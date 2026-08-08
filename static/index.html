@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Math Concept Mapper</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0; min-height: 100%;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+      background: #f8f9fa; color: #24344d;
+    }
+    #topbar {
+      height: 52px; box-sizing: border-box; display: flex; align-items: center;
+      justify-content: space-between; padding: 0 1em; background: #1976d2; color: #fff;
+      position: sticky; top: 0; z-index: 10;
+      box-shadow: 0 2px 10px rgba(15,45,90,0.18);
+    }
+    #topbar .brand { font-weight: 600; font-size: 1.08em; letter-spacing: 0.01em; }
+    #topbar nav a {
+      color: #eaf4ff; text-decoration: none; margin-left: 1.4em; font-size: 0.96em;
+      padding: 0.35em 0.7em; border-radius: 6px; transition: background 0.12s;
+    }
+    #topbar nav a:hover { background: rgba(255,255,255,0.15); }
+    #topbar nav a.active { background: rgba(255,255,255,0.22); font-weight: 600; }
+
+    .hero {
+      text-align: center; padding: 4.5em 1.5em 3.5em;
+      background: linear-gradient(180deg, #eaf4ff 0%, #f8f9fa 100%);
+      border-bottom: 1px solid #e3ecf5;
+    }
+    .hero h1 {
+      margin: 0 0 0.3em; font-size: 2.5em; color: #1a2b45; letter-spacing: -0.01em;
+    }
+    .hero p.tagline {
+      max-width: 620px; margin: 0 auto 1.8em; font-size: 1.15em; line-height: 1.55;
+      color: #4a5b76;
+    }
+    .cta-row { display: flex; gap: 0.9em; justify-content: center; flex-wrap: wrap; }
+    .btn {
+      display: inline-block; padding: 0.75em 1.6em; border-radius: 8px;
+      font-size: 1.05em; font-weight: 600; text-decoration: none; transition: transform 0.1s, box-shadow 0.15s;
+    }
+    .btn-primary {
+      background: #1976d2; color: #fff; box-shadow: 0 4px 14px #1976d255;
+    }
+    .btn-primary:hover { background: #1568bd; transform: translateY(-1px); }
+    .btn-secondary {
+      background: #fff; color: #1976d2; border: 1.5px solid #b5d3f2;
+    }
+    .btn-secondary:hover { background: #f0f6ff; }
+
+    section { max-width: 1000px; margin: 0 auto; padding: 3.2em 1.5em; }
+    section h2 {
+      text-align: center; font-size: 1.7em; color: #1a2b45; margin-bottom: 1.6em;
+    }
+
+    .features {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1.4em;
+    }
+    .feature-card {
+      background: #fff; border: 1px solid #e3ecf5; border-radius: 12px;
+      padding: 1.5em 1.4em; box-shadow: 0 2px 10px #d9e6f622;
+    }
+    .feature-card .icon { font-size: 1.7em; margin-bottom: 0.4em; }
+    .feature-card h3 { margin: 0 0 0.4em; font-size: 1.08em; color: #1976d2; }
+    .feature-card p { margin: 0; font-size: 0.95em; line-height: 1.5; color: #556278; }
+
+    .steps { counter-reset: step; }
+    .step {
+      display: flex; gap: 1.1em; align-items: flex-start; margin-bottom: 1.6em;
+    }
+    .step .num {
+      flex: none; width: 2.2em; height: 2.2em; border-radius: 50%;
+      background: #1976d2; color: #fff; display: flex; align-items: center;
+      justify-content: center; font-weight: 700; font-size: 1.05em;
+    }
+    .step .body h3 { margin: 0.1em 0 0.25em; font-size: 1.08em; color: #1a2b45; }
+    .step .body p { margin: 0; color: #556278; line-height: 1.55; font-size: 0.98em; }
+
+    .tech-note {
+      background: #fff; border: 1px solid #e3ecf5; border-radius: 12px;
+      padding: 1.6em 1.8em; font-size: 0.97em; line-height: 1.6; color: #4a5b76;
+    }
+    .tech-note code {
+      background: #eef2f5; padding: 0.15em 0.4em; border-radius: 4px; font-size: 0.92em;
+    }
+
+    .footer-cta {
+      text-align: center; padding: 3.5em 1.5em 4.5em;
+      background: #eaf4ff; border-top: 1px solid #dbe9f9;
+    }
+    .footer-cta h2 { margin-bottom: 0.6em; }
+    .footer-cta p { color: #4a5b76; margin-bottom: 1.6em; }
+
+    footer.site-footer {
+      text-align: center; padding: 1.5em; color: #8494ab; font-size: 0.88em;
+    }
+
+    @media (max-width: 600px) {
+      .hero h1 { font-size: 1.9em; }
+      .hero { padding: 3em 1.2em 2.5em; }
+    }
+  </style>
+</head>
+<body>
+  <div id="topbar">
+    <div class="brand">🧮 Math Concept Mapper</div>
+    <nav>
+      <a href="index.html" class="active">Home</a>
+      <a href="playground.html">Playground</a>
+    </nav>
+  </div>
+
+  <div class="hero">
+    <h1>Map how math concepts connect</h1>
+    <p class="tagline">
+      A visual workspace for building math curriculum maps — drag topics onto a canvas,
+      link prerequisites and related ideas, and let an AI recommendation engine suggest
+      what to connect next.
+    </p>
+    <div class="cta-row">
+      <a class="btn btn-primary" href="playground.html">Open the Playground →</a>
+      <a class="btn btn-secondary" href="#how-it-works">See how it works</a>
+    </div>
+  </div>
+
+  <section>
+    <h2>What you can do</h2>
+    <div class="features">
+      <div class="feature-card">
+        <div class="icon">🗂️</div>
+        <h3>Drag-and-drop curriculum</h3>
+        <p>Browse a full grade-by-grade, unit-by-unit math concept hierarchy in the sidebar and drop any topic onto the canvas.</p>
+      </div>
+      <div class="feature-card">
+        <div class="icon">🔗</div>
+        <h3>Link &amp; annotate</h3>
+        <p>Draw arrows between concepts to show relationships, and attach notes to any connection to explain the "why."</p>
+      </div>
+      <div class="feature-card">
+        <div class="icon">🤖</div>
+        <h3>AI recommendations</h3>
+        <p>Long-press any node to get smart suggestions — prerequisites, successors, and semantically related topics — powered by a Flask backend.</p>
+      </div>
+      <div class="feature-card">
+        <div class="icon">✏️</div>
+        <h3>Custom concepts</h3>
+        <p>Not in the curriculum? Add your own labeled concept nodes directly from the sidebar.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="how-it-works">
+    <h2>How it works</h2>
+    <div class="steps">
+      <div class="step">
+        <div class="num">1</div>
+        <div class="body">
+          <h3>Start mapping</h3>
+          <p>Drag any topic from the concept sidebar onto the canvas, or type in a custom concept of your own.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="num">2</div>
+        <div class="body">
+          <h3>Connect the dots</h3>
+          <p>Double-click and drag from one node to another to draw a relationship. Double-click a link to add a note explaining it.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="num">3</div>
+        <div class="body">
+          <h3>Get AI suggestions</h3>
+          <p>Long-press (hold the mouse) on a node to open the AI panel — it analyzes your current map and the curriculum structure to recommend what to add next.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Under the hood</h2>
+    <div class="tech-note">
+      The interactive canvas is plain HTML/SVG and JavaScript. Recommendations are computed by
+      a Python/Flask backend (<code>ai_recommender.py</code>) that combines curriculum structure,
+      graph analysis with <code>networkx</code>, and semantic similarity from
+      <code>sentence-transformers</code>. To see AI suggestions in the playground, run the backend
+      locally first with <code>python ai_recommender.py</code> — see the README for setup steps.
+    </div>
+  </section>
+
+  <div class="footer-cta">
+    <h2>Ready to try it?</h2>
+    <p>No sign-up needed — jump straight into the canvas.</p>
+    <a class="btn btn-primary" href="playground.html">Open the Playground →</a>
+  </div>
+
+  <footer class="site-footer">Math Concept Mapper — demo site</footer>
+</body>
+</html>
