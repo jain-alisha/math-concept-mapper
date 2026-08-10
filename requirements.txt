@@ -1,5 +1,5 @@
 flask
 flask_cors
 gunicorn
-sentence_transformers
+numpy
 networkx

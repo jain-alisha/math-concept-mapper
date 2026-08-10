@@ -3,10 +3,9 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import os
 import re
+from collections import Counter
+import numpy as np
 import networkx as nx
-from sentence_transformers import SentenceTransformer, util
-from flask import Flask, request, jsonify
-from flask_cors import CORS
 
 app = Flask(__name__, static_folder='static', static_url_path='')
 CORS(app)
@@ -25,10 +24,34 @@ for grade, units in curriculum.items():
             concept_lookup[topic] = {'grade': grade, 'unit': unit}
             curriculum_topics.append(topic)
 
-# --- Sentence Transformer for semantic similarity ---
-# Uses small, fast, open model (swap out for others if needed)
-EMBED_MODEL = SentenceTransformer('all-MiniLM-L6-v2')
-topic_embeddings = EMBED_MODEL.encode(curriculum_topics, convert_to_tensor=True)
+# --- Lightweight TF-IDF similarity (no ML model/download needed) ---
+# Curriculum topic labels are named systematically (e.g. "Addition",
+# "Add integers", "Add/subtract fractions" all share a root), so word-overlap
+# similarity works well here without the memory cost of an embedding model.
+TOKEN_RE = re.compile(r"[a-zA-Z]+")
+
+def tokenize(text):
+    return [w.lower() for w in TOKEN_RE.findall(text)]
+
+_doc_tokens = [tokenize(t) for t in curriculum_topics]
+_vocab = sorted(set(w for toks in _doc_tokens for w in toks))
+_vocab_index = {w: i for i, w in enumerate(_vocab)}
+_doc_freq = np.zeros(len(_vocab))
+for toks in _doc_tokens:
+    for w in set(toks):
+        _doc_freq[_vocab_index[w]] += 1
+_idf = np.log((1 + len(curriculum_topics)) / (1 + _doc_freq)) + 1
+
+def _vectorize(tokens):
+    vec = np.zeros(len(_vocab))
+    for w, count in Counter(tokens).items():
+        idx = _vocab_index.get(w)
+        if idx is not None:
+            vec[idx] = count * _idf[idx]
+    norm = np.linalg.norm(vec)
+    return vec / norm if norm > 0 else vec
+
+topic_embeddings = np.array([_vectorize(toks) for toks in _doc_tokens])
 
 def find_prereqs_successors(grade, unit, topic):
     """Return topics before/after in the same unit (prereqs/successors)."""
@@ -91,12 +114,12 @@ def get_graph_features(nodes, links, selected_node):
     return list(candidate_labels)
 
 def semantic_similarity(selected_label, candidates, topk=5):
-    """Return topk candidates by embedding similarity to the selected_label."""
+    """Return topk candidates by TF-IDF cosine similarity to the selected_label."""
     if not candidates: return []
     c_idx = [curriculum_topics.index(c) for c in candidates if c in curriculum_topics]
     if not c_idx: return []
-    selected_emb = EMBED_MODEL.encode(selected_label, convert_to_tensor=True)
-    sim_scores = util.pytorch_cos_sim(selected_emb, topic_embeddings[c_idx]).cpu().numpy().flatten()
+    selected_vec = _vectorize(tokenize(selected_label))
+    sim_scores = topic_embeddings[c_idx] @ selected_vec
     ranked = sorted(zip(sim_scores, c_idx), reverse=True)
     results = []
     for score, idx in ranked[:topk]:
