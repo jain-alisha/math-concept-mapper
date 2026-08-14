@@ -2,49 +2,166 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Playground — Math Concept Mapper</title>
+  <title>Playground — Span</title>
+  <script src="theme.js"></script>
   <style>
     * { box-sizing: border-box; }
+    :root {
+      --bg: #f3f5f8;
+      --surface: #ffffff;
+      --text: #171a23;
+      --text-secondary: #5b6472;
+      --text-muted: #8b93a3;
+      --brand: #1976d2;
+      --border: #e9ecf1;
+      --shadow-sm: 0 2px 14px rgba(23,26,35,0.05);
+      --shadow-lg: 0 24px 60px rgba(23,26,35,0.1);
+    }
     html, body {
       height: 100%; margin: 0;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
-      background: #f8f9fa;
+      background: var(--bg);
     }
+    .icon { width: 18px; height: 18px; display: block; }
     #topbar {
       height: 52px; box-sizing: border-box; display: flex; align-items: center;
-      justify-content: space-between; padding: 0 1em; background: #1976d2; color: #fff;
-      box-shadow: 0 2px 10px rgba(15,45,90,0.18); position: relative; z-index: 5;
+      justify-content: space-between; padding: 0 1.2em; background: var(--surface);
+      border-bottom: 1px solid var(--border); position: relative; z-index: 5;
     }
-    #topbar .brand { font-weight: 600; font-size: 1.08em; letter-spacing: 0.01em; }
-    #topbar .brand span { opacity: 0.85; font-weight: 400; }
-    #topbar nav a {
-      color: #eaf4ff; text-decoration: none; margin-left: 1.4em; font-size: 0.96em;
-      padding: 0.35em 0.7em; border-radius: 6px; transition: background 0.12s;
+    #topbar a.brand {
+      display: flex; align-items: center; gap: 0.5em; font-weight: 700; font-size: 1.05em;
+      color: var(--text); text-decoration: none;
     }
-    #topbar nav a:hover { background: rgba(255,255,255,0.15); }
-    #topbar nav a.active { background: rgba(255,255,255,0.22); font-weight: 600; }
+    #topbar .brand .icon { color: var(--brand); }
+    #topbar nav a.text-link {
+      color: var(--text-secondary); text-decoration: none; font-size: 0.94em; font-weight: 500;
+      transition: color 0.12s;
+    }
+    #topbar nav a.text-link:hover { color: var(--text); }
+    #topbar nav { display: flex; align-items: center; gap: 1.4em; }
+    #shareBtn {
+      display: inline-flex; align-items: center; gap: 0.5em;
+      background: var(--brand); color: #fff; border: none; cursor: pointer;
+      font-size: 0.9em; font-weight: 600; padding: 0.5em 1em; border-radius: 8px;
+      font-family: inherit; transition: background 0.12s, transform 0.1s;
+    }
+    #shareBtn:hover { background: #1568bd; transform: translateY(-1px); }
+    #shareBtn .icon { width: 16px; height: 16px; }
+
+    /* --- Auth: sign in button, user menu, modal, My Maps panel --- */
+    #signInBtn {
+      background: none; border: 1px solid var(--border); color: var(--text);
+      font-size: 0.9em; font-weight: 600; padding: 0.5em 1em; border-radius: 8px;
+      font-family: inherit; cursor: pointer; transition: background 0.12s;
+    }
+    #signInBtn:hover { background: var(--bg); }
+    #userMenu { display: none; align-items: center; gap: 0.8em; }
+    #userLabel { font-size: 0.88em; color: var(--text-secondary); font-weight: 500; }
+    #myMapsBtn, #signOutBtn {
+      background: none; border: 1px solid var(--border); color: var(--text);
+      font-size: 0.88em; font-weight: 600; padding: 0.45em 0.85em; border-radius: 8px;
+      font-family: inherit; cursor: pointer; transition: background 0.12s;
+    }
+    #myMapsBtn:hover, #signOutBtn:hover { background: var(--bg); }
+
+    .modal-overlay {
+      display: none; position: fixed; inset: 0; background: rgba(23,26,35,0.4);
+      z-index: 2000; align-items: center; justify-content: center;
+    }
+    .modal {
+      background: var(--surface); border-radius: 14px; box-shadow: var(--shadow-lg);
+      width: 340px; max-width: 90vw; padding: 1.6em; position: relative;
+    }
+    .modal-close {
+      position: absolute; top: 0.7em; right: 0.9em; background: none; border: none;
+      font-size: 1.3em; color: var(--text-muted); cursor: pointer; line-height: 1;
+    }
+    .auth-tabs { display: flex; gap: 0.4em; margin-bottom: 1.2em; }
+    .auth-tab {
+      flex: 1; background: var(--bg); border: none; padding: 0.6em; border-radius: 8px;
+      font-family: inherit; font-size: 0.92em; font-weight: 600; color: var(--text-secondary);
+      cursor: pointer; transition: background 0.12s, color 0.12s;
+    }
+    .auth-tab.active { background: var(--brand); color: #fff; }
+    #signInForm, #signUpForm { display: flex; flex-direction: column; gap: 0.7em; }
+    #signInForm input, #signUpForm input {
+      padding: 0.6em 0.7em; border-radius: 7px; border: 1px solid var(--border);
+      font-size: 0.95em; font-family: inherit; background: var(--bg);
+    }
+    #signInForm input:focus, #signUpForm input:focus { outline: 2px solid #b5d3f2; outline-offset: 1px; }
+    #signInForm button[type="submit"], #signUpForm button[type="submit"] {
+      background: var(--brand); color: #fff; border: none; padding: 0.65em; border-radius: 7px;
+      font-family: inherit; font-size: 0.95em; font-weight: 600; cursor: pointer; margin-top: 0.3em;
+      transition: background 0.12s;
+    }
+    #signInForm button[type="submit"]:hover, #signUpForm button[type="submit"]:hover { background: #1568bd; }
+    .auth-error { font-size: 0.85em; color: #c2503a; min-height: 1.2em; }
+
+    #myMapsPanel {
+      display: none; position: absolute; top: 52px; right: 1.2em; width: 300px;
+      background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+      box-shadow: var(--shadow-lg); z-index: 1500; padding: 0.8em;
+    }
+    #myMapsPanel header { font-weight: 700; font-size: 0.95em; margin-bottom: 0.6em; color: var(--text); }
+    .my-maps-save-row { display: flex; gap: 0.4em; margin-bottom: 0.7em; }
+    .my-maps-save-row input {
+      flex: 1; padding: 0.45em 0.6em; border-radius: 7px; border: 1px solid var(--border);
+      font-size: 0.9em; font-family: inherit; background: var(--bg);
+    }
+    .my-maps-save-row button {
+      background: var(--brand); color: #fff; border: none; padding: 0.45em 0.9em; border-radius: 7px;
+      font-family: inherit; font-size: 0.9em; font-weight: 600; cursor: pointer; white-space: nowrap;
+    }
+    #myMapsList { list-style: none; margin: 0; padding: 0; max-height: 260px; overflow-y: auto; }
+    #myMapsList li {
+      display: flex; align-items: center; justify-content: space-between; gap: 0.5em;
+      padding: 0.5em 0.6em; border-radius: 7px; font-size: 0.9em; color: var(--text-secondary);
+      cursor: default; transition: background 0.12s;
+    }
+    #myMapsList li:not(.empty):hover { background: var(--bg); }
+    #myMapsList .my-map-title { cursor: pointer; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    #myMapsList .my-map-title:hover { color: var(--brand); }
+    #myMapsList .my-map-delete {
+      background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 1.05em;
+      line-height: 1; padding: 0.2em 0.4em;
+    }
+    #myMapsList .my-map-delete:hover { color: #c2503a; }
+    #myMapsList .empty { color: var(--text-muted); cursor: default; justify-content: center; }
+
+    #cloudNotice {
+      display: none; position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+      background: #fff8e1; border: 1px solid #ecda9e; color: #8a6d1f; font-size: 0.88em;
+      padding: 0.6em 1.1em; border-radius: 9px; box-shadow: var(--shadow-sm); z-index: 2500;
+    }
+    #readonlyBanner {
+      position: absolute; top: 12px; left: 50%; transform: translateX(-50%);
+      background: var(--surface); border: 1px solid var(--border); color: var(--text-secondary);
+      font-size: 0.88em; font-weight: 600; padding: 0.55em 1.1em; border-radius: 9px;
+      box-shadow: var(--shadow-sm); z-index: 900;
+    }
+
     #container { display: flex; height: calc(100vh - 52px); }
     #sidebar {
-      width: 340px; background: #fff; border-right: 1px solid #e3ecf5; overflow-y: auto;
+      width: 340px; background: var(--surface); border-right: 1px solid var(--border); overflow-y: auto;
       padding: 0.6em; box-sizing: border-box; transition: width 0.2s; position:relative;
     }
     #sidebar.collapsed { width: 48px; }
     #sidebar h2 {
-      margin: 0.6em 0 0.35em 0.5em; font-size: 1.1em; color: #1a2b45; font-weight: 700;
+      margin: 0.6em 0 0.35em 0.5em; font-size: 1.1em; color: var(--text); font-weight: 700;
       cursor: pointer;
     }
     #sidebar .grade, #sidebar .unit { margin-bottom: 0.25em;}
     #sidebar ul { list-style: none; margin: 0; padding-left: 1.2em;}
     #sidebar li {
       padding: 0.32em 0.55em; margin: 0.12em 0; border-radius: 7px; cursor: grab;
-      font-size: 0.98em; color: #34455e;
+      font-size: 0.98em; color: var(--text-secondary);
       background: none;
       transition: background 0.12s, color 0.12s;
     }
     #sidebar li:hover { background: #eaf4ff; color: #1568bd; }
     #sidebar .toggle { float: right; cursor: pointer; margin-left: 0.4em;}
     #collapseBtn {
-      background: #eef2f5; border: none; cursor: pointer; font-size: 1.15em; color: #1a2b45;
+      background: var(--bg); border: none; cursor: pointer; font-size: 1.15em; color: var(--text);
       padding: 3px 9px; border-radius: 8px; position: absolute; left: 6px; top: 7px;
       transition: background 0.12s;
     }
@@ -53,14 +170,14 @@
     .sidebar-section {
       margin: 0.7em 0 1em 0;
       padding: 0.65em 0.7em 0.5em 0.75em;
-      background: #fff;
-      border: 1px solid #e3ecf5;
+      background: var(--surface);
+      border: 1px solid var(--border);
       border-radius: 10px;
-      box-shadow: 0 2px 10px #d9e6f622;
+      box-shadow: var(--shadow-sm);
       font-size: 1.0em;
-      color: #3a4a63;
+      color: var(--text-secondary);
     }
-    .sidebar-section strong { color: #1976d2; font-weight: 700;}
+    .sidebar-section strong { color: var(--brand); font-weight: 700;}
     .custom-concept-row {
       margin-top: 0.7em;
       display: flex;
@@ -91,41 +208,58 @@
       transform: translateY(-1px);
     }
 
+    .sidebar-search {
+      display: flex; align-items: center; gap: 0.5em;
+      margin: 0.6em 0.1em 0.8em; padding: 0.5em 0.7em;
+      background: var(--surface); border: 1px solid var(--border); border-radius: 9px;
+      transition: border-color 0.12s, box-shadow 0.12s;
+    }
+    .sidebar-search:focus-within {
+      border-color: var(--brand); box-shadow: 0 0 0 2px rgba(25,118,210,0.15);
+    }
+    .sidebar-search .icon { width: 16px; height: 16px; color: var(--text-muted); flex: none; }
+    .sidebar-search input {
+      flex: 1; border: none; outline: none; font-size: 0.96em; background: transparent; color: var(--text);
+    }
+    .sidebar-search input::placeholder { color: var(--text-muted); }
+    .no-results {
+      padding: 0.6em 0.9em; color: var(--text-muted); font-size: 0.92em; text-align: center;
+      display: none;
+    }
+
     #canvasArea {
-      flex: 1; position: relative; overflow: hidden;
-      background-color: #eef2f5;
-      background-image: radial-gradient(circle, #ccd8e6 1.2px, transparent 1.2px);
+      flex: 1; position: relative; overflow: auto;
+      background-color: var(--bg);
+      background-image: radial-gradient(circle, #d7dde5 1.1px, transparent 1.1px);
       background-size: 24px 24px;
     }
     #mapCanvas {
-      width: 100%; height: 100%;
+      display: block;
     }
     .node {
       cursor: grab;
-      fill: #fff;
-      stroke: #aebdd1;
-      stroke-width: 1.6px;
-      filter: drop-shadow(0 2px 6px #7c93b833);
+      filter: drop-shadow(0 6px 16px rgba(23,26,35,0.08));
       transition: filter 0.15s, stroke 0.15s;
     }
     .node:hover {
-      filter: drop-shadow(0 4px 10px #7c93b855);
+      filter: drop-shadow(0 10px 22px rgba(23,26,35,0.12));
     }
     .node.selected {
-      stroke: #2e90fa;
+      stroke: var(--brand) !important;
       stroke-width: 2.6px;
-      filter: drop-shadow(0 0 10px #64b5f6aa);
+      filter: drop-shadow(0 0 10px rgba(25,118,210,0.35));
     }
     .node-label {
       pointer-events: none;
       font-size: 1em;
-      fill: #22314a;
+      fill: var(--text);
       font-weight: 600;
       text-anchor: middle;
       dominant-baseline: middle;
     }
     .link {
-      stroke: #8798b3;
+      fill: none;
+      stroke: #9aa5b5;
       stroke-width: 2.2px;
       stroke-linecap: round;
       marker-end: url(#arrowhead);
@@ -133,6 +267,8 @@
       transition: stroke 0.12s, stroke-width 0.12s;
     }
     .link:hover { stroke: #5a7a9c; }
+    .link.has-note { stroke: #cca43c; }
+    .link.has-note:hover { stroke: #a9822a; }
     .link.selected { stroke: #ff7043; stroke-width: 3px; }
     .link-ghost {
       stroke: #2e90fa;
@@ -143,27 +279,25 @@
       marker-end: url(#arrowheadGhost);
       pointer-events: none;
     }
-    .note-tooltip {
-      position: absolute;
-      background: #fffbea;
-      color: #3c3c2c;
-      border: 1px solid #e9d7b1;
-      padding: 0.7em 1em;
-      border-radius: 8px;
-      font-size: 1em;
-      z-index: 1000;
-      box-shadow: 0 2px 8px #afaa6d33;
-      min-width: 120px;
-      max-width: 300px;
-      pointer-events: none;
+    .link-note-bg {
+      fill: #fff8e1;
+      stroke: #ecda9e;
+      stroke-width: 1px;
+      filter: drop-shadow(0 2px 5px rgba(120,100,20,0.16));
+    }
+    .link-note-text {
+      font-size: 9.5px;
+      font-weight: 500;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+      fill: #8a6d1f;
     }
     #aiPanel {
       position: absolute;
       bottom: 20px; right: 20px;
       width: 350px; max-width: 90vw;
-      background: #fff; border-radius: 14px;
-      box-shadow: 0 10px 30px rgba(25,118,210,0.2);
-      border: 1px solid #d5e8fb;
+      background: var(--surface); border-radius: 14px;
+      box-shadow: var(--shadow-lg);
+      border: 1px solid var(--border);
       z-index: 1002;
       font-size: 1em;
       overflow: hidden;
@@ -236,12 +370,59 @@
 </head>
 <body>
 <div id="topbar">
-  <div class="brand">🧮 Math Concept Mapper <span>— Playground</span></div>
+  <a href="index.html" class="brand">
+    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="6" rx="1"/><rect x="2" y="16" width="6" height="6" rx="1"/><rect x="16" y="16" width="6" height="6" rx="1"/><path d="M12 8v4"/><path d="M5 16v-2a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v2"/></svg>
+    Span
+  </a>
   <nav>
-    <a href="index.html">Home</a>
-    <a href="playground.html" class="active">Playground</a>
+    <button id="shareBtn" title="Copy a shareable link to this map">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+      <span class="share-label">Share</span>
+    </button>
+    <div id="authArea">
+      <button id="signInBtn">Sign in</button>
+      <div id="userMenu">
+        <button id="myMapsBtn">My Maps</button>
+        <span id="userLabel"></span>
+        <button id="signOutBtn">Log out</button>
+        <div id="myMapsPanel">
+          <header>My Maps</header>
+          <div class="my-maps-save-row">
+            <input type="text" id="mapTitleInput" placeholder="Map title..." maxlength="80" />
+            <button id="saveMapBtn">Save</button>
+          </div>
+          <ul id="myMapsList"></ul>
+        </div>
+      </div>
+    </div>
+    <a href="settings.html" class="text-link">Settings</a>
+    <a href="index.html" class="text-link">Home</a>
   </nav>
 </div>
+
+<div id="authModal" class="modal-overlay">
+  <div class="modal">
+    <button id="authModalClose" class="modal-close" title="Close">&times;</button>
+    <div class="auth-tabs">
+      <button id="tabSignIn" class="auth-tab active" type="button">Sign In</button>
+      <button id="tabSignUp" class="auth-tab" type="button">Sign Up</button>
+    </div>
+    <form id="signInForm">
+      <input type="email" id="signInEmail" placeholder="Email" autocomplete="email" required />
+      <input type="password" id="signInPassword" placeholder="Password" autocomplete="current-password" required />
+      <button type="submit">Sign In</button>
+      <div class="auth-error" id="signInError"></div>
+    </form>
+    <form id="signUpForm" style="display:none;">
+      <input type="text" id="signUpName" placeholder="Display name" autocomplete="name" />
+      <input type="email" id="signUpEmail" placeholder="Email" autocomplete="email" required />
+      <input type="password" id="signUpPassword" placeholder="Password (min 6 characters)" autocomplete="new-password" minlength="6" required />
+      <button type="submit">Sign Up</button>
+      <div class="auth-error" id="signUpError"></div>
+    </form>
+  </div>
+</div>
+<div id="cloudNotice"></div>
 <div id="container">
   <div id="sidebar">
     <button id="collapseBtn" title="Collapse/Expand Sidebar">≡</button>
@@ -265,11 +446,17 @@
       </div>
     </div>
     <h2>Math Concepts</h2>
+    <div class="sidebar-search">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+      <input type="search" id="conceptSearchInput" placeholder="Search concepts..." />
+    </div>
     <div id="sidebarList"></div>
+    <div class="no-results" id="noResults">No concepts match your search.</div>
     <hr style="margin:1em 0 0.5em 0; border:none; border-top:1.5px solid #e7e7e7;">
     <div id="notesSidebar"></div>
   </div>
   <div id="canvasArea">
+    <div id="readonlyBanner" style="display:none;"></div>
     <svg id="mapCanvas"></svg>
     <div id="aiPanel" style="display:none;">
       <header>AI Recommendations</header>
@@ -278,10 +465,10 @@
   </div>
 </div>
 <script>
-  // Set this to your hosted backend's URL if the AI backend runs somewhere
-  // other than localhost (e.g. after deploying ai_recommender.py to Render/Fly/Railway).
-  window.AI_BACKEND_URL = 'http://localhost:5000';
+  window.AI_BACKEND_URL = 'https://math-concept-mapper-api.onrender.com';
 </script>
+<script src="vendor/supabase.js"></script>
+<script src="auth.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

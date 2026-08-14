@@ -2,200 +2,380 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Math Concept Mapper</title>
+  <title>Span — map the connections between concepts</title>
+  <script src="theme.js"></script>
   <style>
     * { box-sizing: border-box; }
+    :root {
+      --bg: #f3f5f8;
+      --hero-bg: #fbfbfa;
+      --surface: #ffffff;
+      --text: #171a23;
+      --text-secondary: #5b6472;
+      --text-muted: #8b93a3;
+      --brand: #1976d2;
+      --brand-dark: #14588f;
+      --border: #e9ecf1;
+      --shadow-sm: 0 2px 14px rgba(23,26,35,0.05);
+      --shadow-lg: 0 30px 70px rgba(23,26,35,0.09);
+
+      --blue-bg:#eaf2ff;   --blue-bd:#b9d4f8;   --blue-tx:#1f4f91;
+      --lav-bg:#f1edff;    --lav-bd:#cabdf7;    --lav-tx:#6b4fd8;
+      --coral-bg:#fff0ee;  --coral-bd:#f5b8ab;  --coral-tx:#c2503a;
+      --green-bg:#eafbf1;  --green-bd:#a9e6c3;  --green-tx:#1f8a4c;
+      --amber-bg:#fff8e8;  --amber-bd:#f0d896;  --amber-tx:#a6790a;
+    }
     html, body {
       margin: 0; min-height: 100%;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
-      background: #f8f9fa; color: #24344d;
+      background: var(--bg); color: var(--text);
     }
-    #topbar {
-      height: 52px; box-sizing: border-box; display: flex; align-items: center;
-      justify-content: space-between; padding: 0 1em; background: #1976d2; color: #fff;
-      position: sticky; top: 0; z-index: 10;
-      box-shadow: 0 2px 10px rgba(15,45,90,0.18);
-    }
-    #topbar .brand { font-weight: 600; font-size: 1.08em; letter-spacing: 0.01em; }
-    #topbar nav a {
-      color: #eaf4ff; text-decoration: none; margin-left: 1.4em; font-size: 0.96em;
-      padding: 0.35em 0.7em; border-radius: 6px; transition: background 0.12s;
-    }
-    #topbar nav a:hover { background: rgba(255,255,255,0.15); }
-    #topbar nav a.active { background: rgba(255,255,255,0.22); font-weight: 600; }
+    .icon { width: 20px; height: 20px; display: block; }
 
+    /* ---------- Nav ---------- */
+    #topbar {
+      height: 56px; display: flex; align-items: center;
+      justify-content: space-between; padding: 0 1.2em; background: var(--surface);
+      position: sticky; top: 0; z-index: 10; border-bottom: 1px solid var(--border);
+    }
+    #topbar a.brand {
+      display: flex; align-items: center; gap: 0.5em; font-weight: 700; font-size: 1.08em;
+      color: var(--text); text-decoration: none;
+    }
+    #topbar .brand .icon { color: var(--brand); }
+    #topbar nav { display: flex; align-items: center; gap: 1.6em; }
+    #topbar nav a.text-link {
+      color: var(--text-secondary); text-decoration: none; font-size: 0.95em; font-weight: 500;
+      transition: color 0.12s;
+    }
+    #topbar nav a.text-link:hover { color: var(--text); }
+    #topbar nav a.nav-cta {
+      color: #fff; background: var(--brand); text-decoration: none; font-size: 0.92em; font-weight: 600;
+      padding: 0.5em 1.1em; border-radius: 8px; transition: background 0.12s, transform 0.1s;
+    }
+    #topbar nav a.nav-cta:hover { background: #1568bd; transform: translateY(-1px); }
+
+    /* ---------- Hero ---------- */
     .hero {
-      text-align: center; padding: 4.5em 1.5em 3.5em;
-      background: linear-gradient(180deg, #eaf4ff 0%, #f8f9fa 100%);
-      border-bottom: 1px solid #e3ecf5;
+      background: var(--hero-bg); border-bottom: 1px solid var(--border);
+      padding: 4.5em 1.5em;
+    }
+    .hero-inner {
+      max-width: 1160px; margin: 0 auto;
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 3.5em; align-items: center;
     }
     .hero h1 {
-      margin: 0 0 0.3em; font-size: 2.5em; color: #1a2b45; letter-spacing: -0.01em;
+      margin: 0 0 0.4em; font-size: 2.7em; line-height: 1.12; letter-spacing: -0.015em;
+      color: var(--text);
     }
     .hero p.tagline {
-      max-width: 620px; margin: 0 auto 1.8em; font-size: 1.15em; line-height: 1.55;
-      color: #4a5b76;
+      font-size: 1.13em; line-height: 1.6; color: var(--text-secondary); margin: 0 0 1.8em;
+      max-width: 480px;
     }
-    .cta-row { display: flex; gap: 0.9em; justify-content: center; flex-wrap: wrap; }
+    .cta-row { display: flex; gap: 0.8em; flex-wrap: wrap; }
     .btn {
-      display: inline-block; padding: 0.75em 1.6em; border-radius: 8px;
-      font-size: 1.05em; font-weight: 600; text-decoration: none; transition: transform 0.1s, box-shadow 0.15s;
+      display: inline-flex; align-items: center; gap: 0.5em;
+      padding: 0.75em 1.5em; border-radius: 10px;
+      font-size: 1.02em; font-weight: 600; text-decoration: none;
+      transition: transform 0.12s, box-shadow 0.15s, background 0.12s;
+      border: 1px solid transparent;
     }
     .btn-primary {
-      background: #1976d2; color: #fff; box-shadow: 0 4px 14px #1976d255;
+      background: var(--brand); color: #fff; box-shadow: 0 10px 24px rgba(25,118,210,0.28);
     }
     .btn-primary:hover { background: #1568bd; transform: translateY(-1px); }
     .btn-secondary {
-      background: #fff; color: #1976d2; border: 1.5px solid #b5d3f2;
+      background: var(--surface); color: var(--text); border-color: var(--border); box-shadow: var(--shadow-sm);
     }
-    .btn-secondary:hover { background: #f0f6ff; }
+    .btn-secondary:hover { transform: translateY(-1px); box-shadow: var(--shadow-lg); }
 
-    section { max-width: 1000px; margin: 0 auto; padding: 3.2em 1.5em; }
+    .hero-diagram { filter: drop-shadow(0 20px 40px rgba(23,26,35,0.08)); width: 100%; max-width: 540px; height: auto; }
+    .hero-diagram-wrap { display: flex; justify-content: center; min-width: 0; }
+
+    /* ---------- Social proof strip ---------- */
+    .proof-strip {
+      text-align: center; padding: 1.1em 1.5em; background: var(--surface);
+      border-bottom: 1px solid var(--border); color: var(--text-secondary); font-size: 0.95em;
+    }
+    .proof-strip strong { color: var(--text); font-weight: 600; }
+    .proof-strip .dot { color: var(--text-muted); margin: 0 0.6em; }
+
+    /* ---------- Sections ---------- */
+    section { max-width: 1120px; margin: 0 auto; padding: 4em 1.5em; }
     section h2 {
-      text-align: center; font-size: 1.7em; color: #1a2b45; margin-bottom: 1.6em;
+      text-align: center; font-size: 1.7em; color: var(--text); margin: 0 0 0.4em;
+      letter-spacing: -0.01em;
+    }
+    section > p.section-sub {
+      text-align: center; color: var(--text-secondary); margin: 0 0 2.4em; font-size: 1.02em;
     }
 
+    /* ---------- About blurb ---------- */
+    .about-blurb { max-width: 680px; text-align: center; }
+    .about-blurb .kicker {
+      display: block; font-size: 0.85em; font-weight: 700; letter-spacing: 0.04em;
+      text-transform: uppercase; color: var(--brand); margin-bottom: 0.7em;
+    }
+    .about-blurb p { font-size: 1.08em; line-height: 1.65; color: var(--text-secondary); margin: 0; }
+
+    /* ---------- Feature showcases ---------- */
     .features {
-      display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
       gap: 1.4em;
     }
     .feature-card {
-      background: #fff; border: 1px solid #e3ecf5; border-radius: 12px;
-      padding: 1.5em 1.4em; box-shadow: 0 2px 10px #d9e6f622;
+      background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
+      padding: 1.5em 1.5em 1.7em; box-shadow: var(--shadow-sm);
+      transition: box-shadow 0.15s, transform 0.15s;
     }
-    .feature-card .icon { font-size: 1.7em; margin-bottom: 0.4em; }
-    .feature-card h3 { margin: 0 0 0.4em; font-size: 1.08em; color: #1976d2; }
-    .feature-card p { margin: 0; font-size: 0.95em; line-height: 1.5; color: #556278; }
+    .feature-card:hover { box-shadow: var(--shadow-lg); transform: translateY(-2px); }
+    .feature-card .icon-badge {
+      width: 38px; height: 38px; border-radius: 10px; background: var(--blue-bg);
+      display: flex; align-items: center; justify-content: center; margin-bottom: 0.9em;
+    }
+    .feature-card .icon-badge .icon { color: var(--brand); width: 19px; height: 19px; }
+    .feature-card h3 { margin: 0 0 0.35em; font-size: 1.08em; color: var(--text); }
+    .feature-card p { margin: 0 0 1.1em; font-size: 0.93em; line-height: 1.5; color: var(--text-secondary); }
+    .showcase { width: 100%; height: auto; display: block; }
 
-    .steps { counter-reset: step; }
-    .step {
-      display: flex; gap: 1.1em; align-items: flex-start; margin-bottom: 1.6em;
+    /* ---------- Use-case split ---------- */
+    .use-cases {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.4em;
     }
-    .step .num {
-      flex: none; width: 2.2em; height: 2.2em; border-radius: 50%;
-      background: #1976d2; color: #fff; display: flex; align-items: center;
-      justify-content: center; font-weight: 700; font-size: 1.05em;
+    .use-case-card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
+      padding: 1.8em; box-shadow: var(--shadow-sm);
     }
-    .step .body h3 { margin: 0.1em 0 0.25em; font-size: 1.08em; color: #1a2b45; }
-    .step .body p { margin: 0; color: #556278; line-height: 1.55; font-size: 0.98em; }
-
-    .tech-note {
-      background: #fff; border: 1px solid #e3ecf5; border-radius: 12px;
-      padding: 1.6em 1.8em; font-size: 0.97em; line-height: 1.6; color: #4a5b76;
+    .use-case-card .icon-badge {
+      width: 40px; height: 40px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center; margin-bottom: 1em;
     }
-    .tech-note code {
-      background: #eef2f5; padding: 0.15em 0.4em; border-radius: 4px; font-size: 0.92em;
+    .use-case-card.teacher .icon-badge { background: var(--lav-bg); }
+    .use-case-card.teacher .icon-badge .icon { color: var(--lav-tx); }
+    .use-case-card.student .icon-badge { background: var(--green-bg); }
+    .use-case-card.student .icon-badge .icon { color: var(--green-tx); }
+    .use-case-card .label {
+      font-size: 0.82em; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
+      color: var(--text-muted); margin-bottom: 0.6em; display: block;
     }
+    .use-case-card .statement {
+      font-size: 1.22em; font-weight: 600; line-height: 1.4; color: var(--text); margin: 0 0 0.6em;
+    }
+    .use-case-card .support { font-size: 0.95em; line-height: 1.55; color: var(--text-secondary); margin: 0; }
 
     .footer-cta {
-      text-align: center; padding: 3.5em 1.5em 4.5em;
-      background: #eaf4ff; border-top: 1px solid #dbe9f9;
+      text-align: center; padding: 4em 1.5em 5em; background: var(--hero-bg); border-top: 1px solid var(--border);
     }
-    .footer-cta h2 { margin-bottom: 0.6em; }
-    .footer-cta p { color: #4a5b76; margin-bottom: 1.6em; }
+    .footer-cta h2 { margin-bottom: 0.5em; }
+    .footer-cta p { color: var(--text-secondary); margin-bottom: 1.7em; }
 
     footer.site-footer {
-      text-align: center; padding: 1.5em; color: #8494ab; font-size: 0.88em;
+      text-align: center; padding: 1.6em; color: var(--text-muted); font-size: 0.86em;
     }
 
+    @media (max-width: 860px) {
+      .hero-inner { grid-template-columns: 1fr; }
+      .hero-diagram-wrap { order: -1; }
+      .hero-diagram { width: 100%; max-width: 480px; height: auto; }
+    }
     @media (max-width: 600px) {
-      .hero h1 { font-size: 1.9em; }
-      .hero { padding: 3em 1.2em 2.5em; }
+      .hero h1 { font-size: 2em; }
+      .hero { padding: 3em 1.2em; }
+      #topbar nav { gap: 0.8em; }
+      #topbar nav a.text-link { display: none; }
     }
   </style>
 </head>
 <body>
   <div id="topbar">
-    <div class="brand">🧮 Math Concept Mapper</div>
+    <a href="index.html" class="brand">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="6" rx="1"/><rect x="2" y="16" width="6" height="6" rx="1"/><rect x="16" y="16" width="6" height="6" rx="1"/><path d="M12 8v4"/><path d="M5 16v-2a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v2"/></svg>
+      Span
+    </a>
     <nav>
-      <a href="index.html" class="active">Home</a>
-      <a href="playground.html">Playground</a>
+      <a href="#about" class="text-link">About</a>
+      <a href="playground.html?auth=1" class="text-link">Sign in</a>
+      <a href="playground.html" class="nav-cta">Open Playground</a>
     </nav>
   </div>
 
   <div class="hero">
-    <h1>Map how math concepts connect</h1>
-    <p class="tagline">
-      A visual workspace for building math curriculum maps — drag topics onto a canvas,
-      link prerequisites and related ideas, and let an AI recommendation engine suggest
-      what to connect next.
-    </p>
-    <div class="cta-row">
-      <a class="btn btn-primary" href="playground.html">Open the Playground →</a>
-      <a class="btn btn-secondary" href="#how-it-works">See how it works</a>
+    <div class="hero-inner">
+      <div>
+        <h1>Build the map behind the math.</h1>
+        <p class="tagline">
+          Turn a curriculum into an interactive web of prerequisites, related ideas,
+          and learning pathways.
+        </p>
+        <div class="cta-row">
+          <a class="btn btn-primary" href="playground.html">
+            <svg class="icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3v18l15-9L5 3z"/></svg>
+            Try the Playground
+          </a>
+          <a class="btn btn-secondary" href="playground.html?sample=1">Explore a sample map</a>
+        </div>
+      </div>
+
+      <div class="hero-diagram-wrap">
+        <svg class="hero-diagram" width="540" height="360" viewBox="0 0 560 360" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <marker id="heroArrow" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto" markerUnits="userSpaceOnUse">
+              <polygon points="0 0, 9 3.5, 0 7" fill="#a7b3c4"/>
+            </marker>
+          </defs>
+          <!-- edges -->
+          <path d="M280,50 Q270,85 260,115" fill="none" stroke="#a7b3c4" stroke-width="2" marker-end="url(#heroArrow)"/>
+          <path d="M158,136 Q184,136 210,136" fill="none" stroke="#a7b3c4" stroke-width="2" marker-end="url(#heroArrow)"/>
+          <path d="M310,136 Q330,136 350,136" fill="none" stroke="#a7b3c4" stroke-width="2" marker-end="url(#heroArrow)"/>
+          <path d="M83,157 Q73,180 63,205" fill="none" stroke="#a7b3c4" stroke-width="2" marker-end="url(#heroArrow)"/>
+          <path d="M255,157 Q265,180 273,205" fill="none" stroke="#a7b3c4" stroke-width="2" marker-end="url(#heroArrow)"/>
+          <path d="M63,247 Q60,270 58,295" fill="none" stroke="#a7b3c4" stroke-width="2" marker-end="url(#heroArrow)"/>
+
+          <!-- nodes -->
+          <g>
+            <rect x="175" y="8" width="210" height="42" rx="16" fill="var(--lav-bg)" stroke="var(--lav-bd)"/>
+            <text x="280" y="34" text-anchor="middle" font-size="12.5" font-weight="600" fill="var(--lav-tx)" font-family="-apple-system,Segoe UI,Arial,sans-serif">Systems of Equations</text>
+          </g>
+          <g>
+            <rect x="8" y="115" width="150" height="42" rx="16" fill="var(--blue-bg)" stroke="var(--blue-bd)"/>
+            <text x="83" y="141" text-anchor="middle" font-size="12.5" font-weight="600" fill="var(--blue-tx)" font-family="-apple-system,Segoe UI,Arial,sans-serif">Linear Equations</text>
+          </g>
+          <g>
+            <rect x="210" y="115" width="100" height="42" rx="16" fill="var(--coral-bg)" stroke="var(--coral-bd)"/>
+            <text x="260" y="141" text-anchor="middle" font-size="12.5" font-weight="600" fill="var(--coral-tx)" font-family="-apple-system,Segoe UI,Arial,sans-serif">Matrices</text>
+          </g>
+          <g>
+            <rect x="350" y="115" width="200" height="42" rx="16" fill="var(--green-bg)" stroke="var(--green-bd)"/>
+            <text x="450" y="141" text-anchor="middle" font-size="12.5" font-weight="600" fill="var(--green-tx)" font-family="-apple-system,Segoe UI,Arial,sans-serif">Linear Transformations</text>
+          </g>
+          <g>
+            <rect x="8" y="205" width="110" height="42" rx="16" fill="var(--blue-bg)" stroke="var(--blue-bd)"/>
+            <text x="63" y="231" text-anchor="middle" font-size="12.5" font-weight="600" fill="var(--blue-tx)" font-family="-apple-system,Segoe UI,Arial,sans-serif">Functions</text>
+          </g>
+          <g>
+            <rect x="210" y="205" width="130" height="42" rx="16" fill="var(--amber-bg)" stroke="var(--amber-bd)"/>
+            <text x="275" y="231" text-anchor="middle" font-size="12.5" font-weight="600" fill="var(--amber-tx)" font-family="-apple-system,Segoe UI,Arial,sans-serif">Determinants</text>
+          </g>
+          <g>
+            <rect x="8" y="295" width="100" height="42" rx="16" fill="var(--lav-bg)" stroke="var(--lav-bd)"/>
+            <text x="58" y="321" text-anchor="middle" font-size="12.5" font-weight="600" fill="var(--lav-tx)" font-family="-apple-system,Segoe UI,Arial,sans-serif">Calculus</text>
+          </g>
+        </svg>
+      </div>
     </div>
   </div>
 
+  <div class="proof-strip">
+    Built for <strong>students</strong><span class="dot">·</span><strong>teachers</strong><span class="dot">·</span><strong>curriculum designers</strong>
+  </div>
+
+  <section id="about">
+    <div class="about-blurb" style="margin: 0 auto;">
+      <span class="kicker">Start with a topic. See where it leads.</span>
+      <p>
+        Span turns a flat list of curriculum topics into a living map — the prerequisites,
+        extensions, and connections between ideas that a list can't show. Built for teachers
+        planning a sequence, students tracing why a topic matters, and curriculum designers
+        spotting the gaps in between.
+      </p>
+    </div>
+  </section>
+
   <section>
-    <h2>What you can do</h2>
+    <h2>Three ways it helps</h2>
     <div class="features">
-      <div class="feature-card">
-        <div class="icon">🗂️</div>
-        <h3>Drag-and-drop curriculum</h3>
-        <p>Browse a full grade-by-grade, unit-by-unit math concept hierarchy in the sidebar and drop any topic onto the canvas.</p>
-      </div>
-      <div class="feature-card">
-        <div class="icon">🔗</div>
-        <h3>Link &amp; annotate</h3>
-        <p>Draw arrows between concepts to show relationships, and attach notes to any connection to explain the "why."</p>
-      </div>
-      <div class="feature-card">
-        <div class="icon">🤖</div>
-        <h3>AI recommendations</h3>
-        <p>Long-press any node to get smart suggestions — prerequisites, successors, and semantically related topics — powered by a Flask backend.</p>
-      </div>
-      <div class="feature-card">
-        <div class="icon">✏️</div>
-        <h3>Custom concepts</h3>
-        <p>Not in the curriculum? Add your own labeled concept nodes directly from the sidebar.</p>
-      </div>
-    </div>
-  </section>
 
-  <section id="how-it-works">
-    <h2>How it works</h2>
-    <div class="steps">
-      <div class="step">
-        <div class="num">1</div>
-        <div class="body">
-          <h3>Start mapping</h3>
-          <p>Drag any topic from the concept sidebar onto the canvas, or type in a custom concept of your own.</p>
+      <div class="feature-card">
+        <div class="icon-badge">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="6" rx="1"/><rect x="2" y="16" width="6" height="6" rx="1"/><rect x="16" y="16" width="6" height="6" rx="1"/><path d="M12 8v4"/><path d="M5 16v-2a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v2"/></svg>
         </div>
+        <h3>Map an entire curriculum</h3>
+        <p>Browse a full grade-by-grade, unit-by-unit hierarchy and drag any topic straight onto the canvas.</p>
+        <svg class="showcase" viewBox="0 0 220 100" xmlns="http://www.w3.org/2000/svg">
+          <defs><marker id="a1" markerWidth="7" markerHeight="6" refX="6" refY="3" orient="auto"><polygon points="0 0,7 3,0 6" fill="#1976d2"/></marker></defs>
+          <rect x="4" y="4" width="72" height="92" rx="10" fill="var(--bg)" stroke="var(--border)"/>
+          <rect x="14" y="18" width="52" height="9" rx="4.5" fill="#dde3ec"/>
+          <rect x="14" y="35" width="52" height="9" rx="4.5" fill="var(--blue-bg)" stroke="var(--blue-bd)"/>
+          <rect x="14" y="52" width="52" height="9" rx="4.5" fill="#dde3ec"/>
+          <rect x="14" y="69" width="52" height="9" rx="4.5" fill="#dde3ec"/>
+          <rect x="90" y="4" width="126" height="92" rx="10" fill="var(--surface)" stroke="var(--border)" stroke-dasharray="4 3"/>
+          <path d="M66,39 Q104,18 142,54" fill="none" stroke="#1976d2" stroke-width="1.6" stroke-dasharray="3 3" marker-end="url(#a1)"/>
+          <rect x="140" y="46" width="66" height="26" rx="13" fill="var(--blue-bg)" stroke="var(--blue-bd)"/>
+          <text x="173" y="63" text-anchor="middle" font-size="9" font-weight="600" fill="var(--blue-tx)" font-family="-apple-system,Segoe UI,Arial,sans-serif">Fractions</text>
+        </svg>
       </div>
-      <div class="step">
-        <div class="num">2</div>
-        <div class="body">
-          <h3>Connect the dots</h3>
-          <p>Double-click and drag from one node to another to draw a relationship. Double-click a link to add a note explaining it.</p>
+
+      <div class="feature-card">
+        <div class="icon-badge">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg>
         </div>
+        <h3>See relationships, not just lists</h3>
+        <p>Draw arrows between concepts to show prerequisites, extensions, and related ideas.</p>
+        <svg class="showcase" viewBox="0 0 220 100" xmlns="http://www.w3.org/2000/svg">
+          <defs><marker id="a2" markerWidth="7" markerHeight="6" refX="6" refY="3" orient="auto"><polygon points="0 0,7 3,0 6" fill="#a7b3c4"/></marker></defs>
+          <path d="M78,26 Q98,26 118,26" fill="none" stroke="#a7b3c4" stroke-width="1.8" marker-end="url(#a2)"/>
+          <path d="M40,42 Q30,58 45,72" fill="none" stroke="#a7b3c4" stroke-width="1.8" marker-end="url(#a2)"/>
+          <rect x="8" y="10" width="70" height="26" rx="13" fill="var(--blue-bg)" stroke="var(--blue-bd)"/>
+          <text x="43" y="27" text-anchor="middle" font-size="9" font-weight="600" fill="var(--blue-tx)" font-family="-apple-system,Segoe UI,Arial,sans-serif">Algebra</text>
+          <rect x="118" y="12" width="90" height="26" rx="13" fill="var(--lav-bg)" stroke="var(--lav-bd)"/>
+          <text x="163" y="29" text-anchor="middle" font-size="9" font-weight="600" fill="var(--lav-tx)" font-family="-apple-system,Segoe UI,Arial,sans-serif">Functions</text>
+          <rect x="42" y="70" width="86" height="26" rx="13" fill="var(--green-bg)" stroke="var(--green-bd)"/>
+          <text x="85" y="87" text-anchor="middle" font-size="9" font-weight="600" fill="var(--green-tx)" font-family="-apple-system,Segoe UI,Arial,sans-serif">Calculus</text>
+        </svg>
       </div>
-      <div class="step">
-        <div class="num">3</div>
-        <div class="body">
-          <h3>Get AI suggestions</h3>
-          <p>Long-press (hold the mouse) on a node to open the AI panel — it analyzes your current map and the curriculum structure to recommend what to add next.</p>
+
+      <div class="feature-card">
+        <div class="icon-badge">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/></svg>
         </div>
+        <h3>Discover what connects next</h3>
+        <p>Long-press any node to get AI-suggested prerequisites, successors, and related topics.</p>
+        <svg class="showcase" viewBox="0 0 220 100" xmlns="http://www.w3.org/2000/svg">
+          <path d="M78,54 Q94,32 110,19" fill="none" stroke="var(--border)" stroke-width="1.6" stroke-dasharray="3 3"/>
+          <path d="M78,54 Q96,54 110,55" fill="none" stroke="var(--border)" stroke-width="1.6" stroke-dasharray="3 3"/>
+          <path d="M78,54 Q94,72 110,89" fill="none" stroke="var(--border)" stroke-width="1.6" stroke-dasharray="3 3"/>
+          <rect x="6" y="40" width="72" height="28" rx="14" fill="var(--blue-bg)" stroke="var(--blue-bd)"/>
+          <text x="42" y="58" text-anchor="middle" font-size="9" font-weight="600" fill="var(--blue-tx)" font-family="-apple-system,Segoe UI,Arial,sans-serif">Ratios</text>
+          <rect x="110" y="6" width="104" height="24" rx="12" fill="var(--surface)" stroke="var(--lav-bd)" stroke-dasharray="3 2"/>
+          <text x="162" y="22" text-anchor="middle" font-size="8.5" fill="var(--lav-tx)" font-family="-apple-system,Segoe UI,Arial,sans-serif">Unit Rates</text>
+          <rect x="110" y="42" width="104" height="24" rx="12" fill="var(--surface)" stroke="var(--coral-bd)" stroke-dasharray="3 2"/>
+          <text x="162" y="58" text-anchor="middle" font-size="8.5" fill="var(--coral-tx)" font-family="-apple-system,Segoe UI,Arial,sans-serif">Proportions</text>
+          <rect x="110" y="78" width="104" height="24" rx="12" fill="var(--surface)" stroke="var(--amber-bd)" stroke-dasharray="3 2"/>
+          <text x="162" y="94" text-anchor="middle" font-size="8.5" fill="var(--amber-tx)" font-family="-apple-system,Segoe UI,Arial,sans-serif">Percentages</text>
+        </svg>
       </div>
+
     </div>
   </section>
 
   <section>
-    <h2>Under the hood</h2>
-    <div class="tech-note">
-      The interactive canvas is plain HTML/SVG and JavaScript. Recommendations are computed by
-      a Python/Flask backend (<code>ai_recommender.py</code>) that combines curriculum structure,
-      graph analysis with <code>networkx</code>, and semantic similarity from
-      <code>sentence-transformers</code>. To see AI suggestions in the playground, run the backend
-      locally first with <code>python ai_recommender.py</code> — see the README for setup steps.
+    <div class="use-cases">
+      <div class="use-case-card teacher">
+        <div class="icon-badge">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="7" r="4"/><path d="M2 21v-2a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v2"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </div>
+        <span class="label">For Teachers</span>
+        <p class="statement">See where students may be missing prerequisite connections.</p>
+        <p class="support">Build the map you expect a unit to follow, then compare it against what a student actually connects.</p>
+      </div>
+      <div class="use-case-card student">
+        <div class="icon-badge">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10 12 5 2 10l10 5 10-5Z"/><path d="M6 12v5c0 1 3 3 6 3s6-2 6-3v-5"/></svg>
+        </div>
+        <span class="label">For Students</span>
+        <p class="statement">Understand why the topic you're learning matters.</p>
+        <p class="support">Trace a concept back to what it builds on, and forward to where it eventually leads.</p>
+      </div>
     </div>
   </section>
 
   <div class="footer-cta">
-    <h2>Ready to try it?</h2>
+    <h2>Build your first map</h2>
     <p>No sign-up needed — jump straight into the canvas.</p>
     <a class="btn btn-primary" href="playground.html">Open the Playground →</a>
   </div>
 
-  <footer class="site-footer">Math Concept Mapper — demo site</footer>
+  <footer class="site-footer">Span — demo site</footer>
 </body>
 </html>

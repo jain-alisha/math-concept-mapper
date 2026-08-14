@@ -1,4 +1,4 @@
-# Math Concept Mapper
+# Span
 
 A visual, patent-ready educational software tool for mapping math concepts, powered by an AI-driven recommendation engine.
 
@@ -17,9 +17,17 @@ A visual, patent-ready educational software tool for mapping math concepts, powe
 
 - `index.html` — Landing page explaining the tool, with a link into the playground.
 - `playground.html` — The interactive map UI (sidebar, canvas, AI panel; includes all CSS/JS).
+- `settings.html` / `settings.js` — Color theme picker + Classes (rostering: create/join a
+  class, teacher roster + read-only view into students' maps).
+- `theme.js` — Color theme presets, applied on every page.
 - `app.js` — All front-end logic for the playground.
+- `auth.js` — Accounts, cloud map storage, and rostering (Supabase). See "Accounts & Cloud
+  Save" below.
+- `vendor/supabase.js` — Vendored `@supabase/supabase-js` UMD build (committed, not loaded from a CDN).
 - `concepts.json` — Math concepts, organized by grade/unit/topic.
 - `ai_recommender.py` — Flask API backend for AI-driven recommendations.
+- `supabase-schema.sql` — Database schema + Row Level Security policies for cloud map storage
+  and rostering.
 - `README.md` — This file.
 
 ---
@@ -47,6 +55,47 @@ A visual, patent-ready educational software tool for mapping math concepts, powe
    - Connect nodes with arrows. Double-click a link to add a note.
    - Long-press a node to see AI recommendations and add them instantly (requires the backend
      from step 1 to be running, since the playground calls `http://localhost:5000/recommend`).
+
+---
+
+## Accounts & Cloud Save (Supabase)
+
+Logging in is optional — everything above works with no account (maps autosave to
+`localStorage` and can be shared via `?share=` links regardless). Signing in additionally
+saves maps to the cloud so they're available across devices/browsers.
+
+Setup (one-time):
+
+1. Create a free project at [supabase.com](https://supabase.com).
+2. Open the project's SQL Editor and run everything in `supabase-schema.sql`.
+3. Go to **Settings → API** and copy the **Project URL** and **anon public** key.
+4. Paste them into `static/auth.js`, replacing the `SUPABASE_URL` and `SUPABASE_ANON_KEY`
+   placeholders at the top of the file. (The anon key is *meant* to be public client-side —
+   the SQL above enables Row Level Security, which is what actually enforces that a user can
+   only read/write their own maps, not the key being secret.)
+
+Until those placeholders are replaced, the app runs exactly as before — the "Sign in" button
+hides itself and logs a console note instead of breaking anything.
+
+**Roles:** every self-serve signup is a `student` — there's no role picker at signup, on
+purpose. Role lives in `auth.users.app_metadata`, which the client SDK cannot write (only a
+service-role/dashboard call can), so a logged-in user can never edit their own row to grant
+themselves `teacher`. To promote an account after it has signed up once through the app:
+
+```sql
+update auth.users
+set raw_app_meta_data = raw_app_meta_data || '{"role":"teacher"}'::jsonb
+where email = 'teacher@example.com';
+```
+
+Note: a promoted account's *existing* session still carries the old role claim until it
+refreshes (~1hr) — sign out/in right after promoting to see the change take effect.
+
+**Classes (rostering):** on `settings.html`, teachers create a class and get a shareable
+invite code; students join with it. Teachers get read-only visibility into maps their
+students save (never edit/delete). If you already ran `supabase-schema.sql` before this was
+added, just run the newer half of the file (from the "Rostering" section onward) — the
+`maps` table setup at the top will error as already-existing if you re-run all of it.
 
 ---
 
