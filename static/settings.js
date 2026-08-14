@@ -580,8 +580,7 @@ function renderSamplePreview() {
   const teacherView = document.getElementById('classesTeacherView');
   teacherView.style.display = '';
   teacherView.querySelector('.create-class-row').style.display = 'none';
-  const hint = teacherView.querySelector('p.hint');
-  if (hint) hint.textContent = 'Sample preview — no account needed. This is what a teacher sees for a real class.';
+  document.getElementById('sampleBanner').style.display = '';
 
   const { roster, maps } = buildSampleClassData();
 
