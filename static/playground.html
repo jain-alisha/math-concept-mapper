@@ -145,11 +145,29 @@
       color: #c2503a; font-size: 0.82em; font-weight: 600; padding: 0.5em 0.9em 0.5em 0.7em;
       border-radius: 9px; box-shadow: var(--shadow-sm);
     }
-    #isolatedLegend .beta-tag {
+    .beta-tag {
       font-size: 0.75em; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase;
       color: #c2503a; background: #fff0ee; border: 1px solid #f5b8ab; padding: 0.15em 0.5em;
       border-radius: 999px;
     }
+    #aiSummaryBtn {
+      display: inline-flex; align-items: center; gap: 0.5em;
+      background: var(--surface); color: var(--text); border: 1px solid var(--border);
+      cursor: pointer; font-size: 0.9em; font-weight: 600; padding: 0.5em 0.9em;
+      border-radius: 8px; font-family: inherit; transition: background 0.12s, transform 0.1s;
+    }
+    #aiSummaryBtn:hover { background: var(--bg); transform: translateY(-1px); }
+    #aiSummaryBtn .icon { width: 15px; height: 15px; color: var(--brand); }
+    #aiSummaryPanel {
+      display: none; position: absolute; top: 44px; left: 0; width: 300px;
+      background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+      box-shadow: var(--shadow-lg); z-index: 1500; padding: 0.9em 1em;
+    }
+    #aiSummaryPanel header {
+      display: flex; align-items: center; gap: 0.5em; font-weight: 700; font-size: 0.92em;
+      margin-bottom: 0.5em; color: var(--text);
+    }
+    #aiSummaryPanel p { margin: 0; font-size: 0.92em; line-height: 1.5; color: var(--text-secondary); }
 
     #container { display: flex; height: calc(100vh - 52px); }
     #sidebar {
@@ -391,6 +409,17 @@
     Span
   </a>
   <nav>
+    <div id="aiSummaryWrap" style="position:relative;">
+      <button id="aiSummaryBtn" title="A quick AI-generated read on this map">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/></svg>
+        <span>AI Summary</span>
+        <span class="beta-tag">Beta</span>
+      </button>
+      <div id="aiSummaryPanel">
+        <header>AI Summary <span class="beta-tag">Beta</span></header>
+        <p id="aiSummaryText"></p>
+      </div>
+    </div>
     <button id="shareBtn" title="Copy a shareable link to this map">
       <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
       <span class="share-label">Share</span>

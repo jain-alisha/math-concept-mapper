@@ -51,8 +51,6 @@ becomes a real problem):
 Once an item below is actually shipped, move it down into the "Done" list for
 this section instead of deleting it.
 
-- Short AI summary, e.g. "your map is strong on ratios, thin on slope
-  concepts."
 - AI teacher analysis should include classwide gaps, so if a teacher signaled
   to the AI thing (set this up too, like on their dashboard what they've
   taught).
@@ -70,6 +68,12 @@ this section instead of deleting it.
   off the current `links` array on every `renderCanvas()`, plus a
   bottom-left "Beta" legend that only shows when at least one isolated node
   is on the canvas.
+- Short AI summary, e.g. "your map is strong on ratios, thin on slope
+  concepts." Shipped as an "AI Summary" topbar button in
+  `static/playground.html`/`app.js`: a heuristic (not a model call) that
+  groups the current map's nodes by curriculum unit and compares each
+  unit's connected-vs-isolated ratio to produce a one-line "Strong on X,
+  thin/lighter on Y" read, regenerated fresh every time the panel opens.
 
 ## Teacher-Side AI Analysis
 

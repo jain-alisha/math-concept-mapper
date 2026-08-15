@@ -97,6 +97,7 @@ window.onload = async function() {
   setupSidebarEvents();
   setupSearchEvents();
   setupShareButton();
+  setupAiSummaryButton();
   setupAuthUI();
 
   const params = new URLSearchParams(window.location.search);
@@ -306,6 +307,64 @@ function setupShareButton() {
     label.textContent = 'Copied!';
     setTimeout(() => { label.textContent = original; }, 1600);
   };
+}
+
+// --- Beta: Instant AI summary ---
+// Heuristic, not a model call - groups the map's own nodes by curriculum
+// unit and compares how well-connected each unit's nodes are, same
+// "connected vs isolated" signal isolated-concept highlighting already
+// computes per node, just rolled up per unit.
+function computeMapSummary(nodesArr, linksArr) {
+  if (!nodesArr.length) return 'Your map is empty — add a few concepts to get a summary.';
+  const degree = new Map();
+  for (const n of nodesArr) degree.set(n.id, 0);
+  for (const l of linksArr) {
+    degree.set(l.source, (degree.get(l.source) || 0) + 1);
+    degree.set(l.target, (degree.get(l.target) || 0) + 1);
+  }
+  const byUnit = new Map(); // unit -> { total, connected }
+  let untagged = 0;
+  for (const n of nodesArr) {
+    const unit = n.meta && n.meta.unit;
+    if (!unit) { untagged++; continue; }
+    if (!byUnit.has(unit)) byUnit.set(unit, { total: 0, connected: 0 });
+    const rec = byUnit.get(unit);
+    rec.total++;
+    if ((degree.get(n.id) || 0) > 0) rec.connected++;
+  }
+  if (!byUnit.size) {
+    return `${nodesArr.length} concept${nodesArr.length === 1 ? '' : 's'} on the map so far, none tagged to a curriculum unit yet. Drag topics in from the sidebar to get unit-by-unit insight.`;
+  }
+  const units = [...byUnit.entries()]
+    .map(([unit, r]) => ({ unit, ...r, ratio: r.connected / r.total }))
+    .sort((a, b) => b.ratio - a.ratio || b.total - a.total);
+  const strong = units[0];
+  const thin = units[units.length - 1];
+  if (units.length === 1) {
+    return `You're building out ${strong.unit} — ${strong.connected} of ${strong.total} concept${strong.total === 1 ? '' : 's'} connected so far.`;
+  }
+  const strongPhrase = strong.ratio >= 0.6 ? 'Strong on' : 'Most developed:';
+  const thinPhrase = thin.ratio < 0.5 ? 'thin on' : 'lighter on';
+  return `${strongPhrase} ${strong.unit}, ${thinPhrase} ${thin.unit}.`;
+}
+function setupAiSummaryButton() {
+  const btn = document.getElementById('aiSummaryBtn');
+  const panel = document.getElementById('aiSummaryPanel');
+  const text = document.getElementById('aiSummaryText');
+  if (!btn || !panel || !text) return;
+  btn.onclick = (e) => {
+    e.stopPropagation();
+    const isOpen = getComputedStyle(panel).display !== 'none';
+    if (isOpen) { panel.style.display = 'none'; return; }
+    text.textContent = computeMapSummary(nodes, links);
+    panel.style.display = 'block';
+  };
+  // Capture phase: node/link clicks on the canvas call stopPropagation()
+  // during bubbling, which would otherwise stop this from ever seeing them.
+  document.addEventListener('click', (e) => {
+    if (panel.contains(e.target) || btn.contains(e.target)) return;
+    panel.style.display = 'none';
+  }, true);
 }
 
 // --- Accounts + cloud map storage (Supabase, additive to localStorage) ---
