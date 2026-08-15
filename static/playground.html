@@ -127,6 +127,54 @@
     }
     #myMapsList .my-map-delete:hover { color: #c2503a; }
     #myMapsList .empty { color: var(--text-muted); cursor: default; justify-content: center; }
+    #myMapsList .my-map-timeline-select {
+      flex: none; font-size: 0.78em; font-family: inherit; color: var(--text-muted);
+      border: 1px solid var(--border); border-radius: 6px; padding: 0.15em 0.3em; background: var(--surface);
+      max-width: 80px;
+    }
+
+    #timelineBtn {
+      background: none; border: 1px solid var(--border); color: var(--text);
+      font-size: 0.88em; font-weight: 600; padding: 0.45em 0.85em; border-radius: 8px;
+      font-family: inherit; cursor: pointer; transition: background 0.12s;
+    }
+    #timelineBtn:hover { background: var(--bg); }
+    #timelinePanel {
+      display: none; position: absolute; top: 52px; right: 1.2em; width: 340px;
+      background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+      box-shadow: var(--shadow-lg); z-index: 1500; padding: 0.8em;
+    }
+    #timelinePanel header { font-weight: 700; font-size: 0.95em; margin-bottom: 0.5em; color: var(--text); }
+    #timelinePanel .hint { margin: 0 0 0.7em; font-size: 0.85em; }
+    #timelineList { list-style: none; margin: 0; padding: 0; max-height: 220px; overflow-y: auto; }
+    #timelineList li {
+      display: flex; align-items: center; justify-content: space-between; gap: 0.5em;
+      padding: 0.5em 0.6em; border-radius: 7px; font-size: 0.9em; color: var(--text-secondary);
+      cursor: pointer; transition: background 0.12s;
+    }
+    #timelineList li:hover { background: var(--bg); color: var(--brand); }
+    #timelineList .timeline-delete {
+      background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 1.05em;
+      line-height: 1; padding: 0.2em 0.4em;
+    }
+    #timelineList .timeline-delete:hover { color: #c2503a; }
+    #timelineList .empty { color: var(--text-muted); cursor: default; justify-content: center; }
+    .timeline-back {
+      background: none; border: none; color: var(--brand); font-family: inherit; font-size: 0.85em;
+      font-weight: 600; cursor: pointer; padding: 0 0 0.6em; display: block;
+    }
+    #timelineFrameWrap {
+      width: 100%; height: 200px; background: var(--bg); border: 1px solid var(--border);
+      border-radius: 9px; overflow: hidden; margin-bottom: 0.7em;
+    }
+    #timelineFrame { width: 100%; height: 100%; display: block; }
+    #timelineControls { display: flex; align-items: center; gap: 0.6em; }
+    #timelinePlayBtn {
+      flex: none; background: var(--brand); color: #fff; border: none; width: 30px; height: 30px;
+      border-radius: 50%; cursor: pointer; font-size: 0.8em; display: flex; align-items: center; justify-content: center;
+    }
+    #timelineSlider { flex: 1; }
+    #timelineLabel { flex: none; font-size: 0.8em; color: var(--text-secondary); max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
     #cloudNotice {
       display: none; position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
@@ -428,6 +476,7 @@
       <button id="signInBtn">Sign in</button>
       <div id="userMenu">
         <button id="myMapsBtn">My Maps</button>
+        <button id="timelineBtn">Timeline <span class="beta-tag">Beta</span></button>
         <span id="userLabel"></span>
         <button id="signOutBtn">Log out</button>
         <div id="myMapsPanel">
@@ -437,6 +486,29 @@
             <button id="saveMapBtn">Save</button>
           </div>
           <ul id="myMapsList"></ul>
+        </div>
+        <div id="timelinePanel">
+          <header>Map Timeline <span class="beta-tag">Beta</span></header>
+          <div id="timelineListView">
+            <p class="hint">Group saved maps into a sequence, then scrub through how a map evolved over time.</p>
+            <div class="my-maps-save-row">
+              <input type="text" id="timelineNameInput" placeholder="Timeline name..." maxlength="80" />
+              <button id="createTimelineBtn">Create</button>
+            </div>
+            <ul id="timelineList"></ul>
+          </div>
+          <div id="timelineViewerView" style="display:none;">
+            <button id="timelineBackBtn" class="timeline-back">&larr; All timelines</button>
+            <div id="timelineFrameWrap">
+              <svg id="timelineFrame"></svg>
+            </div>
+            <div id="timelineEmpty" class="settings-empty" style="display:none;">This timeline has no maps yet. Add one from My Maps.</div>
+            <div id="timelineControls">
+              <button id="timelinePlayBtn" title="Play">&#9654;</button>
+              <input type="range" id="timelineSlider" min="0" max="0" value="0" step="1" />
+              <span id="timelineLabel"></span>
+            </div>
+          </div>
         </div>
       </div>
     </div>

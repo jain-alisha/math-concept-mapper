@@ -454,6 +454,20 @@ function setupAuthUI() {
   const myMapsList = document.getElementById('myMapsList');
   const saveMapBtn = document.getElementById('saveMapBtn');
   const mapTitleInput = document.getElementById('mapTitleInput');
+  const timelineBtn = document.getElementById('timelineBtn');
+  const timelinePanel = document.getElementById('timelinePanel');
+  const timelineListView = document.getElementById('timelineListView');
+  const timelineViewerView = document.getElementById('timelineViewerView');
+  const timelineNameInput = document.getElementById('timelineNameInput');
+  const createTimelineBtn = document.getElementById('createTimelineBtn');
+  const timelineList = document.getElementById('timelineList');
+  const timelineBackBtn = document.getElementById('timelineBackBtn');
+  const timelineFrame = document.getElementById('timelineFrame');
+  const timelineEmpty = document.getElementById('timelineEmpty');
+  const timelineControls = document.getElementById('timelineControls');
+  const timelinePlayBtn = document.getElementById('timelinePlayBtn');
+  const timelineSlider = document.getElementById('timelineSlider');
+  const timelineLabel = document.getElementById('timelineLabel');
 
   function openModal() { authModal.style.display = 'flex'; }
   function closeModal() { authModal.style.display = 'none'; }
@@ -507,9 +521,12 @@ function setupAuthUI() {
     await window.SpanAuth.signOut();
     cloudMapId = null; cloudMapTitle = null; cloudMapUpdatedAt = null;
     myMapsPanel.style.display = 'none';
+    timelinePanel.style.display = 'none';
+    stopTimelinePlayback();
   };
 
-  function renderMyMapsList(rows) {
+  function renderMyMapsList(rows, timelines) {
+    timelines = timelines || [];
     myMapsList.innerHTML = '';
     if (!rows.length) {
       myMapsList.innerHTML = '<li class="empty">No saved maps yet.</li>';
@@ -525,6 +542,49 @@ function setupAuthUI() {
         myMapsPanel.style.display = 'none';
         if (mapTitleInput) mapTitleInput.value = row.title;
       };
+      // Beta: map timeline - assign this saved map to a named sequence.
+      const tlSelect = document.createElement('select');
+      tlSelect.className = 'my-map-timeline-select';
+      tlSelect.title = 'Add to a timeline';
+      tlSelect.onclick = (e) => e.stopPropagation();
+      const noneOpt = document.createElement('option');
+      noneOpt.value = ''; noneOpt.textContent = 'Timeline…';
+      tlSelect.appendChild(noneOpt);
+      timelines.forEach(t => {
+        const opt = document.createElement('option');
+        opt.value = t.id; opt.textContent = t.name;
+        if (row.timeline_id === t.id) opt.selected = true;
+        tlSelect.appendChild(opt);
+      });
+      const newOpt = document.createElement('option');
+      newOpt.value = '__new__'; newOpt.textContent = '+ New timeline…';
+      tlSelect.appendChild(newOpt);
+      tlSelect.onchange = async (e) => {
+        e.stopPropagation();
+        let targetId = tlSelect.value;
+        if (targetId === '__new__') {
+          const name = (window.prompt('Name this timeline:') || '').trim();
+          if (!name) { tlSelect.value = row.timeline_id || ''; return; }
+          try {
+            const t = await window.SpanAuth.createTimeline(name);
+            timelines.push(t);
+            targetId = t.id;
+            const opt = document.createElement('option');
+            opt.value = t.id; opt.textContent = t.name; opt.selected = true;
+            tlSelect.insertBefore(opt, newOpt);
+          } catch (err) {
+            alert('Could not create timeline: ' + (err.message || err));
+            tlSelect.value = row.timeline_id || '';
+            return;
+          }
+        }
+        try {
+          await window.SpanAuth.setMapTimeline(row.id, targetId || null);
+          row.timeline_id = targetId || null;
+        } catch (err) {
+          alert('Could not update timeline: ' + (err.message || err));
+        }
+      };
       const delBtn = document.createElement('button');
       delBtn.textContent = '×';
       delBtn.className = 'my-map-delete';
@@ -537,10 +597,204 @@ function setupAuthUI() {
         li.remove();
       };
       li.appendChild(titleSpan);
+      li.appendChild(tlSelect);
       li.appendChild(delBtn);
       myMapsList.appendChild(li);
     }
   }
+
+  // --- Beta: map timeline ---
+  let timelineMaps = [];
+  let timelinePlayTimer = null;
+
+  function stopTimelinePlayback() {
+    if (timelinePlayTimer) { clearInterval(timelinePlayTimer); timelinePlayTimer = null; }
+    timelinePlayBtn.innerHTML = '&#9654;';
+  }
+
+  function showTimelineList() {
+    stopTimelinePlayback();
+    timelineViewerView.style.display = 'none';
+    timelineListView.style.display = '';
+  }
+
+  async function renderTimelineListPanel() {
+    timelineList.innerHTML = '<li class="empty">Loading…</li>';
+    let timelines;
+    try {
+      timelines = await window.SpanAuth.listMyTimelines();
+    } catch (e) {
+      timelineList.innerHTML = '<li class="empty">Could not load timelines.</li>';
+      return;
+    }
+    if (!timelines.length) {
+      timelineList.innerHTML = '<li class="empty">No timelines yet — create one above.</li>';
+      return;
+    }
+    timelineList.innerHTML = '';
+    timelines.forEach(t => {
+      const li = document.createElement('li');
+      const nameSpan = document.createElement('span');
+      nameSpan.textContent = t.name;
+      nameSpan.style.flex = '1';
+      nameSpan.onclick = () => openTimelineViewer(t);
+      const delBtn = document.createElement('button');
+      delBtn.textContent = '×';
+      delBtn.className = 'timeline-delete';
+      delBtn.title = 'Delete this timeline (maps themselves are kept)';
+      delBtn.onclick = async (e) => {
+        e.stopPropagation();
+        if (!confirm(`Delete timeline "${t.name}"? The maps in it won't be deleted.`)) return;
+        await window.SpanAuth.deleteTimeline(t.id);
+        li.remove();
+      };
+      li.onclick = () => openTimelineViewer(t);
+      li.appendChild(nameSpan);
+      li.appendChild(delBtn);
+      timelineList.appendChild(li);
+    });
+  }
+
+  // Lightweight, self-contained renderer for timeline frames - deliberately
+  // does NOT touch the shared nodeColorAssignments map or global nodes/links
+  // arrays like renderCanvas() does, so scrubbing through someone's map
+  // history can never bleed into (or get clobbered by) the live editing
+  // session's own canvas state.
+  function renderTimelineFrame(svg, mapData) {
+    svg.innerHTML = `
+      <defs>
+        <marker id="timelineArrow" markerWidth="10" markerHeight="6" refX="9" refY="3" orient="auto">
+          <polygon points="0 0, 10 3, 0 6" fill="#9aa5b5"/>
+        </marker>
+      </defs>
+    `;
+    const nodesArr = (mapData && mapData.n) || [];
+    const edgesArr = (mapData && mapData.e) || [];
+    if (!nodesArr.length) { svg.setAttribute('viewBox', '0 0 300 150'); return; }
+
+    const localColors = new Map();
+    const palette = ['#eaf2ff', '#f1edff', '#eafbf1', '#fff8e8', '#fdeef8', '#e8f7f7'];
+    const strokes = ['#b9d4f8', '#cabdf7', '#a9e6c3', '#f0d896', '#f2b8e0', '#a8dede'];
+    function colorFor(n) {
+      const key = (n.m && (n.m.unit || n.m.grade)) || n.l;
+      if (!localColors.has(key)) localColors.set(key, localColors.size % palette.length);
+      const i = localColors.get(key);
+      return { fill: palette[i], stroke: strokes[i] };
+    }
+    const byId = new Map(nodesArr.map(n => [n.i, n]));
+
+    for (const e of edgesArr) {
+      const src = byId.get(e.s), tgt = byId.get(e.t);
+      if (!src || !tgt) continue;
+      const sw = getNodeWidth(src.l), tw = getNodeWidth(tgt.l);
+      const x1 = src.x + sw / 2, y1 = src.y + NODE_HEIGHT / 2;
+      const x2 = tgt.x + tw / 2, y2 = tgt.y + NODE_HEIGHT / 2;
+      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      path.setAttribute('d', `M${x1},${y1} L${x2},${y2}`);
+      path.setAttribute('stroke', '#9aa5b5');
+      path.setAttribute('stroke-width', '2');
+      path.setAttribute('fill', 'none');
+      path.setAttribute('marker-end', 'url(#timelineArrow)');
+      svg.appendChild(path);
+    }
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (const n of nodesArr) {
+      const w = getNodeWidth(n.l);
+      const color = colorFor(n);
+      const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      g.setAttribute('transform', `translate(${n.x},${n.y})`);
+      const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      rect.setAttribute('width', w);
+      rect.setAttribute('height', NODE_HEIGHT);
+      rect.setAttribute('rx', NODE_RADIUS);
+      rect.setAttribute('fill', color.fill);
+      rect.setAttribute('stroke', color.stroke);
+      const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      text.textContent = n.l;
+      text.setAttribute('x', w / 2);
+      text.setAttribute('y', NODE_HEIGHT / 2);
+      text.setAttribute('text-anchor', 'middle');
+      text.setAttribute('dominant-baseline', 'middle');
+      text.setAttribute('font-size', '0.95em');
+      text.setAttribute('font-weight', '600');
+      text.setAttribute('font-family', "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif");
+      g.appendChild(rect);
+      g.appendChild(text);
+      svg.appendChild(g);
+      minX = Math.min(minX, n.x); minY = Math.min(minY, n.y);
+      maxX = Math.max(maxX, n.x + w); maxY = Math.max(maxY, n.y + NODE_HEIGHT);
+    }
+    const pad = 24;
+    svg.setAttribute('viewBox', `${minX - pad} ${minY - pad} ${maxX - minX + pad * 2} ${maxY - minY + pad * 2}`);
+  }
+
+  function showTimelineFrame(index) {
+    const m = timelineMaps[index];
+    if (!m) return;
+    renderTimelineFrame(timelineFrame, m.data);
+    timelineLabel.textContent = `${m.title} — ${new Date(m.created_at).toLocaleDateString()}`;
+  }
+
+  async function openTimelineViewer(t) {
+    timelineListView.style.display = 'none';
+    timelineViewerView.style.display = '';
+    timelineFrame.innerHTML = '';
+    timelineLabel.textContent = '';
+    timelineEmpty.style.display = 'none';
+    timelineControls.style.display = 'none';
+    try {
+      timelineMaps = await window.SpanAuth.listTimelineMaps(t.id);
+    } catch (e) {
+      timelineMaps = [];
+    }
+    if (!timelineMaps.length) {
+      timelineEmpty.style.display = 'block';
+      return;
+    }
+    timelineControls.style.display = 'flex';
+    timelineSlider.max = String(timelineMaps.length - 1);
+    timelineSlider.value = '0';
+    showTimelineFrame(0);
+  }
+
+  timelineSlider.oninput = () => {
+    stopTimelinePlayback();
+    showTimelineFrame(Number(timelineSlider.value));
+  };
+  timelineBackBtn.onclick = showTimelineList;
+  timelinePlayBtn.onclick = () => {
+    if (timelinePlayTimer) { stopTimelinePlayback(); return; }
+    if (timelineMaps.length < 2) return;
+    timelinePlayBtn.innerHTML = '&#10074;&#10074;';
+    timelinePlayTimer = setInterval(() => {
+      let next = Number(timelineSlider.value) + 1;
+      if (next > timelineMaps.length - 1) next = 0;
+      timelineSlider.value = String(next);
+      showTimelineFrame(next);
+    }, 1400);
+  };
+  createTimelineBtn.onclick = async () => {
+    const name = timelineNameInput.value.trim();
+    if (!name) return;
+    createTimelineBtn.disabled = true;
+    try {
+      await window.SpanAuth.createTimeline(name);
+      timelineNameInput.value = '';
+      await renderTimelineListPanel();
+    } catch (e) {
+      alert('Could not create timeline: ' + (e.message || e));
+    } finally {
+      createTimelineBtn.disabled = false;
+    }
+  };
+  timelineBtn.onclick = async () => {
+    const isOpen = getComputedStyle(timelinePanel).display !== 'none';
+    if (isOpen) { timelinePanel.style.display = 'none'; stopTimelinePlayback(); return; }
+    myMapsPanel.style.display = 'none';
+    timelinePanel.style.display = 'block';
+    showTimelineList();
+    await renderTimelineListPanel();
+  };
 
   myMapsBtn.onclick = async () => {
     // Check the *computed* style, not the inline one: myMapsPanel starts
@@ -552,10 +806,16 @@ function setupAuthUI() {
     // style first.
     const isOpen = getComputedStyle(myMapsPanel).display !== 'none';
     if (isOpen) { myMapsPanel.style.display = 'none'; return; }
+    timelinePanel.style.display = 'none';
+    stopTimelinePlayback();
     myMapsPanel.style.display = 'block';
     myMapsList.innerHTML = '<li class="empty">Loading…</li>';
     try {
-      renderMyMapsList(await window.SpanAuth.listMyMaps());
+      const [maps, timelines] = await Promise.all([
+        window.SpanAuth.listMyMaps(),
+        window.SpanAuth.listMyTimelines().catch(() => []), // don't block My Maps if this 400s pre-migration
+      ]);
+      renderMyMapsList(maps, timelines);
     } catch (e) {
       myMapsList.innerHTML = '<li class="empty">Could not load maps.</li>';
     }

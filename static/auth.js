@@ -77,7 +77,7 @@
       if (!session) return [];
       const { data, error } = await client
         .from('maps')
-        .select('id,title,updated_at')
+        .select('id,title,updated_at,created_at,timeline_id')
         .eq('owner_id', session.user.id)
         .order('updated_at', { ascending: false });
       if (error) throw error;
@@ -181,6 +181,45 @@
         .select('id,title,updated_at,owner_id')
         .in('owner_id', studentIds)
         .order('updated_at', { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+
+    // --- Beta: map timeline ---
+
+    async listMyTimelines() {
+      const { data, error } = await client
+        .from('map_timelines')
+        .select('id,name,created_at')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+
+    async createTimeline(name) {
+      const { data, error } = await client.from('map_timelines').insert({ name }).select().single();
+      if (error) throw error;
+      return data;
+    },
+
+    async deleteTimeline(id) {
+      const { error } = await client.from('map_timelines').delete().eq('id', id);
+      if (error) throw error;
+    },
+
+    // Maps' own owner-scoped UPDATE policy already covers this - no
+    // timeline-specific RLS needed beyond the map_timelines table itself.
+    async setMapTimeline(mapId, timelineId) {
+      const { error } = await client.from('maps').update({ timeline_id: timelineId }).eq('id', mapId);
+      if (error) throw error;
+    },
+
+    async listTimelineMaps(timelineId) {
+      const { data, error } = await client
+        .from('maps')
+        .select('id,title,data,created_at')
+        .eq('timeline_id', timelineId)
+        .order('created_at', { ascending: true });
       if (error) throw error;
       return data;
     },

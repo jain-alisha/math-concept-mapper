@@ -242,3 +242,30 @@ create policy "teachers update own classes" on public.classes
   for update to authenticated
   using (teacher_id = auth.uid())
   with check (teacher_id = auth.uid());
+
+-- ============================================================
+-- Beta: map timeline - group existing saved maps (e.g. "Oct 4", "Oct 18")
+-- into a named sequence, scrub between them with a slider.
+-- ============================================================
+create table public.map_timelines (
+  id uuid primary key default gen_random_uuid(),
+  owner_id uuid not null references auth.users(id) on delete cascade default auth.uid(),
+  name text not null,
+  created_at timestamptz not null default now()
+);
+create index on public.map_timelines(owner_id);
+alter table public.map_timelines enable row level security;
+
+create policy "select own timelines" on public.map_timelines
+  for select to authenticated using (owner_id = auth.uid());
+create policy "insert own timelines" on public.map_timelines
+  for insert to authenticated with check (owner_id = auth.uid());
+create policy "delete own timelines" on public.map_timelines
+  for delete to authenticated using (owner_id = auth.uid());
+
+-- Nullable, on delete set null: deleting a timeline ungroups its maps
+-- rather than deleting them - the maps are the student's real saved work,
+-- the timeline is just a label grouping some of them together.
+alter table public.maps add column if not exists timeline_id uuid references public.map_timelines(id) on delete set null;
+-- maps already has an owner-scoped, non-column-restricted UPDATE policy
+-- ("update own maps"), so setting timeline_id needs no new maps policy.

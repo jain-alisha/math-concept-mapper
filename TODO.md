@@ -68,9 +68,26 @@ this section instead of deleting it.
   run against production Supabase**, since `listMyClasses()` now selects the
   new column and would otherwise break the real (authenticated) Classes tab
   for every teacher.
-- A way for students to kinda save maps to their dashboard & a feature where
-  they can line for example, October 4th map + October 18th map (and allow
-  them to label their own maps) and play kind of like a movie with a slider.
+- **Code complete, not yet live:** A way for students to kinda save maps to
+  their dashboard & a feature where they can line for example, October 4th
+  map + October 18th map (and allow them to label their own maps) and play
+  kind of like a movie with a slider. Built as map timelines: students
+  already save/label maps via My Maps (unchanged), and can now group any of
+  them into a named timeline via a per-row "Timeline…" select
+  (`static/app.js`) - a "Timeline" topbar button opens a viewer with a
+  slider + play/pause that scrubs between the grouped maps in chronological
+  order, rendered via a new self-contained `renderTimelineFrame()` that
+  deliberately doesn't touch the live canvas's shared node-color/state so
+  scrubbing someone's history can never bleed into their in-progress
+  editing session. New `map_timelines` table + `maps.timeline_id` column in
+  `supabase-schema.sql`; `createTimeline`/`listMyTimelines`/
+  `setMapTimeline`/`listTimelineMaps`/`deleteTimeline` in `static/auth.js`.
+  Verified via Playwright against a fake in-memory `SpanAuth` stub (create
+  timeline, assign maps to it via both the dropdown and its inline "+ New
+  timeline…" prompt path, open the viewer, scrub the slider, play/pause
+  with correct looping) - **do not deploy until the SQL migration below has
+  been run**, since `listMyMaps()` now selects `maps.timeline_id`, which
+  doesn't exist in production yet.
 
 ### Done
 
