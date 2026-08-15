@@ -123,7 +123,7 @@
     async listMyClasses() {
       const { data, error } = await client
         .from('classes')
-        .select('id,name,invite_code,created_at')
+        .select('id,name,invite_code,created_at,taught_topics')
         .order('created_at', { ascending: false });
       if (error) throw error;
       return data;
@@ -131,6 +131,21 @@
 
     async createClass(name) {
       const { data, error } = await client.from('classes').insert({ name }).select().single();
+      if (error) throw error;
+      return data;
+    },
+
+    // Beta: classwide gap analysis factors this in - a "missing prereq" is
+    // a much stronger signal once the teacher has actually marked that
+    // prereq as taught. topics is a flat array of "unit::topic" strings
+    // (see computeMissingPrereqs in settings.js for the reader side).
+    async updateClassTaughtTopics(classId, topics) {
+      const { data, error } = await client
+        .from('classes')
+        .update({ taught_topics: topics })
+        .eq('id', classId)
+        .select()
+        .single();
       if (error) throw error;
       return data;
     },

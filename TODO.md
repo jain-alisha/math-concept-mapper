@@ -51,9 +51,23 @@ becomes a real problem):
 Once an item below is actually shipped, move it down into the "Done" list for
 this section instead of deleting it.
 
-- AI teacher analysis should include classwide gaps, so if a teacher signaled
-  to the AI thing (set this up too, like on their dashboard what they've
-  taught).
+- **Code complete, not yet live:** AI teacher analysis should include
+  classwide gaps, so if a teacher signaled to the AI thing (set this up too,
+  like on their dashboard what they've taught). Built: `classes.taught_topics`
+  jsonb column + `"teachers update own classes"` UPDATE policy (new SQL in
+  `supabase-schema.sql`, teacher-owned classes had no UPDATE policy at all
+  before this), `updateClassTaughtTopics()` in `static/auth.js`, a
+  "What have you taught?" checklist in `static/settings.js`'s roster view
+  (scoped to whichever curriculum units actually appear in the class's
+  student maps, not the whole curriculum tree), and `computeMissingPrereqs()`
+  now takes an optional `taughtSet` so each flagged gap is labeled "you
+  taught this" (real signal) vs. "(not yet taught)" (expected, not a real
+  gap yet), sorting taught-and-missing first. Demoed end-to-end in the
+  sample teacher dashboard (`settings.html?sample=1`, fully interactive with
+  an in-memory fake save) - **do not deploy until the SQL migration has been
+  run against production Supabase**, since `listMyClasses()` now selects the
+  new column and would otherwise break the real (authenticated) Classes tab
+  for every teacher.
 - A way for students to kinda save maps to their dashboard & a feature where
   they can line for example, October 4th map + October 18th map (and allow
   them to label their own maps) and play kind of like a movie with a slider.

@@ -104,11 +104,19 @@ function computeIsolatedConcepts(mapsData) {
 // (same "prerequisite" ordering ai_recommender.py's find_prereqs_successors
 // uses server-side) - flagged if it's absent from the map entirely, or
 // present but not directly linked to this node.
-function computeMissingPrereqs(mapsData, curriculum) {
-  // Nested Map (topic -> prereq -> count), not a delimited string key that
-  // gets split back apart later - topic/prereq labels can themselves
-  // contain spaces ("Ratio word problems"), which would silently mangle a
-  // naive `${topic} ${prereq}`.split(' ') round-trip.
+// taughtSet (optional): a Set of "unit::prereq" strings the teacher has
+// marked as taught (see updateClassTaughtTopics in auth.js). When supplied,
+// each flagged item also gets `taught: true/false` - a missing prereq the
+// teacher has actually covered is a much stronger classwide-gap signal than
+// one that just hasn't come up yet, so callers can sort/filter on it. When
+// omitted (or empty, i.e. the teacher hasn't set anything up), every item
+// is `taught: null` and nothing is filtered - this stays fully backward
+// compatible with call sites that don't know about taught-topics at all.
+function computeMissingPrereqs(mapsData, curriculum, taughtSet) {
+  // Nested Map (topic -> prereq -> {count, unit}), not a delimited string
+  // key that gets split back apart later - topic/prereq labels can
+  // themselves contain spaces ("Ratio word problems"), which would silently
+  // mangle a naive `${topic} ${prereq}`.split(' ') round-trip.
   const counts = new Map();
   for (const m of mapsData) {
     const nodes = (m.data && m.data.n) || [];
@@ -131,18 +139,131 @@ function computeMissingPrereqs(mapsData, curriculum) {
       if (!hasPrereq) {
         if (!counts.has(n.l)) counts.set(n.l, new Map());
         const byPrereq = counts.get(n.l);
-        byPrereq.set(prereq, (byPrereq.get(prereq) || 0) + 1);
+        const rec = byPrereq.get(prereq) || { count: 0, unit: meta.unit };
+        rec.count++;
+        byPrereq.set(prereq, rec);
       }
     }
   }
   const flat = [];
   for (const [topic, byPrereq] of counts) {
-    for (const [prereq, count] of byPrereq) flat.push({ topic, prereq, count });
+    for (const [prereq, rec] of byPrereq) {
+      const taught = taughtSet && taughtSet.size ? taughtSet.has(rec.unit + '::' + prereq) : null;
+      flat.push({ topic, prereq, count: rec.count, unit: rec.unit, taught });
+    }
   }
-  return flat.sort((a, b) => b.count - a.count);
+  // Taught-and-missing first (the strongest signal), then by count.
+  return flat.sort((a, b) => (b.taught === true) - (a.taught === true) || b.count - a.count);
 }
 
-function renderClassInsights(container, roster, mapsData, curriculum) {
+// Beta: classwide gap analysis input - "what has the teacher taught?"
+// Scoped to whichever {grade, unit} pairs actually show up among the
+// class's student maps, rather than the entire curriculum tree, so the
+// checklist stays small and relevant instead of listing hundreds of
+// topics nobody in this class has touched.
+function collectUnitsFromMaps(mapsWithData) {
+  const units = new Map();
+  for (const m of mapsWithData) {
+    const nodesArr = (m.data && m.data.n) || [];
+    for (const n of nodesArr) {
+      const meta = n.m || {};
+      if (meta.grade && meta.unit) units.set(meta.grade + '|' + meta.unit, { grade: meta.grade, unit: meta.unit });
+    }
+  }
+  return [...units.values()];
+}
+
+// saveFn defaults to the real backend call; the sample preview (no account,
+// nothing to persist) passes its own in-memory version instead.
+function renderTaughtTopicsChecklist(container, cls, mapsWithData, curriculum, onSave, saveFn) {
+  saveFn = saveFn || ((classId, topics) => window.SpanAuth.updateClassTaughtTopics(classId, topics));
+  container.innerHTML = '';
+  const header = document.createElement('div');
+  header.style.fontWeight = '700';
+  header.style.fontSize = '0.95em';
+  header.textContent = 'What have you taught? ';
+  const tag = document.createElement('span');
+  tag.className = 'beta-tag';
+  tag.textContent = 'Beta';
+  header.appendChild(tag);
+  container.appendChild(header);
+
+  const hint = document.createElement('p');
+  hint.className = 'hint';
+  hint.textContent = "Mark topics you've already covered - missing-prerequisite gaps below can then tell \"not taught yet\" apart from a real gap.";
+  container.appendChild(hint);
+
+  const units = collectUnitsFromMaps(mapsWithData);
+  if (!units.length) {
+    const p = document.createElement('p');
+    p.className = 'settings-empty';
+    p.textContent = 'No curriculum-tagged concepts in student maps yet.';
+    container.appendChild(p);
+    return;
+  }
+
+  const taught = new Set(cls.taught_topics || []);
+  const checkboxes = [];
+
+  units.forEach(({ grade, unit }) => {
+    const topics = (curriculum[grade] && curriculum[grade][unit]) || [];
+    if (!topics.length) return;
+    const unitDiv = document.createElement('div');
+    unitDiv.className = 'taught-unit';
+    const title = document.createElement('div');
+    title.className = 'taught-unit-title';
+    title.textContent = `${unit} (${grade})`;
+    unitDiv.appendChild(title);
+    const list = document.createElement('ul');
+    list.className = 'taught-topic-list';
+    topics.forEach(topic => {
+      const key = unit + '::' + topic;
+      const li = document.createElement('li');
+      const label = document.createElement('label');
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.checked = taught.has(key);
+      cb.dataset.key = key;
+      checkboxes.push(cb);
+      label.appendChild(cb);
+      label.appendChild(document.createTextNode(topic));
+      li.appendChild(label);
+      list.appendChild(li);
+    });
+    unitDiv.appendChild(list);
+    container.appendChild(unitDiv);
+  });
+
+  const saveRow = document.createElement('div');
+  const saveBtn = document.createElement('button');
+  saveBtn.className = 'taught-save-btn';
+  saveBtn.textContent = 'Save';
+  const savedNote = document.createElement('span');
+  savedNote.className = 'taught-saved-note';
+  savedNote.style.display = 'none';
+  savedNote.textContent = 'Saved!';
+  saveRow.appendChild(saveBtn);
+  saveRow.appendChild(savedNote);
+  container.appendChild(saveRow);
+
+  saveBtn.onclick = async () => {
+    const selected = checkboxes.filter(cb => cb.checked).map(cb => cb.dataset.key);
+    saveBtn.disabled = true;
+    try {
+      await saveFn(cls.id, selected);
+      cls.taught_topics = selected;
+      savedNote.style.display = '';
+      setTimeout(() => { savedNote.style.display = 'none'; }, 2000);
+      if (typeof onSave === 'function') onSave(new Set(selected));
+    } catch (e) {
+      alert('Could not save: ' + (e.message || e));
+    } finally {
+      saveBtn.disabled = false;
+    }
+  };
+}
+
+function renderClassInsights(container, roster, mapsData, curriculum, taughtSet) {
   container.innerHTML = '';
   if (!mapsData.length) {
     container.innerHTML = '<p class="settings-empty">No student maps yet - insights will appear once students save maps.</p>';
@@ -151,7 +272,7 @@ function renderClassInsights(container, roster, mapsData, curriculum) {
 
   const freq = computeConceptFrequency(mapsData).slice(0, 8);
   const isolated = computeIsolatedConcepts(mapsData).slice(0, 6);
-  const missing = computeMissingPrereqs(mapsData, curriculum || {}).slice(0, 6);
+  const missing = computeMissingPrereqs(mapsData, curriculum || {}, taughtSet).slice(0, 6);
   const studentCount = new Set(roster.map(r => r.student_id)).size;
 
   const section = document.createElement('div');
@@ -210,13 +331,30 @@ function renderClassInsights(container, roster, mapsData, curriculum) {
     return wrap;
   }, 'No isolated concepts spotted - nice.');
 
-  addGroup('Missing prerequisite connections', missing, (item) => {
+  const missingTitle = taughtSet && taughtSet.size
+    ? 'Missing prerequisite connections (classwide gaps)'
+    : 'Missing prerequisite connections';
+  addGroup(missingTitle, missing, (item) => {
     const span = document.createElement('span');
     span.innerHTML = '';
     const topicSpan = document.createElement('strong');
     topicSpan.textContent = item.topic;
     span.appendChild(topicSpan);
     span.appendChild(document.createTextNode(` → missing "${item.prereq}"`));
+    if (item.taught === true) {
+      const tag = document.createElement('span');
+      tag.className = 'beta-tag';
+      tag.style.color = '#a6790a'; tag.style.background = '#fff8e8'; tag.style.borderColor = '#f0d896';
+      tag.textContent = 'you taught this';
+      span.appendChild(document.createTextNode(' '));
+      span.appendChild(tag);
+    } else if (item.taught === false) {
+      const tag = document.createElement('span');
+      tag.className = 'settings-empty';
+      tag.style.fontSize = '0.82em';
+      tag.textContent = ' (not yet taught)';
+      span.appendChild(tag);
+    }
     const badge = document.createElement('span');
     badge.className = 'insights-badge insights-badge-warn';
     badge.textContent = `${item.count} student${item.count === 1 ? '' : 's'}`;
@@ -348,7 +486,7 @@ function setupAuthAndClasses() {
         document.querySelectorAll('#teacherClassList .class-card').forEach(c => c.classList.remove('expanded'));
         if (wasExpanded) return;
         card.classList.add('expanded');
-        await renderRoster(cls.id, body);
+        await renderRoster(cls, body);
       };
 
       card.appendChild(head);
@@ -357,7 +495,8 @@ function setupAuthAndClasses() {
     });
   }
 
-  async function renderRoster(classId, body) {
+  async function renderRoster(cls, body) {
+    const classId = cls.id;
     body.innerHTML = '<p class="settings-empty">Loading roster…</p>';
     let roster, maps, mapsWithData;
     try {
@@ -410,10 +549,20 @@ function setupAuthAndClasses() {
     });
     body.appendChild(ul);
 
+    const taughtWrap = document.createElement('div');
+    taughtWrap.className = 'taught-wrap';
+    body.appendChild(taughtWrap);
+
     const insightsWrap = document.createElement('div');
     insightsWrap.className = 'insights-wrap';
     body.appendChild(insightsWrap);
-    renderClassInsights(insightsWrap, roster, mapsWithData, curriculumData);
+
+    let taughtSet = new Set(cls.taught_topics || []);
+    renderClassInsights(insightsWrap, roster, mapsWithData, curriculumData, taughtSet);
+    renderTaughtTopicsChecklist(taughtWrap, cls, mapsWithData, curriculumData, (newSet) => {
+      taughtSet = newSet;
+      renderClassInsights(insightsWrap, roster, mapsWithData, curriculumData, taughtSet);
+    });
   }
 
   document.getElementById('createClassBtn').onclick = async () => {
@@ -570,7 +719,13 @@ function buildSampleClassData() {
     { student_id: 'sample-sam-id', student_display_name: 'Sam T.', student_email: 'sam@example.com' },
   ];
   const maps = [mayaMap, jordanMap, priyaMap, samMap];
-  return { roster, maps };
+  // Marks "Ratio word problems" as taught (the sample teacher's own signal),
+  // so the classwide-gaps demo can show both states at once: Jordan's
+  // "Unit rate definition -> missing Ratio word problems" gets flagged as a
+  // real gap ("you taught this"), while the other missing-prereq items
+  // below stay labeled "(not yet taught)".
+  const taughtTopics = [R_P + '::Ratio word problems'];
+  return { roster, maps, taughtTopics };
 }
 
 // base64url-encodes map data the same way app.js's share-link mechanism
@@ -596,7 +751,8 @@ function renderSamplePreview() {
   teacherView.querySelector('.create-class-row').style.display = 'none';
   document.getElementById('sampleBanner').style.display = '';
 
-  const { roster, maps } = buildSampleClassData();
+  const { roster, maps, taughtTopics } = buildSampleClassData();
+  const sampleClass = { id: 'sample-class', taught_topics: taughtTopics };
 
   const listEl = document.getElementById('teacherClassList');
   listEl.innerHTML = '';
@@ -640,10 +796,22 @@ function renderSamplePreview() {
   });
   body.appendChild(ul);
 
+  const taughtWrap = document.createElement('div');
+  taughtWrap.className = 'taught-wrap';
+  body.appendChild(taughtWrap);
+
   const insightsWrap = document.createElement('div');
   insightsWrap.className = 'insights-wrap';
   body.appendChild(insightsWrap);
-  renderClassInsights(insightsWrap, roster, maps, curriculumData);
+
+  let taughtSet = new Set(sampleClass.taught_topics);
+  renderClassInsights(insightsWrap, roster, maps, curriculumData, taughtSet);
+  // Fake save: this is a no-account preview, so just update local state
+  // instead of calling the (nonexistent) backend row for 'sample-class'.
+  renderTaughtTopicsChecklist(taughtWrap, sampleClass, maps, curriculumData, (newSet) => {
+    taughtSet = newSet;
+    renderClassInsights(insightsWrap, roster, maps, curriculumData, taughtSet);
+  }, async () => {});
 
   card.appendChild(head);
   card.appendChild(body);

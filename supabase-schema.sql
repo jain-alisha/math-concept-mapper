@@ -224,3 +224,21 @@ create policy "teachers view their students maps" on public.maps
       where c.teacher_id = auth.uid()
     )
   );
+
+-- ============================================================
+-- Beta: classwide gap analysis - "what has the teacher taught?"
+-- ============================================================
+-- Flat array of "unit::topic" strings the teacher has marked as taught, so
+-- Class Insights can distinguish "prereq genuinely missing" from "prereq
+-- just hasn't been taught yet" (see computeMissingPrereqs in
+-- static/settings.js). No column-level restriction - same pattern as the
+-- maps.update policy below, which also allows updating a full row rather
+-- than restricting to specific columns.
+alter table public.classes add column if not exists taught_topics jsonb not null default '[]'::jsonb;
+
+-- classes had no UPDATE policy at all before this - teachers could create
+-- and read classes, but not modify them.
+create policy "teachers update own classes" on public.classes
+  for update to authenticated
+  using (teacher_id = auth.uid())
+  with check (teacher_id = auth.uid());
