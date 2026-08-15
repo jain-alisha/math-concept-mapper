@@ -180,6 +180,21 @@
     }
     .use-case-card .support { font-size: 0.95em; line-height: 1.55; color: var(--text-secondary); margin: 0; }
 
+    /* ---------- Beta features ---------- */
+    .beta-pill {
+      display: inline-block; font-size: 0.62em; font-weight: 800; letter-spacing: 0.05em;
+      text-transform: uppercase; color: var(--coral-tx); background: var(--coral-bg);
+      border: 1px solid var(--coral-bd); padding: 0.2em 0.6em; border-radius: 999px;
+      vertical-align: middle; margin-left: 0.6em;
+    }
+    .beta-card { position: relative; }
+    .beta-card .beta-pill { position: absolute; top: 1.4em; right: 1.4em; margin-left: 0; }
+    .beta-card h3 { padding-right: 4.5em; }
+    .beta-card a.beta-link {
+      display: inline-block; margin-top: 0.2em; font-size: 0.88em; font-weight: 600;
+      color: var(--brand); text-decoration: none;
+    }
+
     .footer-cta {
       text-align: center; padding: 4em 1.5em 5em; background: var(--hero-bg); border-top: 1px solid var(--border);
     }
@@ -404,6 +419,60 @@
           <text x="233" y="32" text-anchor="middle" font-size="8.5" fill="var(--text-muted)" font-family="-apple-system,Segoe UI,Arial,sans-serif">Proportions</text>
         </svg>
       </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Coming soon<span class="beta-pill">Beta</span></h2>
+    <p class="section-sub">In active development — a preview of what's next.</p>
+    <div class="features">
+
+      <div class="feature-card beta-card">
+        <div class="icon-badge">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/></svg>
+        </div>
+        <span class="beta-pill">Beta</span>
+        <h3>Instant AI summary</h3>
+        <p>A short, plain-language read on your map — "strong on ratios, thin on slope concepts."</p>
+      </div>
+
+      <div class="feature-card beta-card">
+        <div class="icon-badge">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="18" cy="18" r="3"/><line x1="8.5" y1="8.5" x2="15.5" y2="15.5" stroke-dasharray="2 3"/></svg>
+        </div>
+        <span class="beta-pill">Beta</span>
+        <h3>Isolated concept highlighting</h3>
+        <p>Concepts you've added but never connected are visually flagged against the rest of the map.</p>
+      </div>
+
+      <div class="feature-card beta-card">
+        <div class="icon-badge">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="7" r="4"/><path d="M2 21v-2a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v2"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </div>
+        <span class="beta-pill">Beta</span>
+        <h3>Classwide gap analysis</h3>
+        <p>Teachers tell the AI what they've already taught, and class-wide analysis accounts for it.</p>
+      </div>
+
+      <div class="feature-card beta-card">
+        <div class="icon-badge">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="4" x2="8" y2="10"/></svg>
+        </div>
+        <span class="beta-pill">Beta</span>
+        <h3>Sample teacher dashboard</h3>
+        <p>A fully populated mock class with mock student maps — explore before you ever create one.</p>
+        <a class="beta-link" href="settings.html?sample=1">Preview it →</a>
+      </div>
+
+      <div class="feature-card beta-card">
+        <div class="icon-badge">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="4" rx="1"/><circle cx="9" cy="13" r="3.2" fill="currentColor" stroke="none"/></svg>
+        </div>
+        <span class="beta-pill">Beta</span>
+        <h3>Map timeline</h3>
+        <p>Save maps to your dashboard, label them, and scrub between snapshots — like October 4th vs. October 18th — with a slider.</p>
+      </div>
+
     </div>
   </section>
 

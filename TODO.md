@@ -2,13 +2,23 @@
 
 ## Deployment
 
-- **Move AI backend off Render to Oracle Cloud Always Free tier.** Render's free
-  web service sleeps after 15 min idle (cold start on next request) and its
-  512MB RAM is borderline for `sentence-transformers`/`torch`. Oracle's Always
-  Free tier gives a real always-on VM (4 OCPU / 24GB RAM, free forever) with no
-  sleep policy — but it's actual ops work (SSH in, set up systemd or Docker,
-  reverse proxy + TLS) instead of Render's git-push deploy. Do this once the
-  Render cold start becomes annoying enough to justify the setup time.
+Current setup is Render (API) + Vercel (static frontend) + Supabase
+(auth/db) — this is the supported, working path. Keep new deployment work
+scoped to making this combination solid rather than adding a second target.
+
+<!--
+BACKBURNER (not active — revisit only if Render's free-tier cold start
+becomes a real problem):
+
+- **Move AI backend off Render to Oracle Cloud Always Free tier.** Render's
+  free web service sleeps after 15 min idle (cold start on next request) and
+  its 512MB RAM is borderline for `sentence-transformers`/`torch`. Oracle's
+  Always Free tier gives a real always-on VM (4 OCPU / 24GB RAM, free
+  forever) with no sleep policy — but it's actual ops work (SSH in, set up
+  systemd or Docker, reverse proxy + TLS) instead of Render's git-push
+  deploy. An SSH keypair for this (`~/.ssh/oracle_span_vm`) was generated
+  ahead of time but no VM/infra was ever provisioned — nothing to tear down.
+-->
 
 ## Student & Teacher Portals
 
@@ -35,6 +45,28 @@
 - Removing a student from a class / a student leaving a class (currently
   membership is permanent once joined — fine for a demo, not for a real term).
 - Class-level views beyond a flat roster (e.g. grouping by assignment).
+
+## Beta Features (planned, labeled "Beta" on the homepage)
+
+Once an item below is actually shipped, move it down into the "Done" list for
+this section instead of deleting it.
+
+- Short AI summary, e.g. "your map is strong on ratios, thin on slope
+  concepts."
+- Highlight isolated nodes w/ no/few connections w/ like graph stuff compared
+  to the other nodes.
+- AI teacher analysis should include classwide gaps, so if a teacher signaled
+  to the AI thing (set this up too, like on their dashboard what they've
+  taught).
+- Add a sample teacher dashboard with mock data + mock student maps already
+  populated.
+- A way for students to kinda save maps to their dashboard & a feature where
+  they can line for example, October 4th map + October 18th map (and allow
+  them to label their own maps) and play kind of like a movie with a slider.
+
+### Done
+
+(nothing yet)
 
 ## Teacher-Side AI Analysis
 
