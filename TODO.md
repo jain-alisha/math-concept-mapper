@@ -54,8 +54,6 @@ this section instead of deleting it.
 - AI teacher analysis should include classwide gaps, so if a teacher signaled
   to the AI thing (set this up too, like on their dashboard what they've
   taught).
-- Add a sample teacher dashboard with mock data + mock student maps already
-  populated.
 - A way for students to kinda save maps to their dashboard & a feature where
   they can line for example, October 4th map + October 18th map (and allow
   them to label their own maps) and play kind of like a movie with a slider.
@@ -74,6 +72,14 @@ this section instead of deleting it.
   groups the current map's nodes by curriculum unit and compares each
   unit's connected-vs-isolated ratio to produce a one-line "Strong on X,
   thin/lighter on Y" read, regenerated fresh every time the panel opens.
+- Add a sample teacher dashboard with mock data + mock student maps already
+  populated. Was already mostly built (`settings.html?sample=1`,
+  `buildSampleClassData()` in `static/settings.js`) but the sample student
+  maps were actually broken - every node had hardcoded `x:0, y:0`, so
+  opening one collapsed all its nodes onto a single point. Fixed by giving
+  each of the 4 sample students' maps real, distinct node positions;
+  verified via Playwright that all 4 now open with unique, non-overlapping
+  coordinates.
 
 ## Teacher-Side AI Analysis
 

@@ -513,10 +513,17 @@ function buildSampleClassData() {
   const G6 = '6th Grade Math', R_P = 'Ratios & Proportional Relationships';
   const meta = { grade: G6, unit: R_P };
   let nid = 1;
-  const node = (l) => ({ i: nid++, l, x: 0, y: 0, m: meta });
+  // x/y matter here - these maps get opened directly in the playground (via
+  // ?share=), not just summarized, so every node needs a real position or
+  // they'd all stack on top of each other at the origin.
+  const node = (l, x, y) => ({ i: nid++, l, x, y, m: meta });
 
   // Maya: fully connected chain, no gaps.
-  const mayaNodes = [node('Ratio notation (a:b)'), node('Ratio vocabulary'), node('Equivalent ratios – tables')];
+  const mayaNodes = [
+    node('Ratio notation (a:b)', 60, 140),
+    node('Ratio vocabulary', 320, 80),
+    node('Equivalent ratios – tables', 580, 160),
+  ];
   const mayaMap = {
     id: 'sample-maya', title: 'Ratios Unit Map', owner_id: 'sample-maya-id',
     data: {
@@ -529,21 +536,28 @@ function buildSampleClassData() {
   };
 
   // Jordan: has the prereq present but never links it, plus an isolated node.
-  const jordanNodes = [node('Unit rate definition'), node('Unit rate calc Ints/decimals'), node('Percent of quantity')];
+  const jordanNodes = [
+    node('Unit rate definition', 60, 100),
+    node('Unit rate calc Ints/decimals', 340, 220),
+    node('Percent of quantity', 120, 360),
+  ];
   const jordanMap = {
     id: 'sample-jordan', title: 'Ratios + Percents', owner_id: 'sample-jordan-id',
     data: { n: jordanNodes, e: [] },
   };
 
   // Priya: prereq missing entirely, plus an isolated node.
-  const priyaNodes = [node('Ratio word problems'), node('Ratio notation (a:b)')];
+  const priyaNodes = [
+    node('Ratio word problems', 80, 150),
+    node('Ratio notation (a:b)', 380, 280),
+  ];
   const priyaMap = {
     id: 'sample-priya', title: 'Word Problems Practice', owner_id: 'sample-priya-id',
     data: { n: priyaNodes, e: [] },
   };
 
   // Sam: minimal, single isolated node (also boosts frequency further).
-  const samNodes = [node('Ratio notation (a:b)')];
+  const samNodes = [node('Ratio notation (a:b)', 200, 180)];
   const samMap = {
     id: 'sample-sam', title: 'Getting Started', owner_id: 'sample-sam-id',
     data: { n: samNodes, e: [] },
