@@ -53,8 +53,6 @@ this section instead of deleting it.
 
 - Short AI summary, e.g. "your map is strong on ratios, thin on slope
   concepts."
-- Highlight isolated nodes w/ no/few connections w/ like graph stuff compared
-  to the other nodes.
 - AI teacher analysis should include classwide gaps, so if a teacher signaled
   to the AI thing (set this up too, like on their dashboard what they've
   taught).
@@ -66,7 +64,12 @@ this section instead of deleting it.
 
 ### Done
 
-(nothing yet)
+- Highlight isolated nodes w/ no/few connections w/ like graph stuff compared
+  to the other nodes. Shipped in `static/app.js`/`playground.html`: nodes
+  with zero links get a dashed border + a small corner badge, computed live
+  off the current `links` array on every `renderCanvas()`, plus a
+  bottom-left "Beta" legend that only shows when at least one isolated node
+  is on the canvas.
 
 ## Teacher-Side AI Analysis
 

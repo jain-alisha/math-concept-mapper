@@ -139,6 +139,17 @@
       font-size: 0.88em; font-weight: 600; padding: 0.55em 1.1em; border-radius: 9px;
       box-shadow: var(--shadow-sm); z-index: 900;
     }
+    #isolatedLegend {
+      display: none; position: absolute; bottom: 14px; left: 14px; z-index: 900;
+      align-items: center; gap: 0.6em; background: var(--surface); border: 1px solid #f5b8ab;
+      color: #c2503a; font-size: 0.82em; font-weight: 600; padding: 0.5em 0.9em 0.5em 0.7em;
+      border-radius: 9px; box-shadow: var(--shadow-sm);
+    }
+    #isolatedLegend .beta-tag {
+      font-size: 0.75em; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase;
+      color: #c2503a; background: #fff0ee; border: 1px solid #f5b8ab; padding: 0.15em 0.5em;
+      border-radius: 999px;
+    }
 
     #container { display: flex; height: calc(100vh - 52px); }
     #sidebar {
@@ -249,6 +260,11 @@
       stroke-width: 2.6px;
       filter: drop-shadow(0 0 10px rgba(25,118,210,0.35));
     }
+    .node.isolated {
+      stroke-dasharray: 5 4;
+    }
+    .isolated-badge circle { fill: #fff0ee; stroke: #f5b8ab; stroke-width: 1.4px; }
+    .isolated-badge text { fill: #c2503a; font-weight: 700; pointer-events: none; }
     .node-label {
       pointer-events: none;
       font-size: 1em;
@@ -457,6 +473,7 @@
   </div>
   <div id="canvasArea">
     <div id="readonlyBanner" style="display:none;"></div>
+    <div id="isolatedLegend"><span class="beta-tag">Beta</span> Dashed nodes aren't connected to anything yet</div>
     <svg id="mapCanvas"></svg>
     <div id="aiPanel" style="display:none;">
       <header>AI Recommendations</header>

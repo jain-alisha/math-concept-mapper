@@ -895,11 +895,23 @@ function renderCanvas() {
   }
 
   // --- Draw nodes, drag/move/link logic ---
+  // Beta: isolated-concept highlighting - nodes with no links stand out
+  // (dashed border + small badge) against the rest of the map.
+  const degree = new Map();
+  for (let node of nodes) degree.set(node.id, 0);
+  for (let link of links) {
+    degree.set(link.source, (degree.get(link.source) || 0) + 1);
+    degree.set(link.target, (degree.get(link.target) || 0) + 1);
+  }
+  let anyIsolated = false;
   for (let node of nodes) {
     let w = getNodeWidth(node.label);
     let g = document.createElementNS('http://www.w3.org/2000/svg','g');
     g.setAttribute('transform', `translate(${node.x},${node.y})`);
     g.setAttribute('data-node-id', node.id);
+
+    const isIsolated = (degree.get(node.id) || 0) === 0;
+    if (isIsolated) anyIsolated = true;
 
     let rect = document.createElementNS('http://www.w3.org/2000/svg','rect');
     rect.setAttribute('width', w);
@@ -909,6 +921,7 @@ function renderCanvas() {
     let extraClass = '';
     if (node === selectedNode) extraClass += ' selected';
     if (linkHoverTarget === node) extraClass += ' link-hover';
+    if (isIsolated) extraClass += ' isolated';
     rect.setAttribute('class', 'node'+extraClass);
     const color = nodeColorFor(node);
     rect.setAttribute('fill', color.fill);
@@ -973,6 +986,26 @@ function renderCanvas() {
     g.appendChild(rect);
     g.appendChild(textEl);
 
+    if (isIsolated) {
+      const badge = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      badge.setAttribute('class', 'isolated-badge');
+      badge.setAttribute('transform', `translate(${w},0)`);
+      const bCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      bCircle.setAttribute('r', '9');
+      const bText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      bText.textContent = '!';
+      bText.setAttribute('font-size', '11');
+      bText.setAttribute('text-anchor', 'middle');
+      bText.setAttribute('dominant-baseline', 'middle');
+      bText.setAttribute('y', '0.5');
+      badge.appendChild(bCircle);
+      badge.appendChild(bText);
+      const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+      title.textContent = 'Not connected to anything yet';
+      badge.appendChild(title);
+      g.appendChild(badge);
+    }
+
     // --- If link drag, highlight drop target for valid (other) nodes ---
     if (linkDrag && linkDrag.sourceNode && linkDrag.sourceNode !== node) {
       let dropper = document.createElementNS('http://www.w3.org/2000/svg','rect');
@@ -1004,6 +1037,9 @@ function renderCanvas() {
     }
     svg.appendChild(g);
   }
+
+  const isolatedLegend = document.getElementById('isolatedLegend');
+  if (isolatedLegend) isolatedLegend.style.display = anyIsolated ? 'flex' : 'none';
 
   // --- Note chips: nudge clear of nodes and each other, then draw on top ---
   if (noteChips.length) {
