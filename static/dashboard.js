@@ -20,23 +20,28 @@ document.addEventListener('DOMContentLoaded', async () => {
 // Pure analysis functions over {n,e} map data.
 // ============================================================
 
-// How many distinct students included each concept at least once.
+// How many distinct students included each concept at least once. Tracks
+// *which* students (by owner_id, from mapsData's owner_id field) so the UI
+// can expand "N students" into names linking to their maps.
 function computeConceptFrequency(mapsData) {
-  const counts = new Map();
+  const byLabel = new Map(); // label -> Set<owner_id>
   for (const m of mapsData) {
     const seen = new Set();
     for (const n of (m.data && m.data.n) || []) {
       if (seen.has(n.l)) continue;
       seen.add(n.l);
-      counts.set(n.l, (counts.get(n.l) || 0) + 1);
+      if (!byLabel.has(n.l)) byLabel.set(n.l, new Set());
+      byLabel.get(n.l).add(m.owner_id);
     }
   }
-  return [...counts.entries()].sort((a, b) => b[1] - a[1]);
+  return [...byLabel.entries()]
+    .map(([label, studentIds]) => ({ label, count: studentIds.size, studentIds }))
+    .sort((a, b) => b.count - a.count);
 }
 
 // Concepts a student added but never connected to anything (degree 0).
 function computeIsolatedConcepts(mapsData) {
-  const counts = new Map();
+  const byLabel = new Map();
   for (const m of mapsData) {
     const degree = new Map();
     for (const n of (m.data && m.data.n) || []) degree.set(n.i, 0);
@@ -45,10 +50,15 @@ function computeIsolatedConcepts(mapsData) {
       degree.set(e.t, (degree.get(e.t) || 0) + 1);
     }
     for (const n of (m.data && m.data.n) || []) {
-      if ((degree.get(n.i) || 0) === 0) counts.set(n.l, (counts.get(n.l) || 0) + 1);
+      if ((degree.get(n.i) || 0) === 0) {
+        if (!byLabel.has(n.l)) byLabel.set(n.l, new Set());
+        byLabel.get(n.l).add(m.owner_id);
+      }
     }
   }
-  return [...counts.entries()].sort((a, b) => b[1] - a[1]);
+  return [...byLabel.entries()]
+    .map(([label, studentIds]) => ({ label, count: studentIds.size, studentIds }))
+    .sort((a, b) => b.count - a.count);
 }
 
 // Total connectedness of each concept, summed across every student's map -
@@ -115,7 +125,7 @@ function computeGradeUnitCoverage(mapsData) {
     }
   }
   return [...byUnit.values()]
-    .map(r => ({ grade: r.grade, unit: r.unit, students: r.studentIds.size }))
+    .map(r => ({ grade: r.grade, unit: r.unit, students: r.studentIds.size, studentIds: r.studentIds }))
     .sort((a, b) => b.students - a.students);
 }
 
@@ -176,10 +186,10 @@ function computeClassSummary(mapsData) {
 // can sort/filter on it. When omitted (or empty), every item is
 // `taught: null` and nothing is filtered.
 function computeMissingPrereqs(mapsData, curriculum, taughtSet) {
-  // Nested Map (topic -> prereq -> {count, unit, grade}), not a delimited
-  // string key that gets split back apart later - topic/prereq labels can
-  // themselves contain spaces ("Ratio word problems"), which would silently
-  // mangle a naive `${topic} ${prereq}`.split(' ') round-trip.
+  // Nested Map (topic -> prereq -> {studentIds, unit, grade}), not a
+  // delimited string key that gets split back apart later - topic/prereq
+  // labels can themselves contain spaces ("Ratio word problems"), which
+  // would silently mangle a naive `${topic} ${prereq}`.split(' ') round-trip.
   const counts = new Map();
   for (const m of mapsData) {
     const nodes = (m.data && m.data.n) || [];
@@ -202,8 +212,8 @@ function computeMissingPrereqs(mapsData, curriculum, taughtSet) {
       if (!hasPrereq) {
         if (!counts.has(n.l)) counts.set(n.l, new Map());
         const byPrereq = counts.get(n.l);
-        const rec = byPrereq.get(prereq) || { count: 0, unit: meta.unit, grade: meta.grade };
-        rec.count++;
+        const rec = byPrereq.get(prereq) || { studentIds: new Set(), unit: meta.unit, grade: meta.grade };
+        rec.studentIds.add(m.owner_id);
         byPrereq.set(prereq, rec);
       }
     }
@@ -212,7 +222,7 @@ function computeMissingPrereqs(mapsData, curriculum, taughtSet) {
   for (const [topic, byPrereq] of counts) {
     for (const [prereq, rec] of byPrereq) {
       const taught = taughtSet && taughtSet.size ? taughtSet.has(rec.grade + '::' + rec.unit + '::' + prereq) : null;
-      flat.push({ topic, prereq, count: rec.count, unit: rec.unit, grade: rec.grade, taught });
+      flat.push({ topic, prereq, count: rec.studentIds.size, studentIds: rec.studentIds, unit: rec.unit, grade: rec.grade, taught });
     }
   }
   // Taught-and-missing first (the strongest signal), then by count.
@@ -251,15 +261,11 @@ function renderMapThumbnail(svg, mapData) {
   const edgesArr = (mapData && mapData.e) || [];
   if (!nodesArr.length) { svg.setAttribute('viewBox', '0 0 300 100'); return; }
 
-  const palette = ['#eaf2ff', '#f1edff', '#eafbf1', '#fff8e8', '#fdeef8', '#e8f7f7'];
-  const strokes = ['#b9d4f8', '#cabdf7', '#a9e6c3', '#f0d896', '#f2b8e0', '#a8dede'];
-  const localColors = new Map();
-  function colorFor(n) {
-    const key = (n.m && (n.m.unit || n.m.grade)) || n.l;
-    if (!localColors.has(key)) localColors.set(key, localColors.size % palette.length);
-    const i = localColors.get(key);
-    return { fill: palette[i], stroke: strokes[i] };
-  }
+  // One consistent color, not the per-unit rainbow the main canvas uses -
+  // at thumbnail size you can't actually read six pastel hues as distinct
+  // units, so all it did was look noisy. A single solid accent reads as a
+  // clean "shape at a glance" instead.
+  const NODE_FILL = '#1976d2', NODE_STROKE = '#14588f';
   function widthFor(label) { return Math.max(50, Math.min(label.length * 6.5 + 16, 170)); }
 
   const byId = new Map(nodesArr.map(n => [n.i, n]));
@@ -270,7 +276,7 @@ function renderMapThumbnail(svg, mapData) {
     const x2 = tgt.x + widthFor(tgt.l) / 2, y2 = tgt.y + NODE_H / 2;
     const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
     path.setAttribute('d', `M${x1},${y1} L${x2},${y2}`);
-    path.setAttribute('stroke', '#9aa5b5');
+    path.setAttribute('stroke', '#aab4c2');
     path.setAttribute('stroke-width', '2');
     path.setAttribute('fill', 'none');
     svg.appendChild(path);
@@ -278,15 +284,15 @@ function renderMapThumbnail(svg, mapData) {
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
   for (const n of nodesArr) {
     const w = widthFor(n.l);
-    const color = colorFor(n);
     const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
     g.setAttribute('transform', `translate(${n.x},${n.y})`);
     const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
     rect.setAttribute('width', w);
     rect.setAttribute('height', NODE_H);
     rect.setAttribute('rx', NODE_R);
-    rect.setAttribute('fill', color.fill);
-    rect.setAttribute('stroke', color.stroke);
+    rect.setAttribute('fill', NODE_FILL);
+    rect.setAttribute('stroke', NODE_STROKE);
+    rect.setAttribute('fill-opacity', '0.85');
     g.appendChild(rect);
     svg.appendChild(g);
     minX = Math.min(minX, n.x); minY = Math.min(minY, n.y);
@@ -299,12 +305,19 @@ function renderMapThumbnail(svg, mapData) {
 // hrefFor(map) builds the click-through link - real classes link to the
 // read-only playground view, the sample preview links to a ?share= of the
 // (unsaved, fake) map data instead.
+// mapsWithData should already be ordered most-recent-first (listClassMapsWithData
+// orders by updated_at desc) so the first hit per owner_id is their latest map.
+function mostRecentMapByStudent(mapsWithData) {
+  const byStudent = new Map();
+  for (const m of mapsWithData) {
+    if (!byStudent.has(m.owner_id)) byStudent.set(m.owner_id, m);
+  }
+  return byStudent;
+}
+
 function renderStudentMapCards(container, roster, mapsWithData, hrefFor) {
   container.innerHTML = '';
-  const mostRecentByStudent = new Map();
-  for (const m of mapsWithData) {
-    if (!mostRecentByStudent.has(m.owner_id)) mostRecentByStudent.set(m.owner_id, m);
-  }
+  const mostRecentByStudent = mostRecentMapByStudent(mapsWithData);
   const grid = document.createElement('div');
   grid.className = 'map-cards-grid';
   roster.forEach(student => {
@@ -431,6 +444,9 @@ function insightCard(titleHtml) {
   return card;
 }
 
+// renderItem(item, li) populates the <li> itself, rather than returning a
+// node - lets a single item add both its row and (for expandable rows) a
+// hidden student sublist as siblings inside the same <li>.
 function insightList(items, renderItem, emptyText) {
   if (!items.length) {
     const p = document.createElement('p');
@@ -442,7 +458,7 @@ function insightList(items, renderItem, emptyText) {
   ul.className = 'insights-list';
   items.forEach(item => {
     const li = document.createElement('li');
-    li.appendChild(renderItem(item));
+    renderItem(item, li);
     ul.appendChild(li);
   });
   return ul;
@@ -458,11 +474,55 @@ function badgeRow(labelNode, badgeText, badgeClass) {
   return wrap;
 }
 
+// Builds the "N students" row for `li` as a click-to-expand toggle -
+// clicking reveals which students (by name, linking to their most recent
+// map) sit behind the count. Falls back to a plain, non-clickable row when
+// there's no student data to expand into (e.g. Hub concepts, which counts
+// connections rather than students).
+function addExpandableRow(li, labelNode, badgeText, badgeClass, studentIds, roster, mostRecentByStudent, hrefFor) {
+  const row = badgeRow(labelNode, badgeText, badgeClass);
+  li.appendChild(row);
+  if (!studentIds || !studentIds.size || !roster) return;
+
+  row.classList.add('insights-row-clickable');
+  const chevron = document.createElement('span');
+  chevron.className = 'insights-chevron';
+  chevron.textContent = '▸';
+  row.insertBefore(chevron, row.firstChild);
+
+  const sub = document.createElement('ul');
+  sub.className = 'insights-substudents';
+  sub.style.display = 'none';
+  [...studentIds].forEach(sid => {
+    const student = roster.find(r => r.student_id === sid);
+    const name = student ? (student.student_display_name || student.student_email || sid) : sid;
+    const subLi = document.createElement('li');
+    const m = mostRecentByStudent && mostRecentByStudent.get(sid);
+    if (m && hrefFor) {
+      const a = document.createElement('a');
+      a.href = hrefFor(m);
+      a.target = '_blank';
+      a.textContent = name;
+      subLi.appendChild(a);
+    } else {
+      subLi.textContent = name + (m ? '' : ' (no saved map)');
+    }
+    sub.appendChild(subLi);
+  });
+  li.appendChild(sub);
+
+  row.onclick = () => {
+    const isOpen = sub.style.display !== 'none';
+    sub.style.display = isOpen ? 'none' : 'block';
+    chevron.textContent = isOpen ? '▸' : '▾';
+  };
+}
+
 // Renders every insight card into `grid` (an .insights-grid element) and
 // the AI summary banner into `summaryEl`. Six insight types - three
 // original (most-explored, isolated, missing-prereq/classwide-gaps) plus
 // three new ones (hub concepts, student progress, curriculum coverage).
-function renderClassInsights(summaryEl, grid, roster, mapsData, curriculum, taughtSet) {
+function renderClassInsights(summaryEl, grid, roster, mapsData, curriculum, taughtSet, hrefFor) {
   summaryEl.innerHTML = '';
   grid.innerHTML = '';
   if (!mapsData.length) {
@@ -480,6 +540,10 @@ function renderClassInsights(summaryEl, grid, roster, mapsData, curriculum, taug
   banner.querySelector('p').append(computeClassSummary(mapsData));
   summaryEl.appendChild(banner);
 
+  const mostRecentByStudent = mostRecentMapByStudent(mapsData);
+  const expandRow = (li, labelNode, badgeText, badgeClass, studentIds) =>
+    addExpandableRow(li, labelNode, badgeText, badgeClass, studentIds, roster, mostRecentByStudent, hrefFor);
+
   const freq = computeConceptFrequency(mapsData).slice(0, 8);
   const hubs = computeHubConcepts(mapsData).slice(0, 6);
   const isolated = computeIsolatedConcepts(mapsData).slice(0, 6);
@@ -488,9 +552,9 @@ function renderClassInsights(summaryEl, grid, roster, mapsData, curriculum, taug
   const coverage = computeGradeUnitCoverage(mapsData);
 
   const freqCard = insightCard('Most-explored concepts');
-  freqCard.appendChild(insightList(freq, ([label, count]) => {
-    const span = document.createElement('span'); span.textContent = label;
-    return badgeRow(span, `${count} student${count === 1 ? '' : 's'}`);
+  freqCard.appendChild(insightList(freq, (item, li) => {
+    const span = document.createElement('span'); span.textContent = item.label;
+    expandRow(li, span, `${item.count} student${item.count === 1 ? '' : 's'}`, null, item.studentIds);
   }, 'Nothing yet.'));
   grid.appendChild(freqCard);
 
@@ -498,16 +562,16 @@ function renderClassInsights(summaryEl, grid, roster, mapsData, curriculum, taug
   const hubHint = document.createElement('p'); hubHint.className = 'hint';
   hubHint.textContent = 'Total connections across the whole class, not just how many students used it.';
   hubCard.appendChild(hubHint);
-  hubCard.appendChild(insightList(hubs, ([label, degree]) => {
+  hubCard.appendChild(insightList(hubs, ([label, degree], li) => {
     const span = document.createElement('span'); span.textContent = label;
-    return badgeRow(span, `${degree} connection${degree === 1 ? '' : 's'}`);
+    li.appendChild(badgeRow(span, `${degree} connection${degree === 1 ? '' : 's'}`));
   }, 'No connected concepts yet.'));
   grid.appendChild(hubCard);
 
   const isoCard = insightCard('Added but never connected');
-  isoCard.appendChild(insightList(isolated, ([label, count]) => {
-    const span = document.createElement('span'); span.textContent = label;
-    return badgeRow(span, `${count} student${count === 1 ? '' : 's'}`, 'insights-badge-warn');
+  isoCard.appendChild(insightList(isolated, (item, li) => {
+    const span = document.createElement('span'); span.textContent = item.label;
+    expandRow(li, span, `${item.count} student${item.count === 1 ? '' : 's'}`, 'insights-badge-warn', item.studentIds);
   }, 'No isolated concepts spotted - nice.'));
   grid.appendChild(isoCard);
 
@@ -515,7 +579,7 @@ function renderClassInsights(summaryEl, grid, roster, mapsData, curriculum, taug
     ? 'Missing prerequisite connections <span class="beta-tag">Classwide gaps</span>'
     : 'Missing prerequisite connections';
   const missingCard = insightCard(missingTitle);
-  missingCard.appendChild(insightList(missing, (item) => {
+  missingCard.appendChild(insightList(missing, (item, li) => {
     const span = document.createElement('span');
     const topicSpan = document.createElement('strong');
     topicSpan.textContent = item.topic;
@@ -535,7 +599,7 @@ function renderClassInsights(summaryEl, grid, roster, mapsData, curriculum, taug
       tag.textContent = ' (not yet taught)';
       span.appendChild(tag);
     }
-    return badgeRow(span, `${item.count} student${item.count === 1 ? '' : 's'}`, 'insights-badge-warn');
+    expandRow(li, span, `${item.count} student${item.count === 1 ? '' : 's'}`, 'insights-badge-warn', item.studentIds);
   }, 'No prerequisite gaps spotted in curriculum-tagged concepts.'));
   grid.appendChild(missingCard);
 
@@ -543,9 +607,9 @@ function renderClassInsights(summaryEl, grid, roster, mapsData, curriculum, taug
   const progressHint = document.createElement('p'); progressHint.className = 'hint';
   progressHint.textContent = 'Distinct concepts + total connections per student, lowest first.';
   progressCard.appendChild(progressHint);
-  progressCard.appendChild(insightList(progressRows, (row) => {
+  progressCard.appendChild(insightList(progressRows, (row, li) => {
     const span = document.createElement('span'); span.textContent = row.name;
-    return badgeRow(span, `${row.concepts} concept${row.concepts === 1 ? '' : 's'}, ${row.links} link${row.links === 1 ? '' : 's'}`, row.belowAverage ? 'insights-badge-danger' : '');
+    li.appendChild(badgeRow(span, `${row.concepts} concept${row.concepts === 1 ? '' : 's'}, ${row.links} link${row.links === 1 ? '' : 's'}`, row.belowAverage ? 'insights-badge-danger' : ''));
   }, 'No students yet.'));
   grid.appendChild(progressCard);
 
@@ -553,9 +617,9 @@ function renderClassInsights(summaryEl, grid, roster, mapsData, curriculum, taug
   const coverageHint = document.createElement('p'); coverageHint.className = 'hint';
   coverageHint.textContent = 'Where the class is working, by grade and unit.';
   coverageCard.appendChild(coverageHint);
-  coverageCard.appendChild(insightList(coverage, (row) => {
+  coverageCard.appendChild(insightList(coverage, (row, li) => {
     const span = document.createElement('span'); span.textContent = `${row.unit} (${row.grade})`;
-    return badgeRow(span, `${row.students} student${row.students === 1 ? '' : 's'}`);
+    expandRow(li, span, `${row.students} student${row.students === 1 ? '' : 's'}`, null, row.studentIds);
   }, 'No curriculum-tagged concepts yet.'));
   grid.appendChild(coverageCard);
 }
@@ -585,7 +649,7 @@ function renderClassDashboard(wrap, cls, roster, maps, mapsWithData, curriculum,
   wrap.appendChild(insightsGrid);
 
   let taughtSet = new Set(cls.taught_topics || []);
-  renderClassInsights(summaryEl, insightsGrid, roster, mapsWithData, curriculum, taughtSet);
+  renderClassInsights(summaryEl, insightsGrid, roster, mapsWithData, curriculum, taughtSet, hrefFor);
 
   const taughtCard = document.createElement('div');
   taughtCard.className = 'dash-card';
@@ -595,7 +659,7 @@ function renderClassDashboard(wrap, cls, roster, maps, mapsWithData, curriculum,
   wrap.appendChild(taughtCard);
   renderTaughtTopicsChecklist(taughtBody, cls, mapsWithData, curriculum, (newSet) => {
     taughtSet = newSet;
-    renderClassInsights(summaryEl, insightsGrid, roster, mapsWithData, curriculum, taughtSet);
+    renderClassInsights(summaryEl, insightsGrid, roster, mapsWithData, curriculum, taughtSet, hrefFor);
   }, saveFn);
 
   const rosterCard = document.createElement('div');

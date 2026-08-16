@@ -145,7 +145,7 @@
       cursor: pointer;
     }
     .map-card:hover { box-shadow: var(--shadow-sm); transform: translateY(-1px); }
-    .map-card-thumb { width: 100%; height: 110px; background: var(--bg); display: block; }
+    .map-card-thumb { width: 100%; height: 110px; background: #f7fafd; border-bottom: 1px solid var(--border); display: block; }
     .map-card-body { padding: 0.55em 0.7em; }
     .map-card-student { font-weight: 700; font-size: 0.85em; color: var(--text); }
     .map-card-title { font-size: 0.78em; color: var(--text-muted); margin-top: 0.1em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -165,6 +165,18 @@
     }
     .insights-badge-warn { color: #a6790a; background: #fff8e8; }
     .insights-badge-danger { color: #c2503a; background: #fff0ee; }
+    .insights-row-clickable {
+      cursor: pointer; margin: 0 -0.5em; padding: 0.2em 0.5em; border-radius: 7px;
+      transition: background 0.12s;
+    }
+    .insights-row-clickable:hover { background: var(--bg); }
+    .insights-chevron { flex: none; color: var(--text-muted); font-size: 0.75em; width: 0.9em; }
+    .insights-substudents {
+      list-style: none; margin: 0.3em 0 0.2em 1.6em; padding: 0; border-left: 2px solid var(--border);
+    }
+    .insights-substudents li { padding: 0.2em 0 0.2em 0.7em; font-size: 0.88em; }
+    .insights-substudents a { color: var(--brand); text-decoration: none; }
+    .insights-substudents a:hover { text-decoration: underline; }
 
     .roster-list, .student-maps-list { list-style: none; margin: 0; padding: 0; }
     .roster-list li, .student-maps-list li {

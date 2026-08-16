@@ -139,6 +139,25 @@ come up.
   unit names repeat across grades (both 6th and 7th grade have a "Ratios &
   Proportional Relationships" unit) - a unit-only key would have silently
   conflated two different grades' data.
+- **Done — click-to-expand student attribution.** The "N students" badges
+  in Most-explored concepts, Added but never connected, Missing
+  prerequisite connections, and Curriculum coverage are now click-to-expand:
+  clicking one reveals which students, each linking to their most recent
+  map. `computeConceptFrequency`/`computeIsolatedConcepts`/
+  `computeMissingPrereqs`/`computeGradeUnitCoverage` now track a
+  `studentIds` Set alongside each count, and a shared
+  `addExpandableRow()`/`mostRecentMapByStudent()` build the toggle UI and
+  resolve student → most-recent-map links (reusing the same lookup "Class
+  at a Glance" already needed). Hub concepts and Student progress are left
+  as plain rows - the former counts connections rather than students, the
+  latter is already one row per student.
+- **Done — thumbnail color fix.** The "Class at a Glance" card thumbnails
+  originally reused the main canvas's per-unit pastel palette (6 different
+  hues), which at ~100px with no background separation from the white card
+  body below just looked like a wash of clashing colors. Switched to a
+  single solid accent color (matches the brand blue) and gave the
+  thumbnail its own light tint background with a border separating it from
+  the card body.
 - Likely builds further on the existing `ai_recommender.py` graph/semantic-
   similarity logic for future rounds (e.g. real misconception detection from
   incorrect/missing links, not just structural gaps).
