@@ -17,8 +17,13 @@ A visual, patent-ready educational software tool for mapping math concepts, powe
 
 - `index.html` — Landing page explaining the tool, with a link into the playground.
 - `playground.html` — The interactive map UI (sidebar, canvas, AI panel; includes all CSS/JS).
-- `settings.html` / `settings.js` — Color theme picker + Classes (rostering: create/join a
-  class, teacher roster + read-only view into students' maps).
+- `settings.html` / `settings.js` — Color theme picker + lean class management (create/join a
+  class; a no-login "preview as Student/Teacher" demo toggle for signed-out visitors). The
+  deep per-class view lives on `dashboard.html` instead - each class here links out to it.
+- `dashboard.html` / `dashboard.js` — Teacher Dashboard: roster, a live-thumbnail "Class at a
+  Glance" card grid, and Class Insights (most-explored/hub/isolated concepts, classwide
+  prerequisite gaps aware of what the teacher has marked taught, student progress, curriculum
+  coverage). Supports `?sample=1` (no login) and `?class=<id>` (deep link to one class).
 - `theme.js` — Color theme presets, applied on every page.
 - `app.js` — All front-end logic for the playground.
 - `auth.js` — Accounts, cloud map storage, and rostering (Supabase). See "Accounts & Cloud

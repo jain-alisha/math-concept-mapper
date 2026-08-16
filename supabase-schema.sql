@@ -228,10 +228,10 @@ create policy "teachers view their students maps" on public.maps
 -- ============================================================
 -- Beta: classwide gap analysis - "what has the teacher taught?"
 -- ============================================================
--- Flat array of "unit::topic" strings the teacher has marked as taught, so
--- Class Insights can distinguish "prereq genuinely missing" from "prereq
--- just hasn't been taught yet" (see computeMissingPrereqs in
--- static/settings.js). No column-level restriction - same pattern as the
+-- Flat array of "grade::unit::topic" strings the teacher has marked as
+-- taught, so Class Insights can distinguish "prereq genuinely missing" from
+-- "prereq just hasn't been taught yet" (see computeMissingPrereqs in
+-- static/dashboard.js). No column-level restriction - same pattern as the
 -- maps.update policy below, which also allows updating a full row rather
 -- than restricting to specific columns.
 alter table public.classes add column if not exists taught_topics jsonb not null default '[]'::jsonb;

@@ -137,8 +137,9 @@
 
     // Beta: classwide gap analysis factors this in - a "missing prereq" is
     // a much stronger signal once the teacher has actually marked that
-    // prereq as taught. topics is a flat array of "unit::topic" strings
-    // (see computeMissingPrereqs in settings.js for the reader side).
+    // prereq as taught. topics is a flat array of "grade::unit::topic"
+    // strings
+    // (see computeMissingPrereqs in dashboard.js for the reader side).
     async updateClassTaughtTopics(classId, topics) {
       const { data, error } = await client
         .from('classes')
@@ -232,8 +233,9 @@
       if (!studentIds.length) return [];
       const { data, error } = await client
         .from('maps')
-        .select('id,title,owner_id,data')
-        .in('owner_id', studentIds);
+        .select('id,title,owner_id,data,updated_at')
+        .in('owner_id', studentIds)
+        .order('updated_at', { ascending: false });
       if (error) throw error;
       return data;
     },

@@ -851,15 +851,19 @@ function setupAuthUI() {
 
   function updateAuthUI(session) {
     cloudSession = session;
+    const dashboardLink = document.getElementById('dashboardLink');
     if (session) {
       signInBtn.style.display = 'none';
       userMenu.style.display = 'flex';
       const name = (session.user.user_metadata && session.user.user_metadata.display_name) || session.user.email;
-      userLabel.textContent = `${name} (${window.SpanAuth.role(session)})`;
+      const role = window.SpanAuth.role(session);
+      userLabel.textContent = `${name} (${role})`;
+      if (dashboardLink) dashboardLink.style.display = role === 'teacher' ? '' : 'none';
     } else {
       signInBtn.style.display = '';
       userMenu.style.display = 'none';
       myMapsPanel.style.display = 'none';
+      if (dashboardLink) dashboardLink.style.display = 'none';
     }
   }
 
