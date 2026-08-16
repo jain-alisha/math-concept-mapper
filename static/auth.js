@@ -67,6 +67,19 @@
 
     role: roleOf,
 
+    // DEMO-ONLY, TEMPORARY: self-serve role promotion, no gate at all - see
+    // the loud comment above claim_teacher_role() in supabase-schema.sql
+    // and TODO.md's "Auth & roles" section. Returns the refreshed session
+    // (app_metadata changes only show up in a *new* JWT, so a plain
+    // getSession() right after the RPC would still show the stale role).
+    async claimTeacherRole() {
+      const { error } = await client.rpc('claim_teacher_role');
+      if (error) throw error;
+      const { data, error: refreshError } = await client.auth.refreshSession();
+      if (refreshError) throw refreshError;
+      return data.session;
+    },
+
     // listMyMaps()'s contract is "maps I own" - it needs an explicit filter
     // now that a second RLS policy (teachers viewing their students' maps)
     // means "rows RLS lets me see" is no longer synonymous with "rows I own".

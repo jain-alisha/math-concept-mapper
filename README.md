@@ -82,10 +82,16 @@ Setup (one-time):
 Until those placeholders are replaced, the app runs exactly as before — the "Sign in" button
 hides itself and logs a console note instead of breaking anything.
 
-**Roles:** every self-serve signup is a `student` — there's no role picker at signup, on
-purpose. Role lives in `auth.users.app_metadata`, which the client SDK cannot write (only a
-service-role/dashboard call can), so a logged-in user can never edit their own row to grant
-themselves `teacher`. To promote an account after it has signed up once through the app:
+**Roles:** every signup is a `student` by default — there's no role picker at signup, on
+purpose. Role lives in `auth.users.app_metadata`, which the client SDK cannot write directly
+(only a service-role/dashboard call, or a `SECURITY DEFINER` Postgres function, can).
+
+⚠️ **Temporary, demo-only exception:** a signed-in student can currently self-promote via a
+"Become a teacher (demo)" button on `settings.html`, which calls the `claim_teacher_role()`
+RPC in `supabase-schema.sql` — completely ungated. This is only acceptable because this
+deployment is a demo with no real student data at stake; see `TODO.md`'s "Auth & roles"
+section for the plan to replace it with a real gate before any real usage. The manual SQL
+path below still works and is the only *safe* promotion path until then:
 
 ```sql
 update auth.users

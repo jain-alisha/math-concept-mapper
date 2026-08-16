@@ -256,6 +256,24 @@ function setupAuthAndClasses() {
     }
   };
 
+  // DEMO-ONLY, TEMPORARY: see the loud comment on claim_teacher_role() in
+  // supabase-schema.sql - self-serve, no gate, acceptable only because this
+  // deployment has no real student data at stake.
+  document.getElementById('becomeTeacherBtn').onclick = async () => {
+    const btn = document.getElementById('becomeTeacherBtn');
+    const errEl = document.getElementById('becomeTeacherError');
+    errEl.textContent = '';
+    btn.disabled = true;
+    try {
+      const newSession = await window.SpanAuth.claimTeacherRole();
+      updateAuthUI(newSession);
+    } catch (e) {
+      errEl.textContent = e.message || 'Could not update role.';
+    } finally {
+      btn.disabled = false;
+    }
+  };
+
   // --- Session-driven view switching ---
   function updateAuthUI(session) {
     if (session) {

@@ -269,3 +269,28 @@ create policy "delete own timelines" on public.map_timelines
 alter table public.maps add column if not exists timeline_id uuid references public.map_timelines(id) on delete set null;
 -- maps already has an owner-scoped, non-column-restricted UPDATE policy
 -- ("update own maps"), so setting timeline_id needs no new maps policy.
+
+-- ============================================================
+-- DEMO-ONLY, TEMPORARY: self-serve "become a teacher."
+-- ============================================================
+-- !! Intentionally ungated - ANY authenticated user can call this and
+-- immediately become a teacher (gaining read access to every one of their
+-- students' maps once they create/join a class). This is acceptable ONLY
+-- because this deployment is a demo with no real student data at stake.
+-- TODO before any real usage: replace with a real gate (an invite/signup
+-- code checked inside this function, or move promotion to an admin-only
+-- flow) - see TODO.md's "Auth & roles" section, which tracks this
+-- explicitly so it doesn't get forgotten.
+create or replace function public.claim_teacher_role()
+returns void
+language plpgsql security definer set search_path = public, pg_temp
+as $$
+begin
+  update auth.users
+  set raw_app_meta_data = raw_app_meta_data || '{"role":"teacher"}'::jsonb
+  where id = auth.uid();
+end;
+$$;
+
+revoke execute on function public.claim_teacher_role() from public;
+grant execute on function public.claim_teacher_role() to authenticated;
