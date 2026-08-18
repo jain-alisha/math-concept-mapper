@@ -1122,7 +1122,10 @@ function setupAuthUI() {
       const name = (session.user.user_metadata && session.user.user_metadata.display_name) || session.user.email;
       const role = window.SpanAuth.role(session);
       userLabel.textContent = `${name} (${role})`;
-      if (dashboardLink) dashboardLink.style.display = role === 'teacher' ? '' : 'none';
+      if (dashboardLink) {
+        dashboardLink.style.display = '';
+        dashboardLink.href = role === 'teacher' ? 'dashboard.html' : 'student.html';
+      }
     } else {
       signInBtn.style.display = '';
       userMenu.style.display = 'none';

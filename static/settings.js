@@ -57,11 +57,7 @@ function setupAppearance() {
 
 // Beta: "preview as a role" toggle for signed-out visitors - lets someone
 // see what each role's experience looks like without creating an account.
-// Teacher points at the real (much more detailed) Teacher Dashboard's
-// sample mode; Student reuses the playground's existing sample map, since
-// a student's actual surface area is really just "build a map" + "join a
-// class" (the join-a-class form right above this is already a live demo of
-// that half).
+// Teacher and Student each point at their own dashboard's sample mode.
 function setupRolePreviewToggle() {
   const wrap = document.getElementById('rolePreviewToggle');
   if (!wrap) return;
@@ -78,9 +74,9 @@ function setupRolePreviewToggle() {
       cta.href = 'dashboard.html?sample=1';
       cta.textContent = 'Open Teacher Dashboard demo →';
     } else {
-      note.textContent = "This is a demo of what you'd see as a student: building your own concept map and getting AI-suggested connections as you go.";
-      cta.href = 'playground.html?sample=1';
-      cta.textContent = 'Open Playground demo →';
+      note.textContent = "This is a demo of what you'd see as a student: your own saved maps, a summary of where you're strongest, and the classes you've joined.";
+      cta.href = 'student.html?sample=1';
+      cta.textContent = 'Open Student Dashboard demo →';
     }
   }
 

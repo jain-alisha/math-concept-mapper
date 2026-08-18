@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Student Dashboard — Span</title>
+  <script src="theme.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    :root {
+      --bg: #f3f5f8;
+      --surface: #ffffff;
+      --text: #171a23;
+      --text-secondary: #5b6472;
+      --text-muted: #8b93a3;
+      --brand: #1976d2;
+      --border: #e9ecf1;
+      --shadow-sm: 0 2px 14px rgba(23,26,35,0.05);
+      --shadow-lg: 0 24px 60px rgba(23,26,35,0.1);
+    }
+    html, body {
+      min-height: 100%; margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+      background: var(--bg); color: var(--text);
+    }
+    .icon { width: 18px; height: 18px; display: block; }
+    #topbar {
+      height: 52px; box-sizing: border-box; display: flex; align-items: center;
+      justify-content: space-between; padding: 0 1.2em; background: var(--surface);
+      border-bottom: 1px solid var(--border); position: relative; z-index: 5;
+    }
+    #topbar a.brand {
+      display: flex; align-items: center; gap: 0.5em; font-weight: 700; font-size: 1.05em;
+      color: var(--text); text-decoration: none;
+    }
+    #topbar .brand .icon { color: var(--brand); }
+    #topbar nav { display: flex; align-items: center; gap: 1.4em; }
+    #topbar nav a.text-link {
+      color: var(--text-secondary); text-decoration: none; font-size: 0.94em; font-weight: 500;
+      transition: color 0.12s;
+    }
+    #topbar nav a.text-link:hover { color: var(--text); }
+
+    /* --- Auth (same pattern as playground.html / dashboard.html) --- */
+    #signInBtn {
+      background: none; border: 1px solid var(--border); color: var(--text);
+      font-size: 0.9em; font-weight: 600; padding: 0.5em 1em; border-radius: 8px;
+      font-family: inherit; cursor: pointer; transition: background 0.12s;
+    }
+    #signInBtn:hover { background: var(--bg); }
+    #userMenu { display: none; align-items: center; gap: 0.8em; }
+    #userLabel { font-size: 0.88em; color: var(--text-secondary); font-weight: 500; }
+    #signOutBtn {
+      background: none; border: 1px solid var(--border); color: var(--text);
+      font-size: 0.88em; font-weight: 600; padding: 0.45em 0.85em; border-radius: 8px;
+      font-family: inherit; cursor: pointer; transition: background 0.12s;
+    }
+    #signOutBtn:hover { background: var(--bg); }
+
+    .modal-overlay {
+      display: none; position: fixed; inset: 0; background: rgba(23,26,35,0.4);
+      z-index: 2000; align-items: center; justify-content: center;
+    }
+    .modal {
+      background: var(--surface); border-radius: 14px; box-shadow: var(--shadow-lg);
+      width: 340px; max-width: 90vw; padding: 1.6em; position: relative;
+    }
+    .modal-close {
+      position: absolute; top: 0.7em; right: 0.9em; background: none; border: none;
+      font-size: 1.3em; color: var(--text-muted); cursor: pointer; line-height: 1;
+    }
+    .auth-tabs { display: flex; gap: 0.4em; margin-bottom: 1.2em; }
+    .auth-tab {
+      flex: 1; background: var(--bg); border: none; padding: 0.6em; border-radius: 8px;
+      font-family: inherit; font-size: 0.92em; font-weight: 600; color: var(--text-secondary);
+      cursor: pointer; transition: background 0.12s, color 0.12s;
+    }
+    .auth-tab.active { background: var(--brand); color: #fff; }
+    #signInForm, #signUpForm { display: flex; flex-direction: column; gap: 0.7em; }
+    #signInForm input, #signUpForm input {
+      padding: 0.6em 0.7em; border-radius: 7px; border: 1px solid var(--border);
+      font-size: 0.95em; font-family: inherit; background: var(--bg);
+    }
+    #signInForm input:focus, #signUpForm input:focus { outline: 2px solid #b5d3f2; outline-offset: 1px; }
+    #signInForm button[type="submit"], #signUpForm button[type="submit"] {
+      background: var(--brand); color: #fff; border: none; padding: 0.65em; border-radius: 7px;
+      font-family: inherit; font-size: 0.95em; font-weight: 600; cursor: pointer; margin-top: 0.3em;
+      transition: background 0.12s;
+    }
+    #signInForm button[type="submit"]:hover, #signUpForm button[type="submit"]:hover { background: #1568bd; }
+    .auth-error { font-size: 0.85em; color: #c2503a; min-height: 1.2em; }
+
+    /* --- Dashboard layout --- */
+    .dash-wrap { max-width: 1080px; margin: 0 auto; padding: 2.2em 1.5em 4em; }
+    .dash-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1em; margin-bottom: 0.3em; flex-wrap: wrap; }
+    .dash-header h1 { font-size: 1.6em; margin: 0; letter-spacing: -0.01em; }
+    .dash-meta { color: var(--text-secondary); font-size: 0.92em; margin: 0 0 1.6em; }
+    .beta-tag {
+      font-size: 0.68em; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase;
+      color: #c2503a; background: #fff0ee; border: 1px solid #f5b8ab; padding: 0.15em 0.5em;
+      border-radius: 999px; vertical-align: middle; margin-left: 0.5em;
+    }
+    .settings-empty { color: var(--text-muted); font-size: 0.92em; }
+    .sample-banner {
+      background: #fff8e1; border: 1px solid #ecda9e; color: #8a6d1f; font-size: 0.88em;
+      padding: 0.6em 1em; border-radius: 9px; margin-bottom: 1.6em;
+    }
+    .sample-banner a { color: inherit; font-weight: 600; }
+
+    .dash-card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+      padding: 1.4em 1.6em; margin-bottom: 1.4em; box-shadow: var(--shadow-sm);
+    }
+    .dash-card h2 { font-size: 1.05em; margin: 0 0 0.9em; display: flex; align-items: center; }
+    .dash-card > p.hint { color: var(--text-secondary); font-size: 0.9em; margin: -0.6em 0 1.1em; }
+
+    .ai-summary-banner {
+      display: flex; align-items: center; gap: 0.9em; padding: 1.1em 1.4em; border-radius: 14px;
+      background: linear-gradient(135deg, #eaf2ff, #f1edff); border: 1px solid #cfe0f7; margin-bottom: 1.4em;
+    }
+    .ai-summary-banner p { margin: 0; font-size: 0.98em; color: var(--text); line-height: 1.5; }
+
+    .map-cards-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 0.9em;
+    }
+    .map-card {
+      display: block; text-decoration: none; color: inherit; border: 1px solid var(--border);
+      border-radius: 10px; overflow: hidden; background: var(--surface); transition: box-shadow 0.12s, transform 0.12s;
+      cursor: pointer;
+    }
+    .map-card:hover { box-shadow: var(--shadow-sm); transform: translateY(-1px); }
+    .map-card-thumb { width: 100%; height: 110px; background: #f7fafd; border-bottom: 1px solid var(--border); display: block; }
+    .map-card-body { padding: 0.55em 0.7em; }
+    .map-card-title { font-weight: 700; font-size: 0.85em; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .map-card-meta { font-size: 0.78em; color: var(--text-muted); margin-top: 0.1em; }
+    .map-card-empty .map-card-thumb { display: flex; align-items: center; justify-content: center; color: var(--text-muted); font-size: 0.78em; }
+
+    .class-list { list-style: none; margin: 0; padding: 0; }
+    .class-list li {
+      padding: 0.6em 0; font-size: 0.94em; color: var(--text);
+      border-bottom: 1px solid var(--bg); display: flex; align-items: center; justify-content: space-between; gap: 0.8em;
+    }
+    .class-list li:last-child { border-bottom: none; }
+    .class-list .class-name { font-weight: 600; }
+
+    .dash-empty-state { text-align: center; padding: 4em 1.5em; color: var(--text-secondary); }
+    .dash-empty-state a { color: var(--brand); font-weight: 600; text-decoration: none; }
+  </style>
+</head>
+<body>
+<div id="topbar">
+  <a href="index.html" class="brand">
+    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="6" rx="1"/><rect x="2" y="16" width="6" height="6" rx="1"/><rect x="16" y="16" width="6" height="6" rx="1"/><path d="M12 8v4"/><path d="M5 16v-2a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v2"/></svg>
+    Span
+  </a>
+  <nav>
+    <button id="signInBtn">Sign in</button>
+    <div id="userMenu">
+      <span id="userLabel"></span>
+      <button id="signOutBtn">Log out</button>
+    </div>
+    <a href="settings.html" class="text-link">Settings</a>
+    <a href="playground.html" class="text-link">Playground</a>
+  </nav>
+</div>
+
+<div class="dash-wrap" id="dashWrap">
+  <div class="dash-empty-state" id="dashLoading">Loading…</div>
+</div>
+
+<div id="authModal" class="modal-overlay">
+  <div class="modal">
+    <button id="authModalClose" class="modal-close" title="Close">&times;</button>
+    <div class="auth-tabs">
+      <button id="tabSignIn" class="auth-tab active" type="button">Sign In</button>
+      <button id="tabSignUp" class="auth-tab" type="button">Sign Up</button>
+    </div>
+    <form id="signInForm">
+      <input type="email" id="signInEmail" placeholder="Email" autocomplete="email" required />
+      <input type="password" id="signInPassword" placeholder="Password" autocomplete="current-password" required />
+      <button type="submit">Sign In</button>
+      <div class="auth-error" id="signInError"></div>
+    </form>
+    <form id="signUpForm" style="display:none;">
+      <input type="text" id="signUpName" placeholder="Display name" autocomplete="name" />
+      <input type="email" id="signUpEmail" placeholder="Email" autocomplete="email" required />
+      <input type="password" id="signUpPassword" placeholder="Password (min 6 characters)" autocomplete="new-password" minlength="6" required />
+      <button type="submit">Sign Up</button>
+      <div class="auth-error" id="signUpError"></div>
+    </form>
+  </div>
+</div>
+
+<script src="vendor/supabase.js"></script>
+<script src="auth.js"></script>
+<script src="student.js"></script>
+</body>
+</html>
