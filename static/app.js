@@ -13,6 +13,8 @@ let dragInfo = null;
 let linkDrag = null;
 let linkHoverTarget = null;
 let aiHoldTimeout = null;
+let summaryHighlightIds = new Set();
+let demoPlaying = false;
 
 // Read-only viewing (a teacher opening a student's map from Settings ->
 // Classes). Guarded at the mutation entry points AND inside autosave()
@@ -99,6 +101,7 @@ window.onload = async function() {
   setupShareButton();
   setupAiSummaryButton();
   setupAuthUI();
+  setupPlayDemoButton();
 
   const params = new URLSearchParams(window.location.search);
   if (params.get('view') && params.get('readonly') === '1') {
@@ -148,6 +151,8 @@ function applyReadonlyUI() {
   if (authArea) authArea.style.display = 'none';
   const customConceptRow = document.querySelector('.custom-concept-row');
   if (customConceptRow) customConceptRow.style.display = 'none';
+  const playDemoBtn = document.getElementById('playDemoBtn');
+  if (playDemoBtn) playDemoBtn.style.display = 'none';
 }
 
 // --- "Explore a sample map" (playground.html?sample=1) ---
@@ -225,6 +230,167 @@ function loadSampleMap() {
     links.push({ id: linkIdCounter++, source: idFor[a], target: idFor[b], note: note || '' });
   }
   renderNotesSidebar();
+}
+
+// --- Beta: sample-mode "Play demo" walkthrough ---
+// A scripted, hands-off run-through of the three core interactions (drag a
+// concept onto the map, connect two concepts, open the AI summary) for
+// visitors on the sample map who haven't touched the canvas yet. Every step
+// goes through the same addNode/addLink/aiSummaryBtn-click path a real user
+// would, so what's left on the map afterward is exactly what a user doing
+// this by hand would end up with - the animation is just a guided replay
+// of real actions, not a separate scripted-looking state.
+function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
+
+// #demoCursor/#demoGhost are position:fixed, so a canvas-space (x,y) - the
+// coordinate system nodes live in - needs the canvas container's screen
+// rect plus its current scroll offset to land in the right spot. #mapCanvas
+// has no padding/transform inside #canvasArea, so this is a direct mapping.
+function canvasToScreen(x, y) {
+  const area = document.getElementById('canvasArea');
+  const rect = area.getBoundingClientRect();
+  return { left: rect.left - area.scrollLeft + x, top: rect.top - area.scrollTop + y };
+}
+
+function moveDemoCursor(left, top, duration) {
+  const cursor = document.getElementById('demoCursor');
+  cursor.style.transitionDuration = duration + 'ms';
+  cursor.style.left = left + 'px';
+  cursor.style.top = top + 'px';
+  return sleep(duration);
+}
+function pressDemoCursor() {
+  document.getElementById('demoCursor').classList.add('pressed');
+  return sleep(180);
+}
+function releaseDemoCursor() {
+  document.getElementById('demoCursor').classList.remove('pressed');
+  return sleep(150);
+}
+function moveDemoGhost(label, left, top, duration) {
+  const ghost = document.getElementById('demoGhost');
+  ghost.textContent = label;
+  ghost.style.display = 'block';
+  ghost.style.transitionDuration = duration + 'ms';
+  ghost.style.left = left + 'px';
+  ghost.style.top = top + 'px';
+  return sleep(duration);
+}
+function hideDemoGhost() {
+  document.getElementById('demoGhost').style.display = 'none';
+}
+function showDemoToast(msg) {
+  const toast = document.getElementById('demoToast');
+  toast.textContent = msg;
+  toast.classList.add('show');
+}
+function hideDemoToast() {
+  document.getElementById('demoToast').classList.remove('show');
+}
+// Brief pop-in on a just-added node so it reads as "dropped" rather than
+// silently appearing. Targets the <rect class="node"> child, not the <g> -
+// the <g> carries the translate(x,y) as an attribute, and animating CSS
+// `transform` on it would override that positioning instead of layering on
+// top of it.
+function flashNewNode(nodeId) {
+  const rect = document.querySelector(`#mapCanvas g[data-node-id="${nodeId}"] rect.node`);
+  if (!rect) return;
+  rect.classList.add('demo-pop');
+  setTimeout(() => rect.classList.remove('demo-pop'), 500);
+}
+
+function setupPlayDemoButton() {
+  const btn = document.getElementById('playDemoBtn');
+  if (!btn) return;
+  btn.style.display = 'block';
+  btn.onclick = () => playDemo();
+}
+
+async function playDemo() {
+  if (demoPlaying || isReadonly) return;
+  demoPlaying = true;
+  const btn = document.getElementById('playDemoBtn');
+  const cursor = document.getElementById('demoCursor');
+  const area = document.getElementById('canvasArea');
+  btn.disabled = true;
+  btn.textContent = 'Playing demo…';
+
+  // A patch of empty canvas below whatever's already on the map - computed
+  // from the current nodes' extent rather than a fixed spot, so the demo
+  // never lands on top of existing content whether it's run against the
+  // sample map, a blank map, or a real in-progress one.
+  const baseY = (nodes.length ? Math.max(...nodes.map(n => n.y)) : 40) + 140;
+  const DROP_A = { x: 260, y: baseY };
+  const DROP_B = { x: 560, y: baseY + 20 };
+  const UNIT = { grade: '7th Grade Math', unit: 'Ratios & Proportional Relationships' };
+  const LABEL_A = 'Percent word problems';
+  const LABEL_B = 'Convert fractions, decimals & percents';
+  const SIDEBAR_ORIGIN = { left: 90, top: 160 };
+
+  try {
+    area.scrollTo({ top: area.scrollHeight, left: 0, behavior: 'smooth' });
+    await sleep(500);
+
+    cursor.style.transitionDuration = '0ms';
+    cursor.style.left = SIDEBAR_ORIGIN.left + 'px';
+    cursor.style.top = SIDEBAR_ORIGIN.top + 'px';
+    cursor.style.display = 'block';
+    await sleep(250);
+
+    // --- 1 & 2: drag two concepts from the sidebar onto the map ---
+    showDemoToast('Dragging concepts onto the map…');
+    for (const [label, drop, originTop] of [[LABEL_A, DROP_A, 160], [LABEL_B, DROP_B, 210]]) {
+      cursor.style.transitionDuration = '0ms';
+      cursor.style.left = SIDEBAR_ORIGIN.left + 'px';
+      cursor.style.top = originTop + 'px';
+      await sleep(200);
+      await pressDemoCursor();
+      const dropPoint = canvasToScreen(drop.x, drop.y);
+      moveDemoGhost(label, SIDEBAR_ORIGIN.left, originTop, 0);
+      await Promise.all([
+        moveDemoCursor(dropPoint.left, dropPoint.top, 900),
+        moveDemoGhost(label, dropPoint.left, dropPoint.top, 900),
+      ]);
+      await releaseDemoCursor();
+      hideDemoGhost();
+      addNode(label, drop.x, drop.y, UNIT);
+      flashNewNode(nodes[nodes.length - 1].id);
+      await sleep(450);
+    }
+    const nodeA = nodes.find(n => n.label === LABEL_A && n.x === DROP_A.x && n.y === DROP_A.y);
+    const nodeB = nodes.find(n => n.label === LABEL_B && n.x === DROP_B.x && n.y === DROP_B.y);
+
+    // --- 3: connect them (Ctrl+drag from one node to the other) ---
+    if (nodeA && nodeB) {
+      showDemoToast('Ctrl+drag between nodes to connect them…');
+      const aCenter = canvasToScreen(DROP_A.x + getNodeWidth(nodeA.label) / 2, DROP_A.y + NODE_HEIGHT / 2);
+      const bCenter = canvasToScreen(DROP_B.x + getNodeWidth(nodeB.label) / 2, DROP_B.y + NODE_HEIGHT / 2);
+      await moveDemoCursor(aCenter.left, aCenter.top, 500);
+      await pressDemoCursor();
+      await moveDemoCursor(bCenter.left, bCenter.top, 700);
+      addLink(nodeA.id, nodeB.id);
+      await releaseDemoCursor();
+      await sleep(500);
+    }
+
+    // --- 4: activate the AI summary ---
+    hideDemoToast();
+    await sleep(150);
+    showDemoToast('Opening the AI summary…');
+    const aiBtn = document.getElementById('aiSummaryBtn');
+    const aiRect = aiBtn.getBoundingClientRect();
+    await moveDemoCursor(aiRect.left + aiRect.width / 2, aiRect.top + aiRect.height / 2, 700);
+    await pressDemoCursor();
+    aiBtn.click();
+    await releaseDemoCursor();
+    await sleep(2600);
+    hideDemoToast();
+  } finally {
+    cursor.style.display = 'none';
+    demoPlaying = false;
+    btn.disabled = false;
+    btn.textContent = '▶ Replay demo';
+  }
 }
 
 // --- Serialize / restore map state (shared by autosave and share links) ---
@@ -314,56 +480,154 @@ function setupShareButton() {
 // unit and compares how well-connected each unit's nodes are, same
 // "connected vs isolated" signal isolated-concept highlighting already
 // computes per node, just rolled up per unit.
+//
+// Framed as a nudge toward a specific node rather than a strength/weakness
+// verdict: it asks a question or suggests a concept to connect, and points
+// at the relevant node(s) on the canvas (see summaryHighlightIds) instead
+// of just naming a unit in prose. Phrasing rotates via `pickPhrase` (seeded by
+// the day, so it's stable within a session but doesn't say the same thing
+// every day), and a clear non-gap just gets acknowledged rather than a
+// gap being manufactured to fill the sentence.
+
+const SUMMARY_MOMENTUM_KEY = 'spanSummaryMomentum';
+const SUMMARY_MOMENTUM_MIN_HOURS = 18;
+
+// Deterministic pick so re-opening the panel doesn't change the wording
+// mid-session, but different days/units land on different phrasing.
+function pickPhrase(seedStr, options) {
+  let h = 0;
+  for (let i = 0; i < seedStr.length; i++) h = (h * 31 + seedStr.charCodeAt(i)) >>> 0;
+  return options[h % options.length];
+}
+
+// Real day-over-day progress is more motivating than a rephrased gap, so
+// it takes priority when there's a positive delta to report. Only fires
+// once enough time has passed since the last check-in, and only when the
+// map actually grew - no "0 new connections" message.
+function computeMomentumMessage(linksArr) {
+  let stored = null;
+  try { stored = JSON.parse(localStorage.getItem(SUMMARY_MOMENTUM_KEY) || 'null'); } catch (e) { stored = null; }
+  const now = Date.now();
+  const linkCount = linksArr.length;
+  const hoursSince = stored ? (now - stored.timestamp) / 36e5 : Infinity;
+  let message = null;
+  if (stored && hoursSince >= SUMMARY_MOMENTUM_MIN_HOURS) {
+    const delta = linkCount - stored.linkCount;
+    if (delta > 0) {
+      message = `You've added ${delta} new connection${delta === 1 ? '' : 's'} since your last visit — nice work.`;
+    }
+  }
+  if (!stored || hoursSince >= SUMMARY_MOMENTUM_MIN_HOURS) {
+    try { localStorage.setItem(SUMMARY_MOMENTUM_KEY, JSON.stringify({ linkCount, timestamp: now })); } catch (e) {}
+  }
+  return message;
+}
+
 function computeMapSummary(nodesArr, linksArr) {
-  if (!nodesArr.length) return 'Your map is empty — add a few concepts to get a summary.';
+  if (!nodesArr.length) {
+    return { text: 'Your map is empty — add a few concepts to get started.', highlightIds: [] };
+  }
+
+  const momentum = computeMomentumMessage(linksArr);
+  if (momentum) return { text: momentum, highlightIds: [] };
+
+  const today = new Date().toDateString();
   const degree = new Map();
   for (const n of nodesArr) degree.set(n.id, 0);
   for (const l of linksArr) {
     degree.set(l.source, (degree.get(l.source) || 0) + 1);
     degree.set(l.target, (degree.get(l.target) || 0) + 1);
   }
-  const byUnit = new Map(); // unit -> { total, connected }
-  let untagged = 0;
+  const byUnit = new Map(); // unit -> { total, connected, ids }
   for (const n of nodesArr) {
     const unit = n.meta && n.meta.unit;
-    if (!unit) { untagged++; continue; }
-    if (!byUnit.has(unit)) byUnit.set(unit, { total: 0, connected: 0 });
+    if (!unit) continue;
+    if (!byUnit.has(unit)) byUnit.set(unit, { total: 0, connected: 0, ids: [] });
     const rec = byUnit.get(unit);
     rec.total++;
+    rec.ids.push(n.id);
     if ((degree.get(n.id) || 0) > 0) rec.connected++;
   }
   if (!byUnit.size) {
-    return `${nodesArr.length} concept${nodesArr.length === 1 ? '' : 's'} on the map so far, none tagged to a curriculum unit yet. Drag topics in from the sidebar to get unit-by-unit insight.`;
+    return {
+      text: `${nodesArr.length} concept${nodesArr.length === 1 ? '' : 's'} on the map so far, none tagged to a curriculum unit yet. Drag topics in from the sidebar to get unit-by-unit insight.`,
+      highlightIds: [],
+    };
   }
+
   const units = [...byUnit.entries()]
     .map(([unit, r]) => ({ unit, ...r, ratio: r.connected / r.total }))
     .sort((a, b) => b.ratio - a.ratio || b.total - a.total);
   const strong = units[0];
   const thin = units[units.length - 1];
+
   if (units.length === 1) {
-    return `You're building out ${strong.unit} — ${strong.connected} of ${strong.total} concept${strong.total === 1 ? '' : 's'} connected so far.`;
+    const isolatedIds = strong.ids.filter(id => (degree.get(id) || 0) === 0);
+    if (!isolatedIds.length) {
+      return {
+        text: pickPhrase(strong.unit + today, [
+          `Everything in ${strong.unit} is connected to something else — good coverage.`,
+          `${strong.unit} is fully linked up so far.`,
+        ]),
+        highlightIds: [],
+      };
+    }
+    return {
+      text: pickPhrase(strong.unit + strong.total + today, [
+        `What does ${strong.unit} build on? Try connecting one of the unlinked concepts to something it depends on.`,
+        `A few ${strong.unit} concepts aren't linked to anything yet — what would you connect them to?`,
+      ]),
+      highlightIds: isolatedIds,
+    };
   }
-  const strongPhrase = strong.ratio >= 0.6 ? 'Strong on' : 'Most developed:';
-  const thinPhrase = thin.ratio < 0.5 ? 'thin on' : 'lighter on';
-  return `${strongPhrase} ${strong.unit}, ${thinPhrase} ${thin.unit}.`;
+
+  const gap = strong.ratio - thin.ratio;
+  if (gap < 0.15 && thin.ratio >= 0.5) {
+    // No real gap between units - acknowledge it instead of manufacturing one.
+    return {
+      text: pickPhrase(strong.unit + thin.unit + today, [
+        `Your map is holding together well across ${strong.unit} and ${thin.unit} — keep going.`,
+        `Solid connections across both ${strong.unit} and ${thin.unit} so far.`,
+      ]),
+      highlightIds: [],
+    };
+  }
+
+  const thinIsolatedIds = thin.ids.filter(id => (degree.get(id) || 0) === 0);
+  const text = pickPhrase(thin.unit + strong.unit + today, [
+    `How does ${thin.unit} connect to ${strong.unit}?`,
+    `What in ${thin.unit} builds on what you've already mapped in ${strong.unit}?`,
+    `Try linking a concept in ${thin.unit} to something it depends on.`,
+  ]);
+  return { text, highlightIds: thinIsolatedIds.length ? thinIsolatedIds : thin.ids };
 }
 function setupAiSummaryButton() {
   const btn = document.getElementById('aiSummaryBtn');
   const panel = document.getElementById('aiSummaryPanel');
   const text = document.getElementById('aiSummaryText');
   if (!btn || !panel || !text) return;
+  const closePanel = () => {
+    panel.style.display = 'none';
+    if (summaryHighlightIds.size) {
+      summaryHighlightIds = new Set();
+      renderCanvas();
+    }
+  };
   btn.onclick = (e) => {
     e.stopPropagation();
     const isOpen = getComputedStyle(panel).display !== 'none';
-    if (isOpen) { panel.style.display = 'none'; return; }
-    text.textContent = computeMapSummary(nodes, links);
+    if (isOpen) { closePanel(); return; }
+    const summary = computeMapSummary(nodes, links);
+    text.textContent = summary.text;
+    summaryHighlightIds = new Set(summary.highlightIds);
     panel.style.display = 'block';
+    renderCanvas();
   };
   // Capture phase: node/link clicks on the canvas call stopPropagation()
   // during bubbling, which would otherwise stop this from ever seeing them.
   document.addEventListener('click', (e) => {
     if (panel.contains(e.target) || btn.contains(e.target)) return;
-    panel.style.display = 'none';
+    closePanel();
   }, true);
 }
 
@@ -1245,6 +1509,7 @@ function renderCanvas() {
     if (node === selectedNode) extraClass += ' selected';
     if (linkHoverTarget === node) extraClass += ' link-hover';
     if (isIsolated) extraClass += ' isolated';
+    if (summaryHighlightIds.has(node.id)) extraClass += ' summary-highlight';
     rect.setAttribute('class', 'node'+extraClass);
     const color = nodeColorFor(node);
     rect.setAttribute('fill', color.fill);

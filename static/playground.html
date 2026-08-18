@@ -255,6 +255,38 @@
       color: var(--text-secondary);
     }
     .sidebar-section strong { color: var(--brand); font-weight: 700;}
+    #playDemoBtn {
+      display: none; margin-top: 0.8em; width: 100%;
+      padding: 0.5em 0.8em; border-radius: 7px; border: none;
+      background: #1976d2; color: #fff; font-size: 0.94em; font-weight: 700;
+      cursor: pointer; transition: background 0.13s, transform 0.1s;
+    }
+    #playDemoBtn:hover { background: #1568bd; transform: translateY(-1px); }
+    #playDemoBtn:disabled { opacity: 0.6; cursor: default; transform: none; }
+
+    #demoCursor {
+      position: fixed; width: 22px; height: 22px; border-radius: 50%;
+      background: var(--brand); border: 3px solid #fff; box-shadow: 0 2px 10px rgba(23,26,35,0.35);
+      pointer-events: none; z-index: 4000; display: none;
+      transition: left 0.7s cubic-bezier(.4,0,.2,1), top 0.7s cubic-bezier(.4,0,.2,1), transform 0.15s;
+      transform: translate(-50%, -50%);
+    }
+    #demoCursor.pressed { transform: translate(-50%, -50%) scale(0.7); background: #14588f; }
+    #demoGhost {
+      position: fixed; display: none; pointer-events: none; z-index: 3999;
+      background: #eaf2ff; border: 2px dashed var(--brand);
+      border-radius: 17px; padding: 0.7em 1.1em; font-weight: 600; font-size: 0.9em;
+      color: #14588f; box-shadow: 0 8px 20px rgba(23,26,35,0.18); opacity: 0.94;
+      transition: left 0.7s cubic-bezier(.4,0,.2,1), top 0.7s cubic-bezier(.4,0,.2,1);
+      transform: translate(-50%, -50%); white-space: nowrap;
+    }
+    #demoToast {
+      position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%);
+      background: var(--text); color: #fff; padding: 0.6em 1.1em; border-radius: 999px;
+      font-size: 0.88em; font-weight: 600; z-index: 4001; box-shadow: var(--shadow-lg);
+      opacity: 0; pointer-events: none; transition: opacity 0.3s;
+    }
+    #demoToast.show { opacity: 1; }
     .custom-concept-row {
       margin-top: 0.7em;
       display: flex;
@@ -328,6 +360,23 @@
     }
     .node.isolated {
       stroke-dasharray: 5 4;
+    }
+    .node.summary-highlight {
+      stroke: #c98a12 !important;
+      stroke-width: 2.6px;
+      animation: summaryPulse 1.6s ease-in-out infinite;
+    }
+    @keyframes summaryPulse {
+      0%, 100% { filter: drop-shadow(0 0 0 rgba(201,138,18,0)); }
+      50% { filter: drop-shadow(0 0 14px rgba(201,138,18,0.6)); }
+    }
+    .node.demo-pop {
+      transform-box: fill-box; transform-origin: center;
+      animation: demoPop 0.5s cubic-bezier(.34,1.56,.64,1);
+    }
+    @keyframes demoPop {
+      0% { transform: scale(0.35); opacity: 0.2; }
+      100% { transform: scale(1); opacity: 1; }
     }
     .isolated-badge circle { fill: #fff0ee; stroke: #f5b8ab; stroke-width: 1.4px; }
     .isolated-badge text { fill: #c2503a; font-weight: 700; pointer-events: none; }
@@ -555,6 +604,7 @@
         <li>To move a node: <b>Drag</b> it on the map.</li>
         <li>Right-click a node or link to delete.</li>
       </ul>
+      <button id="playDemoBtn">&#9654; Play demo</button>
     </div>
     <div class="sidebar-section">
       <strong>Add your own concept:</strong>
@@ -583,6 +633,9 @@
     </div>
   </div>
 </div>
+<div id="demoCursor"></div>
+<div id="demoGhost"></div>
+<div id="demoToast"></div>
 <script>
   window.AI_BACKEND_URL = 'https://math-concept-mapper-api.onrender.com';
 </script>
