@@ -843,7 +843,7 @@ function renderSampleDashboard() {
 
   const banner = document.createElement('div');
   banner.className = 'sample-banner';
-  banner.innerHTML = 'Sample preview — no account needed. This is what a teacher sees for a real class. <a href="settings.html">Sign in for your own →</a>';
+  banner.innerHTML = 'Sample preview (no account needed). This is what a teacher sees for a real class. <a href="settings.html">Sign in for your own →</a>';
   dashWrap.appendChild(banner);
 
   const header = document.createElement('div');
