@@ -53,6 +53,22 @@ def _vectorize(tokens):
 
 topic_embeddings = np.array([_vectorize(toks) for toks in _doc_tokens])
 
+def resolved_meta(label, meta):
+    """meta as-authored, falling back to a curriculum lookup by exact label
+    match. Custom-typed nodes (via "Add your own concept") never carry
+    grade/unit even when the text happens to match a real curriculum topic
+    - without this, every recommendation for a hand-typed-but-real topic
+    skips straight to the all-curriculum fallback below instead of the
+    topic's own unit, which is why recs for a real topic like "Percent of
+    quantity" can look like generic word-similarity noise instead of
+    curriculum-adjacent ones."""
+    grade, unit = meta.get('grade'), meta.get('unit')
+    if grade and unit:
+        return grade, unit
+    fallback = concept_lookup.get(label)
+    return (fallback['grade'], fallback['unit']) if fallback else (grade, unit)
+
+
 def find_prereqs_successors(grade, unit, topic):
     """Return topics before/after in the same unit (prereqs/successors)."""
     topics = curriculum[grade][unit]
@@ -89,8 +105,7 @@ def get_graph_features(nodes, links, selected_node):
     for n in nodes:
         meta = n.get('meta', {})
         label = n['label']
-        g = meta.get('grade')
-        u = meta.get('unit')
+        g, u = resolved_meta(label, meta)
         if g and u and label in curriculum.get(g, {}).get(u, []):
             idx = curriculum[g][u].index(label)
             if idx > 0:
@@ -105,8 +120,7 @@ def get_graph_features(nodes, links, selected_node):
     for n in [node_ids[tid] for tid in two_hop if tid in node_ids]:
         meta = n.get('meta', {})
         label = n['label']
-        g = meta.get('grade')
-        u = meta.get('unit')
+        g, u = resolved_meta(label, meta)
         if g and u:
             for topic in curriculum[g][u]:
                 if topic not in [x['label'] for x in nodes]:
@@ -144,8 +158,7 @@ def recommend():
         selected_label = selected.get('label', '')
         selected_meta = selected.get('meta', {})
 
-        grade = selected_meta.get('grade')
-        unit = selected_meta.get('unit')
+        grade, unit = resolved_meta(selected_label, selected_meta)
 
         # 1. Direct prereqs/successors in unit
         prereq_succ = []
