@@ -142,6 +142,19 @@
     .class-list li:last-child { border-bottom: none; }
     .class-list .class-name { font-weight: 600; }
 
+    #timelineFrameWrap {
+      width: 100%; height: 260px; background: var(--bg); border: 1px solid var(--border);
+      border-radius: 9px; overflow: hidden; margin-bottom: 0.9em;
+    }
+    #timelineFrame { width: 100%; height: 100%; display: block; }
+    #timelineControls { display: flex; align-items: center; gap: 0.7em; }
+    #timelinePlayBtn {
+      flex: none; background: var(--brand); color: #fff; border: none; width: 34px; height: 34px;
+      border-radius: 50%; cursor: pointer; font-size: 0.85em; display: flex; align-items: center; justify-content: center;
+    }
+    #timelineSlider { flex: 1; }
+    #timelineLabel { flex: none; font-size: 0.85em; color: var(--text-secondary); max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
     .dash-empty-state { text-align: center; padding: 4em 1.5em; color: var(--text-secondary); }
     .dash-empty-state a { color: var(--brand); font-weight: 600; text-decoration: none; }
   </style>

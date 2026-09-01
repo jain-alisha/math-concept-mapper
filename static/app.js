@@ -12,9 +12,20 @@ let selectedLink = null;
 let dragInfo = null;
 let linkDrag = null;
 let linkHoverTarget = null;
-let aiHoldTimeout = null;
 let summaryHighlightIds = new Set();
 let demoPlaying = false;
+
+// --- Node-level scaffolding (click a node -> Edit/Connect/Explore) ---
+let nodeToolbarState = null;   // { node }
+let exploreMenuState = null;   // { node }
+let ghostState = null;         // { node, question, suggestions, shownLabels, loading, error }
+let connectPending = null;     // node awaiting a second click to complete a connection
+
+const EXPLORE_QUESTIONS = [
+  { key: 'builds_on', title: 'What does this build on?', hint: 'Find likely prerequisites.' },
+  { key: 'leads_to', title: 'What does this lead to?', hint: 'Find concepts that build from it.' },
+  { key: 'related', title: 'What else is related?', hint: 'Find sideways connections that are useful but not necessarily prerequisite-based.' },
+];
 
 // Read-only viewing (a teacher opening a student's map from Settings ->
 // Classes). Guarded at the mutation entry points AND inside autosave()
@@ -373,9 +384,58 @@ async function playDemo() {
       await sleep(500);
     }
 
-    // --- 4: activate the AI summary ---
+    // --- 4: click a concept, Explore what it builds on, add a suggestion ---
     hideDemoToast();
     await sleep(150);
+    const anchorNode = nodeA || nodeB;
+    if (anchorNode) {
+      showDemoToast('Click a concept, then Explore…');
+      const anchorRectEl = document.querySelector(`#mapCanvas g[data-node-id="${anchorNode.id}"] rect`);
+      if (anchorRectEl) {
+        const anchorScreenRect = anchorRectEl.getBoundingClientRect();
+        await moveDemoCursor(anchorScreenRect.left + anchorScreenRect.width / 2, anchorScreenRect.top + anchorScreenRect.height / 2, 600);
+        await pressDemoCursor();
+        anchorRectEl.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+        await releaseDemoCursor();
+        await sleep(500);
+
+        const exploreBtn = document.querySelector('#nodeToolbar button[data-act="explore"]');
+        if (exploreBtn) {
+          const eRect = exploreBtn.getBoundingClientRect();
+          await moveDemoCursor(eRect.left + eRect.width / 2, eRect.top + eRect.height / 2, 500);
+          await pressDemoCursor();
+          exploreBtn.click();
+          await releaseDemoCursor();
+          await sleep(500);
+
+          const questionBtn = document.querySelector('#exploreMenu button[data-q="builds_on"]');
+          if (questionBtn) {
+            const qRect = questionBtn.getBoundingClientRect();
+            await moveDemoCursor(qRect.left + qRect.width / 2, qRect.top + qRect.height / 2, 500);
+            await pressDemoCursor();
+            questionBtn.click();
+            await releaseDemoCursor();
+            await sleep(1300);
+
+            const addBtn = document.querySelector('.ghost-actions button[data-act="add"]');
+            if (addBtn) {
+              const aRect = addBtn.getBoundingClientRect();
+              await moveDemoCursor(aRect.left + aRect.width / 2, aRect.top + aRect.height / 2, 500);
+              await pressDemoCursor();
+              addBtn.click();
+              await releaseDemoCursor();
+              await sleep(600);
+            }
+          }
+        }
+      }
+      closeAllNodeOverlays();
+      renderCanvas();
+      hideDemoToast();
+      await sleep(150);
+    }
+
+    // --- 5: activate the AI summary ---
     showDemoToast('Opening the AI summary…');
     const aiBtn = document.getElementById('aiSummaryBtn');
     const aiRect = aiBtn.getBoundingClientRect();
@@ -1537,15 +1597,7 @@ function renderCanvas() {
         };
         document.onmousemove = dragNodeMove;
         document.onmouseup = stopNodeDrag;
-        // Long-press (no Ctrl): Show AI after 550ms
-        aiHoldTimeout = setTimeout(() => {
-          showAIPanel(node);
-        }, 550);
       }
-    };
-    // --- Cancel long-press/AI panel on mouseup/mouseleave
-    rect.onmouseup = rect.onmouseleave = () => {
-      if (aiHoldTimeout) clearTimeout(aiHoldTimeout);
     };
     // --- Ctrl+double-click to delete node
     rect.ondblclick = e => {
@@ -1554,10 +1606,28 @@ function renderCanvas() {
       }
       // Else: nothing (no note)
     };
+    // --- Click: select + toggle the Edit/Connect/Explore toolbar. While a
+    // Connect is pending (from another node's toolbar), clicking a
+    // *different* node completes the link instead of opening a toolbar.
     rect.onclick = e => {
-      selectedNode = node; selectedLink = null;
-      renderCanvas();
       e.stopPropagation();
+      if (isReadonly) { selectedNode = node; selectedLink = null; renderCanvas(); return; }
+      if (connectPending && connectPending !== node) {
+        addLink(connectPending.id, node.id);
+        connectPending = null;
+        closeAllNodeOverlays();
+        renderCanvas();
+        return;
+      }
+      connectPending = null;
+      if (nodeToolbarState && nodeToolbarState.node === node) {
+        closeAllNodeOverlays();
+      } else {
+        selectedNode = node; selectedLink = null;
+        closeAllNodeOverlays();
+        nodeToolbarState = { node };
+      }
+      renderCanvas();
     };
 
     // --- Label for node ---
@@ -1664,8 +1734,12 @@ function renderCanvas() {
 
   svg.onclick = e => {
     selectedNode = null; selectedLink = null; linkHoverTarget = null;
+    closeAllNodeOverlays();
     renderCanvas();
   };
+
+  renderGhostSuggestions(svg);
+  updateNodeOverlays();
 }
 
 // --- Node Drag/Move: update only the moved node + its links, no full rebuild ---
@@ -1784,75 +1858,358 @@ function renderNotesSidebar() {
   }
 }
 
-// --- AI PANEL: Shows 'reason' for each recommendation ---
-function showAIPanel(node) {
-  if (!node) return;
-  selectedNode = node;
-  document.getElementById('aiPanel').style.display = 'block';
-  document.getElementById('aiList').innerHTML = `<li class="empty">Loading...</li>`;
-  const backendUrl = window.AI_BACKEND_URL || 'http://localhost:5000';
-  fetch(`${backendUrl}/recommend`, {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({
-      nodes: nodes.map(n=>({
-        id:n.id,label:n.label,meta:n.meta
-      })),
-      links: links.map(l=>({source:l.source, target:l.target})),
-      selected_node: {id:node.id, label:node.label, meta:node.meta}
-    })
-  })
-  .then(r => r.json())
-  .then(res => {
-    renderAIList(res.recommendations || []);
-  })
-  .catch(() => {
-    document.getElementById('aiList').innerHTML =
-      `<li class="empty">AI backend unavailable.<br>Run ai_recommender.py locally, or set window.AI_BACKEND_URL.</li>`;
-  });
+// ============================================================
+// Node-level scaffolding: click a node for Edit/Connect/Explore, then pick
+// one of three questions to get suggestions rendered as ghost nodes right
+// on the canvas (not a side panel/chat box). Each suggestion is a full
+// relationship - source concept + relationship type + target concept +
+// reason - never a bare "add this concept," since the product is about
+// edges, not just nodes. Never auto-adds anything: every ghost needs an
+// explicit "+ Add" click, and dismissing one is just as easy.
+// ============================================================
+
+function closeAllNodeOverlays() {
+  nodeToolbarState = null;
+  exploreMenuState = null;
+  ghostState = null;
+  connectPending = null;
 }
-function renderAIList(recs) {
-  const aiList = document.getElementById('aiList');
-  aiList.innerHTML = '';
-  if (!recs.length) {
-    aiList.innerHTML = `<li class="empty">No suggestions (all linked?)</li>`;
+
+// Suggestions lay out in the direction their relationship actually points -
+// prerequisites above the anchor, successors below, sideways/related ones
+// off to the side - so position alone previews what kind of edge "+ Add"
+// will draw, before the student reads a word of the reason.
+function layoutGhostPosition(anchor, index, total, question) {
+  const anchorW = getNodeWidth(anchor.label);
+  const spread = 250;
+  const startX = anchor.x + anchorW / 2 - ((total - 1) * spread) / 2 - 100;
+  let pos;
+  if (question === 'builds_on') pos = { x: startX + index * spread, y: anchor.y - 150 };
+  else if (question === 'leads_to') pos = { x: startX + index * spread, y: anchor.y + NODE_HEIGHT + 110 };
+  else pos = { x: anchor.x + anchorW + 130, y: anchor.y - 70 + index * 95 };
+  // The canvas's own coordinate space starts at (0,0) with no negative
+  // headroom (no viewBox) - an anchor near the top/left edge of the map
+  // would otherwise push "builds on" ghosts to a negative y that's not
+  // just off-screen but genuinely unreachable by scrolling.
+  return { x: Math.max(10, pos.x), y: Math.max(10, pos.y) };
+}
+
+async function requestSuggestions(node, question, exclude) {
+  const backendUrl = window.AI_BACKEND_URL || 'http://localhost:5000';
+  const res = await fetch(`${backendUrl}/recommend`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      nodes: nodes.map(n => ({ id: n.id, label: n.label, meta: n.meta })),
+      selected_node: { id: node.id, label: node.label, meta: node.meta },
+      question,
+      exclude: [...exclude],
+    }),
+  });
+  if (!res.ok) throw new Error('bad response');
+  const data = await res.json();
+  return data.suggestions || [];
+}
+
+async function openExploreQuestion(node, question) {
+  ghostState = { node, question, suggestions: [], shownLabels: new Set(), loading: true, error: false };
+  renderCanvas();
+  let suggestions = [];
+  try {
+    suggestions = await requestSuggestions(node, question, ghostState.shownLabels);
+  } catch (e) {
+    if (ghostState && ghostState.node === node && ghostState.question === question) {
+      ghostState.loading = false; ghostState.error = true;
+      renderCanvas();
+    }
     return;
   }
-  for (const rec of recs) {
-    const li = document.createElement('li');
-    li.textContent = rec.label + (rec.meta.unit ? ` (${rec.meta.unit})` : '');
-    if (rec.reason) {
-      const reasonDiv = document.createElement('div');
-      reasonDiv.style.fontSize = "0.92em";
-      reasonDiv.style.color = "#3388bb";
-      reasonDiv.style.marginLeft = "0.6em";
-      reasonDiv.textContent = rec.reason;
-      li.appendChild(document.createElement("br"));
-      li.appendChild(reasonDiv);
+  if (!ghostState || ghostState.node !== node || ghostState.question !== question) return; // stale response
+  suggestions.forEach(s => ghostState.shownLabels.add(s.label));
+  ghostState.suggestions = suggestions;
+  ghostState.loading = false;
+  renderCanvas();
+}
+
+async function showMoreSuggestions() {
+  if (!ghostState) return;
+  const { node, question, shownLabels } = ghostState;
+  ghostState.loading = true;
+  renderCanvas();
+  let suggestions = [];
+  try {
+    suggestions = await requestSuggestions(node, question, shownLabels);
+  } catch (e) {
+    if (ghostState) { ghostState.loading = false; renderCanvas(); }
+    return;
+  }
+  if (!ghostState || ghostState.node !== node || ghostState.question !== question) return;
+  suggestions.forEach(s => shownLabels.add(s.label));
+  ghostState.suggestions = suggestions;
+  ghostState.loading = false;
+  renderCanvas();
+}
+
+// Direction follows the suggestion's own source/target labels (one of
+// which is always the anchor, the other the new concept) rather than
+// assuming "anchor -> new" - a builds_on ghost draws new -> anchor.
+function addGhostSuggestion(suggestion, pos) {
+  if (!ghostState) return;
+  const anchor = ghostState.node;
+  addNode(suggestion.label, pos.x, pos.y, suggestion.meta);
+  const newNode = nodes[nodes.length - 1];
+  const sourceId = suggestion.source === anchor.label ? anchor.id : newNode.id;
+  const targetId = suggestion.target === anchor.label ? anchor.id : newNode.id;
+  addLink(sourceId, targetId);
+  if (ghostState) ghostState.suggestions = ghostState.suggestions.filter(s => s.label !== suggestion.label);
+  renderNotesSidebar();
+  renderCanvas();
+}
+
+function dismissGhostSuggestion(label) {
+  if (!ghostState) return;
+  ghostState.suggestions = ghostState.suggestions.filter(s => s.label !== label);
+  renderCanvas();
+}
+
+function showGhostReason(s, anchorRect) {
+  const pop = document.getElementById('ghostReasonPopover');
+  if (!pop) return;
+  pop.style.display = 'block';
+  pop.style.left = Math.max(8, anchorRect.left - 60) + 'px';
+  pop.style.top = (anchorRect.bottom + 8) + 'px';
+  pop.innerHTML = `
+    <div class="reason-rel">${s.source} <span class="reason-arrow">&rarr;</span> ${s.target} <span class="reason-tag">${s.relationship}</span></div>
+    <p></p>
+    <button id="closeReasonBtn" title="Close">&times;</button>
+  `;
+  pop.querySelector('p').textContent = s.reason;
+  pop.querySelector('#closeReasonBtn').onclick = e => { e.stopPropagation(); pop.style.display = 'none'; };
+}
+
+// Ghost suggestion nodes are real SVG elements appended after the real map
+// (so they pan/scroll/scale with everything else) - dashed border, lower
+// opacity, a small sparkle + "Suggested" tag distinguish them from real
+// nodes at a glance. Their +Add/Why?/x actions live in an HTML overlay
+// (updateNodeOverlays) positioned off each ghost's rendered bounding box,
+// same technique as the node toolbar/explore menu below.
+function renderGhostSuggestions(svg) {
+  if (!ghostState || !nodes.includes(ghostState.node) || !ghostState.suggestions.length) return;
+  const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+  defs.innerHTML = `<marker id="ghostArrow" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto"><polygon points="0 0, 9 3.5, 0 7" fill="#c98a12"/></marker>`;
+  svg.appendChild(defs);
+
+  const anchor = ghostState.node;
+  const anchorW = getNodeWidth(anchor.label);
+  const ax = anchor.x + anchorW / 2, ay = anchor.y + NODE_HEIGHT / 2;
+  const total = ghostState.suggestions.length;
+
+  ghostState.suggestions.forEach((s, i) => {
+    const pos = layoutGhostPosition(anchor, i, total, ghostState.question);
+    s._pos = pos;
+    const w = getNodeWidth(s.label);
+
+    const fromGhost = s.source === s.label; // ghost is the edge's source -> arrow points at anchor
+    const gx = pos.x + w / 2, gy = pos.y + NODE_HEIGHT / 2;
+    const [x1, y1, x2, y2] = fromGhost ? [gx, gy, ax, ay] : [ax, ay, gx, gy];
+    const edge = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    edge.setAttribute('d', `M${x1},${y1} L${x2},${y2}`);
+    edge.setAttribute('stroke', '#c98a12');
+    edge.setAttribute('stroke-width', '2');
+    edge.setAttribute('stroke-dasharray', '5 4');
+    edge.setAttribute('fill', 'none');
+    if (ghostState.question !== 'related') edge.setAttribute('marker-end', 'url(#ghostArrow)');
+    svg.appendChild(edge);
+
+    const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    g.setAttribute('transform', `translate(${pos.x},${pos.y})`);
+    g.setAttribute('class', 'ghost-node');
+    g.setAttribute('data-ghost-label', s.label);
+
+    const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    rect.setAttribute('width', w);
+    rect.setAttribute('height', NODE_HEIGHT);
+    rect.setAttribute('rx', NODE_RADIUS);
+    rect.setAttribute('class', 'ghost-node-rect');
+    g.appendChild(rect);
+
+    const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    text.textContent = '✦ ' + s.label;
+    text.setAttribute('x', w / 2);
+    text.setAttribute('y', NODE_HEIGHT / 2 - 7);
+    text.setAttribute('text-anchor', 'middle');
+    text.setAttribute('dominant-baseline', 'middle');
+    text.setAttribute('class', 'ghost-node-text');
+    g.appendChild(text);
+
+    const tag = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    tag.textContent = 'Suggested · ' + s.relationship;
+    tag.setAttribute('x', w / 2);
+    tag.setAttribute('y', NODE_HEIGHT / 2 + 12);
+    tag.setAttribute('text-anchor', 'middle');
+    tag.setAttribute('dominant-baseline', 'middle');
+    tag.setAttribute('class', 'ghost-node-tag');
+    g.appendChild(tag);
+
+    svg.appendChild(g);
+  });
+
+  // updateCanvasSize() sized the SVG to fit real nodes only, before ghosts
+  // existed - grow it if any ghost (plus room for its action bar below)
+  // would otherwise land past the current edge and get clipped, since this
+  // SVG has no viewBox to pan within.
+  const PAD = 240;
+  let neededW = Number(svg.getAttribute('width')) || 0;
+  let neededH = Number(svg.getAttribute('height')) || 0;
+  ghostState.suggestions.forEach(s => {
+    neededW = Math.max(neededW, s._pos.x + getNodeWidth(s.label) + PAD);
+    neededH = Math.max(neededH, s._pos.y + NODE_HEIGHT + PAD);
+  });
+  svg.setAttribute('width', neededW);
+  svg.setAttribute('height', neededH);
+}
+
+// One place that positions every floating HTML overlay (toolbar, explore
+// menu, ghost action bars, "show more" bar) off the *rendered* SVG
+// elements' bounding boxes, called at the end of every renderCanvas() so
+// they track nodes through drags/drops and survive re-renders.
+function updateNodeOverlays() {
+  const toolbar = document.getElementById('nodeToolbar');
+  const exploreMenu = document.getElementById('exploreMenu');
+  const ghostLayer = document.getElementById('ghostActionsLayer');
+  const moreBar = document.getElementById('ghostMoreBar');
+  const reasonPopover = document.getElementById('ghostReasonPopover');
+  if (!toolbar || !exploreMenu || !ghostLayer || !moreBar) return; // not on this page
+
+  reasonPopover.style.display = 'none';
+
+  if (nodeToolbarState && nodes.includes(nodeToolbarState.node) && !isReadonly) {
+    const node = nodeToolbarState.node;
+    const g = document.querySelector(`#mapCanvas g[data-node-id="${node.id}"]`);
+    if (g) {
+      const rect = g.getBoundingClientRect();
+      toolbar.style.display = 'flex';
+      toolbar.style.left = (rect.left + rect.width / 2) + 'px';
+      toolbar.style.top = rect.top + 'px';
+      if (connectPending === node) {
+        toolbar.innerHTML = `<span class="toolbar-hint">Click another node to connect…</span><button data-act="cancel-connect">Cancel</button>`;
+      } else {
+        toolbar.innerHTML = `<button data-act="edit">Edit</button><span class="sep">&middot;</span><button data-act="connect">Connect</button><span class="sep">&middot;</span><button data-act="explore">&#10022; Explore</button>`;
+      }
+      toolbar.onclick = e => {
+        e.stopPropagation();
+        const act = e.target.getAttribute('data-act');
+        if (act === 'edit') {
+          const val = window.prompt('Rename concept:', node.label);
+          if (val && val.trim() && val.trim() !== node.label) {
+            node.label = val.trim();
+            renderNotesSidebar();
+            renderCanvas();
+          }
+        } else if (act === 'connect') {
+          connectPending = node;
+          renderCanvas();
+        } else if (act === 'cancel-connect') {
+          connectPending = null;
+          renderCanvas();
+        } else if (act === 'explore') {
+          exploreMenuState = { node };
+          ghostState = null;
+          renderCanvas();
+        }
+      };
+    } else {
+      toolbar.style.display = 'none';
     }
-    li.draggable = true;
-    li.style.userSelect = 'none';
-    li.ondragstart = ev => {
-      ev.dataTransfer.setData('text/plain', JSON.stringify({
-        label: rec.label,
-        meta: rec.meta,
-        fromAI: true
-      }));
-    };
-    li.onclick = () => {
-      let angle = Math.random() * 2 * Math.PI, radius = 160 + Math.random()*25;
-      let x = selectedNode.x + radius*Math.cos(angle), y = selectedNode.y + radius*Math.sin(angle);
-      addNode(rec.label, x, y, rec.meta);
-      addLink(selectedNode.id, nodeIdCounter-1);
-      document.getElementById('aiPanel').style.display = 'none';
-      renderNotesSidebar();
-    };
-    aiList.appendChild(li);
+  } else {
+    toolbar.style.display = 'none';
+  }
+
+  if (exploreMenuState && nodes.includes(exploreMenuState.node)) {
+    const node = exploreMenuState.node;
+    const g = document.querySelector(`#mapCanvas g[data-node-id="${node.id}"]`);
+    if (g) {
+      const rect = g.getBoundingClientRect();
+      exploreMenu.style.display = 'block';
+      exploreMenu.style.left = (rect.left + rect.width / 2) + 'px';
+      exploreMenu.style.top = (rect.bottom + 10) + 'px';
+      exploreMenu.innerHTML = `
+        <div class="explore-menu-title">Explore this concept</div>
+        ${EXPLORE_QUESTIONS.map(q => `<button data-q="${q.key}"><div class="eq-title">${q.title}</div><div class="eq-hint">${q.hint}</div></button>`).join('')}
+      `;
+      exploreMenu.onclick = e => {
+        e.stopPropagation();
+        const btn = e.target.closest('button');
+        if (!btn) return;
+        const q = btn.getAttribute('data-q');
+        exploreMenuState = null;
+        openExploreQuestion(node, q);
+      };
+    } else {
+      exploreMenu.style.display = 'none';
+    }
+  } else {
+    exploreMenu.style.display = 'none';
+  }
+
+  ghostLayer.innerHTML = '';
+  if (ghostState && nodes.includes(ghostState.node)) {
+    const anchorG = document.querySelector(`#mapCanvas g[data-node-id="${ghostState.node.id}"]`);
+    ghostState.suggestions.forEach(s => {
+      const g = document.querySelector(`#mapCanvas g[data-ghost-label="${CSS.escape(s.label)}"]`);
+      if (!g) return;
+      const rect = g.getBoundingClientRect();
+      const bar = document.createElement('div');
+      bar.className = 'ghost-actions';
+      bar.style.left = (rect.left + rect.width / 2) + 'px';
+      bar.style.top = (rect.bottom + 4) + 'px';
+      bar.innerHTML = `<button data-act="add">+ Add</button><button data-act="why">Why?</button><button data-act="dismiss" title="Dismiss">&times;</button>`;
+      bar.onclick = e => {
+        e.stopPropagation();
+        const act = e.target.getAttribute('data-act');
+        if (act === 'add') addGhostSuggestion(s, s._pos);
+        else if (act === 'dismiss') dismissGhostSuggestion(s.label);
+        else if (act === 'why') showGhostReason(s, rect);
+      };
+      ghostLayer.appendChild(bar);
+    });
+
+    if (anchorG) {
+      const arect = anchorG.getBoundingClientRect();
+      // To the left of the anchor, vertically centered - stays clear of
+      // ghost action bars regardless of whether this question's ghosts
+      // land above, below, or to the right (related's own side).
+      moreBar.style.left = (arect.left - 12) + 'px';
+      moreBar.style.top = (arect.top + arect.height / 2) + 'px';
+      if (ghostState.loading) {
+        moreBar.style.display = 'block';
+        moreBar.innerHTML = `<span class="loading-label">Thinking…</span>`;
+      } else if (ghostState.error) {
+        moreBar.style.display = 'block';
+        moreBar.innerHTML = `<span class="loading-label">AI backend unavailable.</span><button id="closeExploreBtn" title="Close">&times;</button>`;
+        document.getElementById('closeExploreBtn').onclick = e => { e.stopPropagation(); ghostState = null; renderCanvas(); };
+      } else {
+        moreBar.style.display = 'block';
+        moreBar.innerHTML = ghostState.suggestions.length
+          ? `<button id="showMoreBtn">Show 3 more</button><button id="closeExploreBtn" title="Close">&times;</button>`
+          : `<span class="loading-label">Nothing else to suggest here.</span><button id="closeExploreBtn" title="Close">&times;</button>`;
+        const moreBtn = document.getElementById('showMoreBtn');
+        if (moreBtn) moreBtn.onclick = e => { e.stopPropagation(); showMoreSuggestions(); };
+        document.getElementById('closeExploreBtn').onclick = e => { e.stopPropagation(); ghostState = null; renderCanvas(); };
+      }
+    } else {
+      moreBar.style.display = 'none';
+    }
+  } else {
+    moreBar.style.display = 'none';
   }
 }
+
 document.addEventListener('click', e => {
-  if (!e.target.closest('#aiPanel') && !e.target.closest('.node')) {
-    document.getElementById('aiPanel').style.display = 'none';
+  if (e.target.closest('#nodeToolbar, #exploreMenu, #ghostActionsLayer, #ghostMoreBar, #ghostReasonPopover, .node, .ghost-node')) return;
+  if (nodeToolbarState || exploreMenuState || ghostState || connectPending) {
+    closeAllNodeOverlays();
+    renderCanvas();
   }
 });
 

@@ -5,7 +5,6 @@ import os
 import re
 from collections import Counter
 import numpy as np
-import networkx as nx
 
 app = Flask(__name__, static_folder='static', static_url_path='')
 CORS(app)
@@ -68,65 +67,6 @@ def resolved_meta(label, meta):
     fallback = concept_lookup.get(label)
     return (fallback['grade'], fallback['unit']) if fallback else (grade, unit)
 
-
-def find_prereqs_successors(grade, unit, topic):
-    """Return topics before/after in the same unit (prereqs/successors)."""
-    topics = curriculum[grade][unit]
-    idx = topics.index(topic)
-    prereq = topics[idx-1] if idx > 0 else None
-    succ = topics[idx+1] if idx < len(topics)-1 else None
-    out = []
-    if prereq: out.append({'label': prereq, 'meta': {'grade': grade, 'unit': unit}})
-    if succ: out.append({'label': succ, 'meta': {'grade': grade, 'unit': unit}})
-    return out
-
-def get_graph_features(nodes, links, selected_node):
-    """Use NetworkX to analyze current concept map and extract candidates to suggest."""
-    G = nx.Graph()
-    node_ids = {n['id']: n for n in nodes}
-    # Add all nodes
-    for n in nodes:
-        G.add_node(n['id'], label=n['label'])
-    # Add all links
-    for l in links:
-        G.add_edge(l['source'], l['target'])
-    # Get selected node id
-    selected_id = selected_node.get('id')
-    if selected_id is None or selected_id not in G: return []
-    # Get neighbors and 2-hop neighbors
-    neighbors = set(G.neighbors(selected_id))
-    two_hop = set()
-    for n in neighbors:
-        two_hop.update(G.neighbors(n))
-    two_hop -= neighbors
-    two_hop.discard(selected_id)
-    # Find curriculum topics *not* yet on map, that are adjacent in curriculum to any node on map
-    candidate_labels = set()
-    for n in nodes:
-        meta = n.get('meta', {})
-        label = n['label']
-        g, u = resolved_meta(label, meta)
-        if g and u and label in curriculum.get(g, {}).get(u, []):
-            idx = curriculum[g][u].index(label)
-            if idx > 0:
-                before = curriculum[g][u][idx-1]
-                if before not in [x['label'] for x in nodes]:
-                    candidate_labels.add(before)
-            if idx < len(curriculum[g][u])-1:
-                after = curriculum[g][u][idx+1]
-                if after not in [x['label'] for x in nodes]:
-                    candidate_labels.add(after)
-    # Add 2-hop exploration (find curriculum topics in same units as two-hop nodes)
-    for n in [node_ids[tid] for tid in two_hop if tid in node_ids]:
-        meta = n.get('meta', {})
-        label = n['label']
-        g, u = resolved_meta(label, meta)
-        if g and u:
-            for topic in curriculum[g][u]:
-                if topic not in [x['label'] for x in nodes]:
-                    candidate_labels.add(topic)
-    return list(candidate_labels)
-
 def semantic_similarity(selected_label, candidates, topk=5):
     """Return topk candidates by TF-IDF cosine similarity to the selected_label."""
     if not candidates: return []
@@ -142,6 +82,88 @@ def semantic_similarity(selected_label, candidates, topk=5):
         results.append({'label': topic, 'meta': meta, 'score': float(score)})
     return results
 
+# --- Relationship-shaped suggestions for the three Explore questions ---
+# The product's thesis is about edges, not just nodes - a suggestion is
+# always (source concept, relationship type, target concept, reason), never
+# a bare "add this topic." Curriculum topic order within a unit is the
+# source of truth for prerequisite/successor direction; "related" pulls
+# same-unit topics that are neither, ranked by word-overlap to the anchor.
+REASON_TEMPLATES = {
+    'builds_on': [
+        "{b} is what {a} builds on directly - it lays the groundwork.",
+        "Getting {b} solid first is usually what makes {a} click.",
+        "{a} assumes {b} as a starting point.",
+    ],
+    'leads_to': [
+        "{a} feeds directly into {b} - a natural next step.",
+        "Once {a} is solid, {b} is where it gets used next.",
+        "{b} builds on {a} without much else in between.",
+    ],
+    'related': [
+        "{b} touches similar ideas as {a}, without being a strict prerequisite.",
+        "{a} and {b} often show up side by side in the same unit.",
+        "{b} is a useful sideways connection from {a}, not a dependency.",
+    ],
+}
+
+def _stable_index(a, b, n):
+    # Deterministic (not process-random like Python's hash()) so the same
+    # pair always phrases the same way, while still varying across pairs.
+    s = sum(ord(c) for c in (a + b))
+    return s % n
+
+def build_reason(a, b, question):
+    options = REASON_TEMPLATES[question]
+    template = options[_stable_index(a, b, len(options))]
+    return template.format(a=a, b=b)
+
+RELATIONSHIP_LABEL = {
+    'builds_on': 'prerequisite',
+    'leads_to': 'builds toward',
+    'related': 'related',
+}
+
+def relationship_suggestions(selected_label, selected_meta, used_labels, question, topk=3):
+    grade, unit = resolved_meta(selected_label, selected_meta)
+    candidates = []
+    if grade and unit and selected_label in curriculum.get(grade, {}).get(unit, []):
+        topics = curriculum[grade][unit]
+        idx = topics.index(selected_label)
+        if question == 'builds_on':
+            candidates = [t for t in reversed(topics[:idx]) if t not in used_labels]
+        elif question == 'leads_to':
+            candidates = [t for t in topics[idx + 1:] if t not in used_labels]
+        elif question == 'related':
+            near = set()
+            if idx > 0: near.add(topics[idx - 1])
+            if idx < len(topics) - 1: near.add(topics[idx + 1])
+            candidates = [t for t in topics if t != selected_label and t not in near and t not in used_labels]
+
+    ranked = semantic_similarity(selected_label, candidates, topk=topk) if candidates else []
+    if len(ranked) < topk:
+        pool = [t for t in curriculum_topics if t not in used_labels and t != selected_label]
+        seen = set(r['label'] for r in ranked)
+        pool = [t for t in pool if t not in seen]
+        ranked += semantic_similarity(selected_label, pool, topk=topk - len(ranked))
+
+    relationship = RELATIONSHIP_LABEL[question]
+    results = []
+    for r in ranked[:topk]:
+        if question == 'builds_on':
+            source, target = r['label'], selected_label
+        else:
+            # 'leads_to' and 'related' both read as selected -> suggestion
+            source, target = selected_label, r['label']
+        results.append({
+            'label': r['label'],
+            'meta': r['meta'],
+            'source': source,
+            'target': target,
+            'relationship': relationship,
+            'reason': build_reason(source, target, question),
+        })
+    return results
+
 @app.route('/')
 def index():
     return app.send_static_file('index.html')
@@ -151,51 +173,21 @@ def recommend():
     try:
         data = request.get_json()
         nodes = data.get('nodes', [])
-        links = data.get('links', [])
         selected = data.get('selected_node', {})
+        question = data.get('question', 'related')
+        exclude = data.get('exclude', [])
+        if question not in RELATIONSHIP_LABEL:
+            question = 'related'
 
-        used_labels = set(n['label'] for n in nodes)
+        used_labels = set(n['label'] for n in nodes) | set(exclude)
         selected_label = selected.get('label', '')
         selected_meta = selected.get('meta', {})
 
-        grade, unit = resolved_meta(selected_label, selected_meta)
-
-        # 1. Direct prereqs/successors in unit
-        prereq_succ = []
-        if grade and unit and selected_label in curriculum.get(grade, {}).get(unit, []):
-            prereq_succ = [
-                t for t in find_prereqs_successors(grade, unit, selected_label)
-                if t['label'] not in used_labels
-            ]
-
-        # 2. Candidates from current graph structure
-        graph_candidates = get_graph_features(nodes, links, selected)
-        graph_candidates = [c for c in graph_candidates if c not in used_labels and c != selected_label]
-
-        # 3. Semantic similarity using transformer
-        semantic_recs = semantic_similarity(selected_label, graph_candidates, topk=7)
-
-        # 4. Fallback: semantic to all curriculum (if not enough)
-        needed = max(0, 8 - (len(prereq_succ) + len(semantic_recs)))
-        if needed > 0:
-            all_candidates = [t for t in curriculum_topics if t not in used_labels and t != selected_label]
-            fallback_recs = semantic_similarity(selected_label, all_candidates, topk=needed)
-        else:
-            fallback_recs = []
-
-        # Remove duplicates and merge all recommendations
-        seen = set()
-        recommendations = []
-        for rec in prereq_succ + semantic_recs + fallback_recs:
-            if rec['label'] not in seen:
-                recommendations.append({'label': rec['label'], 'meta': rec['meta']})
-                seen.add(rec['label'])
-
-        # Limit number, prioritize prereq/succ, then graph, then semantic
-        return jsonify({'recommendations': recommendations[:8]})
+        suggestions = relationship_suggestions(selected_label, selected_meta, used_labels, question, topk=3)
+        return jsonify({'suggestions': suggestions})
     except Exception as e:
         print("Error in /recommend:", e)
-        return jsonify({'recommendations': []})
+        return jsonify({'suggestions': []})
 
 if __name__ == '__main__':
     app.run(debug=True)

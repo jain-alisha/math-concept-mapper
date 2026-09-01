@@ -422,43 +422,96 @@
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
       fill: #8a6d1f;
     }
-    #aiPanel {
-      position: absolute;
-      bottom: 20px; right: 20px;
-      width: 350px; max-width: 90vw;
-      background: var(--surface); border-radius: 14px;
-      box-shadow: var(--shadow-lg);
-      border: 1px solid var(--border);
-      z-index: 1002;
-      font-size: 1em;
-      overflow: hidden;
+    /* --- Node-level scaffolding: toolbar, explore menu, ghost nodes --- */
+    #nodeToolbar {
+      position: fixed; transform: translate(-50%, -130%);
+      display: flex; align-items: center; gap: 0.5em;
+      background: var(--text); color: #fff; padding: 0.5em 0.8em;
+      border-radius: 999px; font-size: 0.85em; font-weight: 600;
+      box-shadow: var(--shadow-lg); z-index: 2200; white-space: nowrap;
     }
-    #aiPanel header {
-      background: linear-gradient(135deg, #1976d2, #2e90fa); color: #fff;
-      padding: 0.7em 1.1em; font-size: 1.03em;
-      font-weight: 700; letter-spacing: 0.02em;
+    #nodeToolbar button {
+      background: none; border: none; color: #fff; font-family: inherit;
+      font-weight: 600; font-size: 1em; cursor: pointer; padding: 0.1em 0.2em;
     }
-    #aiPanel ul {
-      margin: 0; padding: 0.65em 0.9em; list-style: none;
+    #nodeToolbar button:hover { text-decoration: underline; }
+    #nodeToolbar .sep { opacity: 0.5; }
+    #nodeToolbar .toolbar-hint { opacity: 0.85; }
+
+    #exploreMenu {
+      position: fixed; transform: translateX(-50%);
+      width: 280px; background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; box-shadow: var(--shadow-lg); z-index: 2200;
+      padding: 0.6em; font-size: 0.9em;
     }
-    #aiPanel li {
-      margin: 0.4em 0; padding: 0.5em 0.75em;
-      background: #f8fbff; border-radius: 8px;
-      border: 1px solid #e3ecf8; cursor: grab;
-      transition: background 0.12s, transform 0.1s, box-shadow 0.12s;
-      font-size: 0.96em;
-      user-select: none;
+    #exploreMenu .explore-menu-title {
+      font-weight: 700; color: var(--text); padding: 0.3em 0.5em 0.5em; font-size: 0.95em;
     }
-    #aiPanel li:hover {
-      background: #eaf4ff;
-      transform: translateY(-1px);
-      box-shadow: 0 3px 8px #b5d3f255;
+    #exploreMenu button {
+      display: block; width: 100%; text-align: left; background: none; border: none;
+      font-family: inherit; cursor: pointer; padding: 0.55em 0.5em; border-radius: 8px;
+      transition: background 0.12s;
     }
-    #aiPanel .empty {
-      color: #9aa7ba; padding: 0.6em 0.9em; text-align: center;
-      cursor: default;
-      user-select: none;
-      line-height: 1.5;
+    #exploreMenu button:hover { background: var(--bg); }
+    #exploreMenu .eq-title { font-weight: 600; color: var(--text); font-size: 0.96em; }
+    #exploreMenu .eq-hint { color: var(--text-secondary); font-size: 0.85em; margin-top: 0.15em; }
+
+    .ghost-node-rect {
+      fill: #fff8e8; stroke: #c98a12; stroke-width: 1.6px; stroke-dasharray: 6 4;
+      fill-opacity: 0.75;
+    }
+    .ghost-node-text {
+      font-size: 0.95em; font-weight: 600; fill: #8a6d1f;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+    }
+    .ghost-node-tag {
+      font-size: 0.68em; font-weight: 700; fill: #a6790a; text-transform: uppercase;
+      letter-spacing: 0.03em;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+    }
+    .ghost-actions {
+      position: fixed; transform: translateX(-50%);
+      display: flex; gap: 0.4em; background: var(--surface); border: 1px solid #f0d896;
+      border-radius: 8px; box-shadow: var(--shadow-sm); padding: 0.3em 0.4em; z-index: 2100;
+    }
+    .ghost-actions button {
+      background: none; border: none; font-family: inherit; font-size: 0.82em; font-weight: 600;
+      cursor: pointer; padding: 0.15em 0.4em; border-radius: 5px; color: var(--text);
+      transition: background 0.12s;
+    }
+    .ghost-actions button:hover { background: var(--bg); }
+    .ghost-actions button[data-act="add"] { color: #1f8a4c; }
+    .ghost-actions button[data-act="dismiss"] { color: #c2503a; font-size: 0.95em; }
+
+    #ghostMoreBar {
+      position: fixed; transform: translate(-100%, -50%);
+      display: flex; align-items: center; gap: 0.5em;
+      background: var(--surface); border: 1px solid var(--border); border-radius: 999px;
+      box-shadow: var(--shadow-lg); padding: 0.4em 0.7em; z-index: 2200;
+    }
+    #ghostMoreBar button {
+      background: var(--brand); color: #fff; border: none; font-family: inherit;
+      font-size: 0.82em; font-weight: 600; cursor: pointer; padding: 0.35em 0.8em; border-radius: 999px;
+    }
+    #ghostMoreBar button#closeExploreBtn { background: none; color: var(--text-muted); padding: 0.35em 0.5em; font-size: 1em; }
+    #ghostMoreBar .loading-label { font-size: 0.85em; color: var(--text-secondary); padding: 0 0.3em; }
+
+    #ghostReasonPopover {
+      position: fixed; width: 280px; background: var(--surface); border: 1px solid #f0d896;
+      border-radius: 12px; box-shadow: var(--shadow-lg); padding: 0.8em 1em; z-index: 2200;
+      font-size: 0.88em;
+    }
+    #ghostReasonPopover .reason-rel { font-weight: 700; color: var(--text); margin-bottom: 0.4em; font-size: 0.92em; }
+    #ghostReasonPopover .reason-arrow { color: #c98a12; }
+    #ghostReasonPopover .reason-tag {
+      font-size: 0.72em; font-weight: 700; text-transform: uppercase; color: #a6790a;
+      background: #fff8e8; border: 1px solid #f0d896; border-radius: 999px; padding: 0.1em 0.5em;
+      margin-left: 0.3em; vertical-align: middle;
+    }
+    #ghostReasonPopover p { margin: 0; color: var(--text-secondary); line-height: 1.5; }
+    #ghostReasonPopover button {
+      position: absolute; top: 0.5em; right: 0.7em; background: none; border: none;
+      color: var(--text-muted); font-size: 1.2em; cursor: pointer; line-height: 1;
     }
     #notesSidebar {
       margin-top: 0.3em;
@@ -487,13 +540,11 @@
     }
     @media (max-width: 850px) {
       #sidebar { width: 200px; }
-      #aiPanel { width: 90vw; min-width: 190px;}
     }
     @media (max-width: 500px) {
       #container { flex-direction: column;}
       #sidebar { width: 100vw; height: 32vh; border-bottom: 1.5px solid #ccd;}
       #canvasArea { height: 60vh;}
-      #aiPanel { right: 3vw; }
     }
 
 
@@ -596,11 +647,12 @@
     <div class="sidebar-section" id="sidebarInstructions">
       <strong>How to use:</strong>
       <ul style="padding-left:1.2em;">
-        <li>Drag a concept from the sidebar or from the AI recommender onto the map.</li>
+        <li>Drag a concept from the sidebar onto the map.</li>
         <li><b>Custom node:</b> Enter any label below and add your own concept to the map.</li>
-        <li>To create a link: <b>Double-click and drag</b> from one node to another.</li>
+        <li>Click a node for <b>Edit</b>, <b>Connect</b>, or <b>&#10022; Explore</b>.</li>
+        <li><b>Explore</b> asks what a concept builds on, leads to, or relates to, then shows suggestions as ghost nodes on the map - each one lets you Add, ask Why?, or dismiss it.</li>
+        <li>To create a link: use <b>Connect</b>, or <b>Ctrl+drag</b> from one node to another.</li>
         <li>To add a note to a link: <b>Double-click</b> on the link line.</li>
-        <li>To get AI recommendations: <b>Long-press</b> (hold mouse) on a node.</li>
         <li>To move a node: <b>Drag</b> it on the map.</li>
         <li>Right-click a node or link to delete.</li>
       </ul>
@@ -627,12 +679,13 @@
     <div id="readonlyBanner" style="display:none;"></div>
     <div id="isolatedLegend"><span class="beta-tag">Beta</span> Dashed nodes aren't connected to anything yet</div>
     <svg id="mapCanvas"></svg>
-    <div id="aiPanel" style="display:none;">
-      <header>AI Recommendations</header>
-      <ul id="aiList"></ul>
-    </div>
   </div>
 </div>
+<div id="nodeToolbar" style="display:none;"></div>
+<div id="exploreMenu" style="display:none;"></div>
+<div id="ghostActionsLayer"></div>
+<div id="ghostMoreBar" style="display:none;"></div>
+<div id="ghostReasonPopover" style="display:none;"></div>
 <div id="demoCursor"></div>
 <div id="demoGhost"></div>
 <div id="demoToast"></div>

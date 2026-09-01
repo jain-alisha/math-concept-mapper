@@ -62,6 +62,65 @@ function renderMapThumbnail(svg, mapData) {
   svg.setAttribute('viewBox', `${minX - pad} ${minY - pad} ${maxX - minX + pad * 2} ${maxY - minY + pad * 2}`);
 }
 
+// Full-size frame renderer for the Timeline viewer - unlike
+// renderMapThumbnail (deliberately unlabeled: too small to read text at
+// thumbnail-card size), this fills most of a dash-card and is meant to be
+// scrubbed/watched frame by frame, so labels are the whole point. Mirrors
+// app.js's own renderTimelineFrame in the playground, minus the
+// getNodeWidth/NODE_HEIGHT globals that only exist there.
+function renderTimelineFrame(svg, mapData) {
+  const NODE_H = 46, NODE_R = 16;
+  svg.innerHTML = '';
+  const nodesArr = (mapData && mapData.n) || [];
+  const edgesArr = (mapData && mapData.e) || [];
+  if (!nodesArr.length) { svg.setAttribute('viewBox', '0 0 300 150'); return; }
+
+  function widthFor(label) { return Math.max(70, Math.min(label.length * 8 + 36, 260)); }
+  const byId = new Map(nodesArr.map(n => [n.i, n]));
+
+  for (const e of edgesArr) {
+    const src = byId.get(e.s), tgt = byId.get(e.t);
+    if (!src || !tgt) continue;
+    const x1 = src.x + widthFor(src.l) / 2, y1 = src.y + NODE_H / 2;
+    const x2 = tgt.x + widthFor(tgt.l) / 2, y2 = tgt.y + NODE_H / 2;
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', `M${x1},${y1} L${x2},${y2}`);
+    path.setAttribute('stroke', '#9aa5b5');
+    path.setAttribute('stroke-width', '2');
+    path.setAttribute('fill', 'none');
+    svg.appendChild(path);
+  }
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const n of nodesArr) {
+    const w = widthFor(n.l);
+    const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    g.setAttribute('transform', `translate(${n.x},${n.y})`);
+    const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    rect.setAttribute('width', w);
+    rect.setAttribute('height', NODE_H);
+    rect.setAttribute('rx', NODE_R);
+    rect.setAttribute('fill', '#eaf2ff');
+    rect.setAttribute('stroke', '#b9d4f8');
+    const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    text.textContent = n.l;
+    text.setAttribute('x', w / 2);
+    text.setAttribute('y', NODE_H / 2);
+    text.setAttribute('text-anchor', 'middle');
+    text.setAttribute('dominant-baseline', 'middle');
+    text.setAttribute('font-size', '0.92em');
+    text.setAttribute('font-weight', '600');
+    text.setAttribute('fill', '#1f4f91');
+    text.setAttribute('font-family', "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif");
+    g.appendChild(rect);
+    g.appendChild(text);
+    svg.appendChild(g);
+    minX = Math.min(minX, n.x); minY = Math.min(minY, n.y);
+    maxX = Math.max(maxX, n.x + w); maxY = Math.max(maxY, n.y + NODE_H);
+  }
+  const framePad = 28;
+  svg.setAttribute('viewBox', `${minX - framePad} ${minY - framePad} ${maxX - minX + framePad * 2} ${maxY - minY + framePad * 2}`);
+}
+
 // A one-line, first-person read across all of a student's own maps - same
 // byUnit-ratio heuristic and prompt-toward-a-gap framing as the playground's
 // per-map AI summary and the teacher dashboard's class summary, just rolled
@@ -168,11 +227,13 @@ function renderClassList(container, classes) {
   container.appendChild(ul);
 }
 
-// Assembles the full page body: summary banner, map grid, class list.
-// hrefFor(map) is the click-through link - real maps link to the read-only
-// playground view (same mechanism a teacher uses to view a student's map);
-// the sample preview links to a ?share= of the (unsaved, fake) map data.
-function renderStudentDashboardBody(wrap, mapsWithData, classes, hrefFor) {
+// Assembles the full page body: summary banner, map grid, timeline, class
+// list. hrefFor(map) is the click-through link - real maps link to the
+// read-only playground view (same mechanism a teacher uses to view a
+// student's map); the sample preview links to a ?share= of the (unsaved,
+// fake) map data. timelineMaps is the ordered ({title, created_at, data})
+// snapshot list for the "My Timeline" card - omitted/empty hides the card.
+function renderStudentDashboardBody(wrap, mapsWithData, classes, hrefFor, timelineMaps) {
   wrap.innerHTML = '';
 
   const banner = document.createElement('div');
@@ -190,6 +251,24 @@ function renderStudentDashboardBody(wrap, mapsWithData, classes, hrefFor) {
   wrap.appendChild(mapsCard);
   renderMyMapCards(mapsBody, mapsWithData, hrefFor);
 
+  if (timelineMaps && timelineMaps.length) {
+    const timelineCard = document.createElement('div');
+    timelineCard.className = 'dash-card';
+    timelineCard.innerHTML = '<h2>My Timeline <span class="beta-tag">Beta</span></h2><p class="hint">Scrub through saved snapshots of a map in order, or press play to watch it build up over time.</p>';
+    const timelineBody = document.createElement('div');
+    timelineCard.appendChild(timelineBody);
+    wrap.appendChild(timelineCard);
+    renderTimelineViewer(timelineBody, timelineMaps);
+  } else if (window.SpanAuth && window.SpanAuth.isConfigured) {
+    // Real mode with no timeline yet - point at where one gets created,
+    // rather than silently omitting the section (sample mode always has
+    // one, so its absence here would otherwise look like a missing feature).
+    const timelineCard = document.createElement('div');
+    timelineCard.className = 'dash-card';
+    timelineCard.innerHTML = '<h2>My Timeline <span class="beta-tag">Beta</span></h2><p class="settings-empty">No timeline yet - save a map, then add it to a timeline from the Playground\'s Timeline panel.</p>';
+    wrap.appendChild(timelineCard);
+  }
+
   const classesCard = document.createElement('div');
   classesCard.className = 'dash-card';
   classesCard.innerHTML = '<h2>My classes</h2>';
@@ -197,6 +276,55 @@ function renderStudentDashboardBody(wrap, mapsWithData, classes, hrefFor) {
   classesCard.appendChild(classesBody);
   wrap.appendChild(classesCard);
   renderClassList(classesBody, classes);
+}
+
+// Slider + play button that scrubs through an ordered list of map
+// snapshots, same interaction as the playground's own Timeline panel
+// (app.js's showTimelineFrame/timelinePlayBtn) but rendered inline in a
+// dashboard card instead of a popover, and reusing renderMapThumbnail as
+// the per-frame renderer instead of a separate one.
+function renderTimelineViewer(container, timelineMaps) {
+  container.innerHTML = `
+    <div id="timelineFrameWrap"><svg id="timelineFrame"></svg></div>
+    <div id="timelineControls">
+      <button id="timelinePlayBtn" title="Play">&#9654;</button>
+      <input type="range" id="timelineSlider" min="0" max="0" value="0" step="1" />
+      <span id="timelineLabel"></span>
+    </div>
+  `;
+  const svg = container.querySelector('#timelineFrame');
+  const slider = container.querySelector('#timelineSlider');
+  const playBtn = container.querySelector('#timelinePlayBtn');
+  const label = container.querySelector('#timelineLabel');
+  let playTimer = null;
+
+  function stopPlayback() {
+    if (playTimer) { clearInterval(playTimer); playTimer = null; }
+    playBtn.innerHTML = '&#9654;';
+  }
+  function showFrame(index) {
+    const m = timelineMaps[index];
+    if (!m) return;
+    renderMapThumbnail(svg, m.data);
+    label.textContent = `${m.title} — ${new Date(m.created_at).toLocaleDateString()}`;
+  }
+
+  slider.max = String(timelineMaps.length - 1);
+  slider.value = '0';
+  showFrame(0);
+
+  slider.oninput = () => { stopPlayback(); showFrame(Number(slider.value)); };
+  playBtn.onclick = () => {
+    if (playTimer) { stopPlayback(); return; }
+    if (timelineMaps.length < 2) return;
+    playBtn.innerHTML = '&#10074;&#10074;';
+    playTimer = setInterval(() => {
+      let next = Number(slider.value) + 1;
+      if (next > timelineMaps.length - 1) next = 0;
+      slider.value = String(next);
+      showFrame(next);
+    }, 1400);
+  };
 }
 
 // ============================================================
@@ -244,6 +372,41 @@ function buildSampleStudentData() {
   return { maps: [percentsMap, ratiosMap], classes };
 }
 
+// Four snapshots of the same "Ratios Unit Map" story from buildSampleStudentData,
+// growing one step at a time - so the sample Timeline has something real to
+// scrub/play through instead of unrelated maps side by side.
+function buildSampleTimelineMaps() {
+  const G6 = '6th Grade Math', R_P = 'Ratios & Proportional Relationships';
+  const DAY = 86400000;
+  const meta = { grade: G6, unit: R_P };
+  const n = (i, l, x, y) => ({ i, l, x, y, m: meta });
+
+  const snapshots = [
+    { daysAgo: 21, nodeCount: 2, edgeCount: 0 },
+    { daysAgo: 14, nodeCount: 3, edgeCount: 1 },
+    { daysAgo: 7, nodeCount: 4, edgeCount: 3 },
+    { daysAgo: 0, nodeCount: 4, edgeCount: 3 },
+  ];
+  const allNodes = [
+    n(1, 'Ratio notation (a:b)', 60, 140),
+    n(2, 'Ratio vocabulary', 500, 70),
+    n(3, 'Equivalent ratios – tables', 940, 180),
+    n(4, 'Ratio word problems', 1380, 90),
+  ];
+  const allEdges = [
+    { i: 1, s: 1, t: 2, no: '' },
+    { i: 2, s: 2, t: 3, no: '' },
+    { i: 3, s: 3, t: 4, no: '' },
+  ];
+
+  return snapshots.map((s, idx) => ({
+    id: `sample-timeline-${idx}`,
+    title: 'Ratios Unit Map',
+    created_at: new Date(Date.now() - s.daysAgo * DAY).toISOString(),
+    data: { n: allNodes.slice(0, s.nodeCount), e: allEdges.slice(0, s.edgeCount) },
+  }));
+}
+
 // base64url-encodes map data the same way app.js's share-link mechanism
 // does, so "view this map" works even for fake, unsaved sample data.
 function encodeMapForShare(data) {
@@ -275,7 +438,11 @@ function renderSampleStudentDashboard() {
   const { maps, classes } = buildSampleStudentData();
   const body = document.createElement('div');
   dashWrap.appendChild(body);
-  renderStudentDashboardBody(body, maps, classes, (m) => `playground.html?share=${encodeMapForShare(m.data)}`);
+  renderStudentDashboardBody(
+    body, maps, classes,
+    (m) => `playground.html?share=${encodeMapForShare(m.data)}`,
+    buildSampleTimelineMaps()
+  );
 }
 
 // ============================================================
@@ -385,6 +552,18 @@ function setupStudentDashboardAuth() {
       mapsWithData = mapRows.map(m => ({ ...m, data: { n: [], e: [] } }));
     }
 
+    // Most-recently-created timeline, if any - timelines themselves are
+    // created/managed from the Playground's own Timeline panel; this view
+    // is read-only, same division of labor as maps (build in the
+    // Playground, review here).
+    let timelineMaps = [];
+    try {
+      const timelines = await window.SpanAuth.listMyTimelines();
+      if (timelines.length) timelineMaps = await window.SpanAuth.listTimelineMaps(timelines[0].id);
+    } catch (e) {
+      timelineMaps = [];
+    }
+
     dashWrap.innerHTML = '';
     const header = document.createElement('div');
     header.className = 'dash-header';
@@ -393,7 +572,7 @@ function setupStudentDashboardAuth() {
 
     const body = document.createElement('div');
     dashWrap.appendChild(body);
-    renderStudentDashboardBody(body, mapsWithData, classes, (m) => `playground.html?view=${m.id}&readonly=1`);
+    renderStudentDashboardBody(body, mapsWithData, classes, (m) => `playground.html?view=${m.id}&readonly=1`, timelineMaps);
   }
 
   function updateAuthUI(session) {
