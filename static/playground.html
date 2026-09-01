@@ -217,6 +217,47 @@
     }
     #aiSummaryPanel p { margin: 0; font-size: 0.92em; line-height: 1.5; color: var(--text-secondary); }
 
+    #checkMapBtn {
+      display: inline-flex; align-items: center; gap: 0.5em;
+      background: var(--surface); color: var(--text); border: 1px solid var(--border);
+      cursor: pointer; font-size: 0.9em; font-weight: 600; padding: 0.5em 0.9em;
+      border-radius: 8px; font-family: inherit; transition: background 0.12s, transform 0.1s;
+    }
+    #checkMapBtn:hover { background: var(--bg); transform: translateY(-1px); }
+    #checkMapBtn .icon { width: 15px; height: 15px; color: #c98a12; }
+    #checkMapPanel {
+      display: none; position: absolute; top: 44px; left: 0; width: 360px; max-height: 70vh; overflow-y: auto;
+      background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+      box-shadow: var(--shadow-lg); z-index: 1500; padding: 0.9em 1em;
+    }
+    #checkMapPanel header {
+      display: flex; align-items: center; gap: 0.5em; font-weight: 700; font-size: 0.92em;
+      margin-bottom: 0.6em; color: var(--text);
+    }
+    .checkmap-empty { margin: 0; font-size: 0.92em; color: var(--text-secondary); }
+    .checkmap-section { margin-bottom: 1em; }
+    .checkmap-section:last-child { margin-bottom: 0; }
+    .checkmap-section-title {
+      font-size: 0.78em; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase;
+      color: var(--text-muted); margin-bottom: 0.5em;
+    }
+    .checkmap-row {
+      background: var(--bg); border-radius: 9px; padding: 0.65em 0.8em; margin-bottom: 0.5em;
+    }
+    .checkmap-row:last-child { margin-bottom: 0; }
+    .checkmap-row p { margin: 0; font-size: 0.88em; line-height: 1.45; color: var(--text); }
+    .checkmap-row .checkmap-explain { color: var(--text-secondary); margin-top: 0.4em; }
+    .checkmap-actions { display: flex; flex-wrap: wrap; gap: 0.5em; margin-top: 0.5em; }
+    .checkmap-actions button {
+      background: var(--surface); border: 1px solid var(--border); color: var(--brand);
+      font-family: inherit; font-size: 0.8em; font-weight: 600; padding: 0.3em 0.7em;
+      border-radius: 999px; cursor: pointer; transition: background 0.12s;
+    }
+    .checkmap-actions button:hover { background: var(--bg); }
+    .checkmap-actions button.checkmap-danger { color: #c2503a; }
+
+    .node.dimmed { opacity: 0.25; transition: opacity 0.15s; }
+
     #container { display: flex; height: calc(100vh - 52px); }
     #sidebar {
       width: 340px; background: var(--surface); border-right: 1px solid var(--border); overflow-y: auto;
@@ -380,6 +421,8 @@
     }
     .isolated-badge circle { fill: #fff0ee; stroke: #f5b8ab; stroke-width: 1.4px; }
     .isolated-badge text { fill: #c2503a; font-weight: 700; pointer-events: none; }
+    .ai-added-badge circle { fill: #fff8e8; stroke: #f0d896; stroke-width: 1.2px; }
+    .ai-added-badge text { fill: #a6790a; pointer-events: none; }
     .node-label {
       pointer-events: none;
       font-size: 1em;
@@ -455,6 +498,12 @@
     #exploreMenu button:hover { background: var(--bg); }
     #exploreMenu .eq-title { font-weight: 600; color: var(--text); font-size: 0.96em; }
     #exploreMenu .eq-hint { color: var(--text-secondary); font-size: 0.85em; margin-top: 0.15em; }
+    #exploreMenu .hint-mode-toggle {
+      display: flex; align-items: center; gap: 0.5em; padding: 0.6em 0.5em 0.2em;
+      margin-top: 0.2em; border-top: 1px solid var(--border);
+      font-size: 0.85em; color: var(--text-secondary); cursor: pointer;
+    }
+    #exploreMenu .hint-mode-toggle input { accent-color: var(--brand); cursor: pointer; }
 
     .ghost-node-rect {
       fill: #fff8e8; stroke: #c98a12; stroke-width: 1.6px; stroke-dasharray: 6 4;
@@ -568,6 +617,17 @@
         <p id="aiSummaryText"></p>
       </div>
     </div>
+    <div id="checkMapWrap" style="position:relative;">
+      <button id="checkMapBtn" title="Look for gaps, isolated concepts, and connections worth a second look">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/></svg>
+        <span>Check my map</span>
+        <span class="beta-tag">Beta</span>
+      </button>
+      <div id="checkMapPanel">
+        <header>Map check <span class="beta-tag">Beta</span></header>
+        <div id="checkMapBody"></div>
+      </div>
+    </div>
     <button id="shareBtn" title="Copy a shareable link to this map">
       <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
       <span class="share-label">Share</span>
@@ -650,10 +710,11 @@
         <li>Drag a concept from the sidebar onto the map.</li>
         <li><b>Custom node:</b> Enter any label below and add your own concept to the map.</li>
         <li>Click a node for <b>Edit</b>, <b>Connect</b>, or <b>&#10022; Explore</b>.</li>
-        <li><b>Explore</b> asks what a concept builds on, leads to, or relates to, then shows suggestions as ghost nodes on the map - each one lets you Add, ask Why?, or dismiss it.</li>
+        <li><b>Explore</b> asks what a concept builds on, leads to, or relates to, then shows suggestions as ghost nodes on the map - each one lets you Add, ask Why?, or dismiss it. Check "Give me hints instead" to get a nudge before the answer.</li>
         <li>To create a link: use <b>Connect</b>, or <b>Ctrl+drag</b> from one node to another.</li>
         <li>To add a note to a link: <b>Double-click</b> on the link line.</li>
         <li>To move a node: <b>Drag</b> it on the map.</li>
+        <li><b>&#10022; Check my map</b> (top of the page) looks for isolated concepts, missing connections, and connections worth a second look, across your whole map.</li>
         <li>Right-click a node or link to delete.</li>
       </ul>
       <button id="playDemoBtn">&#9654; Play demo</button>

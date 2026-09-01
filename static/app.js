@@ -27,6 +27,10 @@ const EXPLORE_QUESTIONS = [
   { key: 'related', title: 'What else is related?', hint: 'Find sideways connections that are useful but not necessarily prerequisite-based.' },
 ];
 
+// --- Map-level "Check my map" ---
+let checkMapDim = false;             // true while a finding's "Show on map"/"Highlight" is active
+let checkMapDismissed = new Set();   // questionable-relationship link ids the student chose to "Keep anyway"
+
 // Read-only viewing (a teacher opening a student's map from Settings ->
 // Classes). Guarded at the mutation entry points AND inside autosave()
 // itself, rather than trusting RLS's silent write-rejection alone - a stray
@@ -111,6 +115,7 @@ window.onload = async function() {
   setupSearchEvents();
   setupShareButton();
   setupAiSummaryButton();
+  setupCheckMapButton();
   setupAuthUI();
   setupPlayDemoButton();
 
@@ -680,6 +685,7 @@ function setupAiSummaryButton() {
     const summary = computeMapSummary(nodes, links);
     text.textContent = summary.text;
     summaryHighlightIds = new Set(summary.highlightIds);
+    checkMapDim = false; // Check My Map's dimming is a separate highlight source - don't leave it stuck on
     panel.style.display = 'block';
     renderCanvas();
   };
@@ -688,6 +694,232 @@ function setupAiSummaryButton() {
   document.addEventListener('click', (e) => {
     if (panel.contains(e.target) || btn.contains(e.target)) return;
     closePanel();
+  }, true);
+}
+
+// ============================================================
+// Beta: map-level "Check my map" - a different kind of check than
+// Explore's per-node scaffolding. Four heuristic categories, all computed
+// client-side from the curriculum JSON already loaded for the sidebar (no
+// backend call needed): missing bridge, isolated concept, missing
+// relationship, questionable relationship. Never auto-corrects anything -
+// every action here is a suggestion the student explicitly accepts
+// (Show on map / + Add / + Connect) or a deliberate choice on an existing
+// edge (Explain / Keep anyway / Remove connection), never a silent edit.
+// ============================================================
+
+function curriculumPos(label) {
+  for (const grade in conceptsData) {
+    for (const unit in conceptsData[grade]) {
+      const idx = conceptsData[grade][unit].indexOf(label);
+      if (idx !== -1) return { grade, unit, idx, topics: conceptsData[grade][unit] };
+    }
+  }
+  return null;
+}
+
+function checkMyMap() {
+  const degree = new Map(nodes.map(n => [n.id, 0]));
+  links.forEach(l => {
+    degree.set(l.source, (degree.get(l.source) || 0) + 1);
+    degree.set(l.target, (degree.get(l.target) || 0) + 1);
+  });
+
+  const isolated = nodes.filter(n => (degree.get(n.id) || 0) === 0);
+
+  const missingBridge = [];
+  const questionable = [];
+  const onMapLabels = new Set(nodes.map(n => n.label));
+  links.forEach(l => {
+    if (checkMapDismissed.has(l.id)) return;
+    const src = nodes.find(n => n.id === l.source), tgt = nodes.find(n => n.id === l.target);
+    if (!src || !tgt) return;
+    const posA = curriculumPos(src.label), posB = curriculumPos(tgt.label);
+    if (!posA || !posB) return;
+    // Deliberately same-unit only: cross-unit and cross-grade edges are
+    // often the most valuable connections on a map (that's the whole
+    // point of a map over a flat topic list), so distance alone can't
+    // tell a genuine long-range prerequisite apart from a careless jump
+    // once units differ - only flag within a single unit, where the
+    // curriculum's own step-by-step order is a much stronger signal.
+    if (posA.grade !== posB.grade || posA.unit !== posB.unit) return;
+    const dist = Math.abs(posA.idx - posB.idx);
+    if (dist <= 1) return; // adjacent in the curriculum sequence - a direct edge is expected here
+    if (dist <= 3) {
+      const lo = Math.min(posA.idx, posB.idx), hi = Math.max(posA.idx, posB.idx);
+      const between = posA.topics.slice(lo + 1, hi).filter(t => !onMapLabels.has(t));
+      if (between.length) {
+        missingBridge.push({ source: src, target: tgt, candidate: between[0], link: l, grade: posA.grade, unit: posA.unit });
+      }
+    } else {
+      questionable.push({
+        source: src, target: tgt, link: l,
+        reason: `${src.label} and ${tgt.label} are ${dist} topics apart in ${posA.unit} - worth double-checking this is a direct prerequisite, not a multi-step jump.`,
+      });
+    }
+  });
+
+  const missingRelationship = [];
+  const tagged = nodes.filter(n => curriculumPos(n.label));
+  for (let i = 0; i < tagged.length; i++) {
+    for (let j = i + 1; j < tagged.length; j++) {
+      const a = tagged[i], b = tagged[j];
+      const posA = curriculumPos(a.label), posB = curriculumPos(b.label);
+      if (posA.grade === posB.grade && posA.unit === posB.unit && Math.abs(posA.idx - posB.idx) === 1) {
+        const already = links.some(l => (l.source === a.id && l.target === b.id) || (l.source === b.id && l.target === a.id));
+        if (!already) missingRelationship.push({ a, b, unit: posA.unit });
+      }
+    }
+  }
+
+  return { isolated, missingBridge, missingRelationship, questionable };
+}
+
+function highlightCheckMapNodes(ids) {
+  summaryHighlightIds = new Set(ids);
+  checkMapDim = true;
+  renderCanvas();
+}
+
+function checkMapSection(body, title, count, items, renderItem) {
+  if (!items.length) return;
+  const sec = document.createElement('div');
+  sec.className = 'checkmap-section';
+  const h = document.createElement('div');
+  h.className = 'checkmap-section-title';
+  h.textContent = `${count} ${title}`;
+  sec.appendChild(h);
+  items.forEach(item => sec.appendChild(renderItem(item)));
+  body.appendChild(sec);
+}
+
+function renderCheckMapPanel() {
+  const body = document.getElementById('checkMapBody');
+  if (!body) return;
+  const findings = checkMyMap();
+  const total = findings.isolated.length + findings.missingBridge.length + findings.missingRelationship.length + findings.questionable.length;
+  body.innerHTML = '';
+  if (!total) {
+    body.innerHTML = '<p class="checkmap-empty">No gaps spotted — nice work.</p>';
+    return;
+  }
+
+  checkMapSection(body, findings.missingBridge.length === 1 ? 'possible gap' : 'possible gaps', findings.missingBridge.length, findings.missingBridge, f => {
+    const row = document.createElement('div');
+    row.className = 'checkmap-row';
+    const p = document.createElement('p');
+    p.innerHTML = `${f.source.label} and ${f.target.label} are connected, but <strong>${f.candidate}</strong> may be an important concept in between.`;
+    row.appendChild(p);
+    const actions = document.createElement('div');
+    actions.className = 'checkmap-actions';
+    const showBtn = document.createElement('button');
+    showBtn.textContent = 'Show on map';
+    showBtn.onclick = () => highlightCheckMapNodes([f.source.id, f.target.id]);
+    const addBtn = document.createElement('button');
+    addBtn.textContent = `+ Add ${f.candidate}`;
+    addBtn.onclick = () => {
+      // Clamped like layoutGhostPosition - this canvas has no viewBox, so a
+      // negative y (both endpoints near the top edge) would be genuinely
+      // unreachable, not just off-screen.
+      const midX = Math.max(10, (f.source.x + f.target.x) / 2);
+      const midY = Math.max(10, (f.source.y + f.target.y) / 2 - 80);
+      addNode(f.candidate, midX, midY, { grade: f.grade, unit: f.unit, aiAdded: true });
+      const bridgeNode = nodes[nodes.length - 1];
+      addLink(f.source.id, bridgeNode.id);
+      addLink(bridgeNode.id, f.target.id);
+      renderCheckMapPanel();
+    };
+    actions.appendChild(showBtn); actions.appendChild(addBtn);
+    row.appendChild(actions);
+    return row;
+  });
+
+  checkMapSection(body, findings.isolated.length === 1 ? 'isolated concept' : 'isolated concepts', findings.isolated.length, findings.isolated, n => {
+    const row = document.createElement('div');
+    row.className = 'checkmap-row';
+    const p = document.createElement('p');
+    p.innerHTML = `<strong>${n.label}</strong> has no incoming or outgoing connections.`;
+    row.appendChild(p);
+    const actions = document.createElement('div');
+    actions.className = 'checkmap-actions';
+    const btn = document.createElement('button');
+    btn.textContent = 'Highlight';
+    btn.onclick = () => highlightCheckMapNodes([n.id]);
+    actions.appendChild(btn);
+    row.appendChild(actions);
+    return row;
+  });
+
+  checkMapSection(body, findings.missingRelationship.length === 1 ? 'connection to consider' : 'connections to consider', findings.missingRelationship.length, findings.missingRelationship, f => {
+    const row = document.createElement('div');
+    row.className = 'checkmap-row';
+    const p = document.createElement('p');
+    p.innerHTML = `<strong>${f.a.label}</strong> and <strong>${f.b.label}</strong> are next to each other in ${f.unit}, but aren't connected yet.`;
+    row.appendChild(p);
+    const actions = document.createElement('div');
+    actions.className = 'checkmap-actions';
+    const showBtn = document.createElement('button');
+    showBtn.textContent = 'Show on map';
+    showBtn.onclick = () => highlightCheckMapNodes([f.a.id, f.b.id]);
+    const connectBtn = document.createElement('button');
+    connectBtn.textContent = '+ Connect';
+    connectBtn.onclick = () => { addLink(f.a.id, f.b.id); renderCheckMapPanel(); };
+    actions.appendChild(showBtn); actions.appendChild(connectBtn);
+    row.appendChild(actions);
+    return row;
+  });
+
+  checkMapSection(body, findings.questionable.length === 1 ? 'connection to reconsider' : 'connections to reconsider', findings.questionable.length, findings.questionable, f => {
+    const row = document.createElement('div');
+    row.className = 'checkmap-row';
+    const p = document.createElement('p');
+    p.textContent = `Take another look at this connection: ${f.source.label} → ${f.target.label}.`;
+    row.appendChild(p);
+    const explainP = document.createElement('p');
+    explainP.className = 'checkmap-explain';
+    explainP.style.display = 'none';
+    explainP.textContent = f.reason;
+    row.appendChild(explainP);
+    const actions = document.createElement('div');
+    actions.className = 'checkmap-actions';
+    const explainBtn = document.createElement('button');
+    explainBtn.textContent = 'Explain';
+    explainBtn.onclick = () => { explainP.style.display = explainP.style.display === 'none' ? 'block' : 'none'; };
+    const keepBtn = document.createElement('button');
+    keepBtn.textContent = 'Keep anyway';
+    keepBtn.onclick = () => { checkMapDismissed.add(f.link.id); renderCheckMapPanel(); };
+    const removeBtn = document.createElement('button');
+    removeBtn.textContent = 'Remove connection';
+    removeBtn.className = 'checkmap-danger';
+    removeBtn.onclick = () => { deleteLink(f.link.id); renderCheckMapPanel(); };
+    actions.appendChild(explainBtn); actions.appendChild(keepBtn); actions.appendChild(removeBtn);
+    row.appendChild(actions);
+    return row;
+  });
+}
+
+function closeCheckMapPanel() {
+  const panel = document.getElementById('checkMapPanel');
+  if (panel) panel.style.display = 'none';
+  checkMapDim = false;
+  summaryHighlightIds = new Set();
+  renderCanvas();
+}
+
+function setupCheckMapButton() {
+  const btn = document.getElementById('checkMapBtn');
+  const panel = document.getElementById('checkMapPanel');
+  if (!btn || !panel) return;
+  btn.onclick = e => {
+    e.stopPropagation();
+    const isOpen = getComputedStyle(panel).display !== 'none';
+    if (isOpen) { closeCheckMapPanel(); return; }
+    panel.style.display = 'block';
+    renderCheckMapPanel();
+  };
+  document.addEventListener('click', e => {
+    if (panel.contains(e.target) || btn.contains(e.target)) return;
+    if (getComputedStyle(panel).display !== 'none') closeCheckMapPanel();
   }, true);
 }
 
@@ -1573,6 +1805,7 @@ function renderCanvas() {
     if (linkHoverTarget === node) extraClass += ' link-hover';
     if (isIsolated) extraClass += ' isolated';
     if (summaryHighlightIds.has(node.id)) extraClass += ' summary-highlight';
+    if (checkMapDim && !summaryHighlightIds.has(node.id)) extraClass += ' dimmed';
     rect.setAttribute('class', 'node'+extraClass);
     const color = nodeColorFor(node);
     rect.setAttribute('fill', color.fill);
@@ -1663,6 +1896,30 @@ function renderCanvas() {
       badge.appendChild(bText);
       const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
       title.textContent = 'Not connected to anything yet';
+      badge.appendChild(title);
+      g.appendChild(badge);
+    }
+
+    // Quiet provenance mark, not a penalty - a small sparkle for concepts
+    // added from an Explore suggestion rather than typed/dragged in by the
+    // student. Bottom-right (not top-right) so it doesn't collide with the
+    // isolated badge above. Clears the first time the node is renamed.
+    if (node.meta && node.meta.aiAdded) {
+      const badge = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      badge.setAttribute('class', 'ai-added-badge');
+      badge.setAttribute('transform', `translate(${w},${NODE_HEIGHT})`);
+      const bCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      bCircle.setAttribute('r', '8');
+      const bText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      bText.textContent = '✦';
+      bText.setAttribute('font-size', '9');
+      bText.setAttribute('text-anchor', 'middle');
+      bText.setAttribute('dominant-baseline', 'middle');
+      bText.setAttribute('y', '0.5');
+      badge.appendChild(bCircle);
+      badge.appendChild(bText);
+      const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+      title.textContent = 'Added from an Explore suggestion';
       badge.appendChild(title);
       g.appendChild(badge);
     }
@@ -1911,8 +2168,41 @@ async function requestSuggestions(node, question, exclude) {
   return data.suggestions || [];
 }
 
-async function openExploreQuestion(node, question) {
-  ghostState = { node, question, suggestions: [], shownLabels: new Set(), loading: true, error: false };
+// Hint-mode phrasing: a vague conceptual nudge, then a stronger one built
+// by taking the real reason and masking the concealed concept's name out
+// of it (real content, identity still withheld) - not a second, separately
+// authored hint, so it always agrees with the eventual reveal.
+const HINT1_TEMPLATES = {
+  prerequisite: [
+    "Think about what idea usually comes right before this one in the unit.",
+    "What foundational skill would make this topic click?",
+  ],
+  'builds toward': [
+    "Think about where this idea naturally gets used once it's understood.",
+    "What comes next once you've got this down?",
+  ],
+  related: [
+    "Think about what other idea in this unit shares a similar theme.",
+    "What's a nearby idea that isn't a strict prerequisite?",
+  ],
+};
+
+function hint1For(s) {
+  const options = HINT1_TEMPLATES[s.relationship] || HINT1_TEMPLATES.related;
+  return options[_hintTemplateIndex(s.source + s.target, options.length)];
+}
+function _hintTemplateIndex(seed, n) {
+  let h = 0;
+  for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0;
+  return h % n;
+}
+function hint2For(s) {
+  const re = new RegExp(s.label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
+  return s.reason.replace(re, 'this concept');
+}
+
+async function openExploreQuestion(node, question, hintMode) {
+  ghostState = { node, question, suggestions: [], shownLabels: new Set(), loading: true, error: false, hintMode: !!hintMode };
   renderCanvas();
   let suggestions = [];
   try {
@@ -1925,7 +2215,7 @@ async function openExploreQuestion(node, question) {
     return;
   }
   if (!ghostState || ghostState.node !== node || ghostState.question !== question) return; // stale response
-  suggestions.forEach(s => ghostState.shownLabels.add(s.label));
+  suggestions.forEach(s => { ghostState.shownLabels.add(s.label); s.revealLevel = ghostState.hintMode ? 0 : 3; });
   ghostState.suggestions = suggestions;
   ghostState.loading = false;
   renderCanvas();
@@ -1933,7 +2223,7 @@ async function openExploreQuestion(node, question) {
 
 async function showMoreSuggestions() {
   if (!ghostState) return;
-  const { node, question, shownLabels } = ghostState;
+  const { node, question, shownLabels, hintMode } = ghostState;
   ghostState.loading = true;
   renderCanvas();
   let suggestions = [];
@@ -1944,7 +2234,7 @@ async function showMoreSuggestions() {
     return;
   }
   if (!ghostState || ghostState.node !== node || ghostState.question !== question) return;
-  suggestions.forEach(s => shownLabels.add(s.label));
+  suggestions.forEach(s => { shownLabels.add(s.label); s.revealLevel = hintMode ? 0 : 3; });
   ghostState.suggestions = suggestions;
   ghostState.loading = false;
   renderCanvas();
@@ -1956,7 +2246,10 @@ async function showMoreSuggestions() {
 function addGhostSuggestion(suggestion, pos) {
   if (!ghostState) return;
   const anchor = ghostState.node;
-  addNode(suggestion.label, pos.x, pos.y, suggestion.meta);
+  // aiAdded: quietly retained provenance, not a visual penalty - just a
+  // small badge (see renderCanvas) that clears the first time the student
+  // renames the node, since that's a clear "I've made this mine" signal.
+  addNode(suggestion.label, pos.x, pos.y, { ...suggestion.meta, aiAdded: true });
   const newNode = nodes[nodes.length - 1];
   const sourceId = suggestion.source === anchor.label ? anchor.id : newNode.id;
   const targetId = suggestion.target === anchor.label ? anchor.id : newNode.id;
@@ -1984,6 +2277,24 @@ function showGhostReason(s, anchorRect) {
     <button id="closeReasonBtn" title="Close">&times;</button>
   `;
   pop.querySelector('p').textContent = s.reason;
+  pop.querySelector('#closeReasonBtn').onclick = e => { e.stopPropagation(); pop.style.display = 'none'; };
+}
+
+// Same popover as showGhostReason, but for a still-concealed ghost - no
+// source/target/relationship line, since one of those two labels *is* the
+// answer being withheld at this reveal level.
+function showGhostHint(s, anchorRect, title, text) {
+  const pop = document.getElementById('ghostReasonPopover');
+  if (!pop) return;
+  pop.style.display = 'block';
+  pop.style.left = Math.max(8, anchorRect.left - 60) + 'px';
+  pop.style.top = (anchorRect.bottom + 8) + 'px';
+  pop.innerHTML = `
+    <div class="reason-rel">${title}</div>
+    <p></p>
+    <button id="closeReasonBtn" title="Close">&times;</button>
+  `;
+  pop.querySelector('p').textContent = text;
   pop.querySelector('#closeReasonBtn').onclick = e => { e.stopPropagation(); pop.style.display = 'none'; };
 }
 
@@ -2033,8 +2344,9 @@ function renderGhostSuggestions(svg) {
     rect.setAttribute('class', 'ghost-node-rect');
     g.appendChild(rect);
 
+    const revealed = (s.revealLevel === undefined ? 3 : s.revealLevel) >= 3;
     const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-    text.textContent = '✦ ' + s.label;
+    text.textContent = revealed ? ('✦ ' + s.label) : '✦ ?';
     text.setAttribute('x', w / 2);
     text.setAttribute('y', NODE_HEIGHT / 2 - 7);
     text.setAttribute('text-anchor', 'middle');
@@ -2043,7 +2355,7 @@ function renderGhostSuggestions(svg) {
     g.appendChild(text);
 
     const tag = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-    tag.textContent = 'Suggested · ' + s.relationship;
+    tag.textContent = revealed ? ('Suggested · ' + s.relationship) : ('Hint level ' + Math.min(s.revealLevel, 2) + ' · ' + s.relationship);
     tag.setAttribute('x', w / 2);
     tag.setAttribute('y', NODE_HEIGHT / 2 + 12);
     tag.setAttribute('text-anchor', 'middle');
@@ -2103,6 +2415,7 @@ function updateNodeOverlays() {
           const val = window.prompt('Rename concept:', node.label);
           if (val && val.trim() && val.trim() !== node.label) {
             node.label = val.trim();
+            if (node.meta && node.meta.aiAdded) delete node.meta.aiAdded;
             renderNotesSidebar();
             renderCanvas();
           }
@@ -2136,14 +2449,17 @@ function updateNodeOverlays() {
       exploreMenu.innerHTML = `
         <div class="explore-menu-title">Explore this concept</div>
         ${EXPLORE_QUESTIONS.map(q => `<button data-q="${q.key}"><div class="eq-title">${q.title}</div><div class="eq-hint">${q.hint}</div></button>`).join('')}
+        <label class="hint-mode-toggle"><input type="checkbox" id="hintModeToggle" /> Give me hints instead of the answer</label>
       `;
       exploreMenu.onclick = e => {
+        if (e.target.closest('label')) return; // let the checkbox itself handle its own click
         e.stopPropagation();
         const btn = e.target.closest('button');
         if (!btn) return;
         const q = btn.getAttribute('data-q');
+        const hintMode = exploreMenu.querySelector('#hintModeToggle').checked;
         exploreMenuState = null;
-        openExploreQuestion(node, q);
+        openExploreQuestion(node, q, hintMode);
       };
     } else {
       exploreMenu.style.display = 'none';
@@ -2163,13 +2479,25 @@ function updateNodeOverlays() {
       bar.className = 'ghost-actions';
       bar.style.left = (rect.left + rect.width / 2) + 'px';
       bar.style.top = (rect.bottom + 4) + 'px';
-      bar.innerHTML = `<button data-act="add">+ Add</button><button data-act="why">Why?</button><button data-act="dismiss" title="Dismiss">&times;</button>`;
+      const level = s.revealLevel === undefined ? 3 : s.revealLevel;
+      if (level === 0) {
+        bar.innerHTML = `<button data-act="hint1">Hint</button><button data-act="dismiss" title="Dismiss">&times;</button>`;
+      } else if (level === 1) {
+        bar.innerHTML = `<button data-act="hint2">Need another hint?</button><button data-act="dismiss" title="Dismiss">&times;</button>`;
+      } else if (level === 2) {
+        bar.innerHTML = `<button data-act="reveal">Show suggestion</button><button data-act="dismiss" title="Dismiss">&times;</button>`;
+      } else {
+        bar.innerHTML = `<button data-act="add">+ Add</button><button data-act="why">Why?</button><button data-act="dismiss" title="Dismiss">&times;</button>`;
+      }
       bar.onclick = e => {
         e.stopPropagation();
         const act = e.target.getAttribute('data-act');
         if (act === 'add') addGhostSuggestion(s, s._pos);
         else if (act === 'dismiss') dismissGhostSuggestion(s.label);
         else if (act === 'why') showGhostReason(s, rect);
+        else if (act === 'hint1') { s.revealLevel = 1; renderCanvas(); showGhostHint(s, rect, 'Hint', hint1For(s)); }
+        else if (act === 'hint2') { s.revealLevel = 2; renderCanvas(); showGhostHint(s, rect, 'Another hint', hint2For(s)); }
+        else if (act === 'reveal') { s.revealLevel = 3; renderCanvas(); }
       };
       ghostLayer.appendChild(bar);
     });

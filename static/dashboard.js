@@ -110,6 +110,32 @@ function computeStudentProgress(mapsData, roster) {
   return { rows, avgConcepts };
 }
 
+// Per-student split of concepts the student typed/dragged in themselves
+// vs. concepts added from an Explore suggestion (n.m.aiAdded, set by
+// addGhostSuggestion in app.js and cleared the first time a student
+// renames a suggested node). Provenance is tracked quietly, not as a
+// judgment - this is a visibility tool for teachers, not a scoreboard, so
+// it's presented as a plain count split rather than sorted by "most AI-
+// reliant" or similarly loaded framing.
+function computeProvenanceStats(mapsData, roster) {
+  const byStudent = new Map();
+  for (const r of roster) byStudent.set(r.student_id, { own: 0, aiAdded: 0 });
+  for (const m of mapsData) {
+    const rec = byStudent.get(m.owner_id);
+    if (!rec) continue;
+    const nodesArr = (m.data && m.data.n) || [];
+    nodesArr.forEach(n => { if (n.m && n.m.aiAdded) rec.aiAdded++; else rec.own++; });
+  }
+  return roster.map(r => {
+    const rec = byStudent.get(r.student_id);
+    return {
+      name: r.student_display_name || r.student_email || r.student_id,
+      own: rec.own,
+      aiAdded: rec.aiAdded,
+    };
+  });
+}
+
 // Which {grade, unit} pairs the class's maps actually touch, and how many
 // distinct students are working in each - "where is the class's attention."
 function computeGradeUnitCoverage(mapsData) {
@@ -547,6 +573,7 @@ function renderClassInsights(summaryEl, grid, roster, mapsData, curriculum, taug
   const missing = computeMissingPrereqs(mapsData, curriculum || {}, taughtSet).slice(0, 8);
   const { rows: progressRows } = computeStudentProgress(mapsData, roster);
   const coverage = computeGradeUnitCoverage(mapsData);
+  const provenance = computeProvenanceStats(mapsData, roster);
 
   const freqCard = insightCard('Most-explored concepts');
   freqCard.appendChild(insightList(freq, (item, li) => {
@@ -619,6 +646,16 @@ function renderClassInsights(summaryEl, grid, roster, mapsData, curriculum, taug
     expandRow(li, span, `${row.students} student${row.students === 1 ? '' : 's'}`, null, row.studentIds);
   }, 'No curriculum-tagged concepts yet.'));
   grid.appendChild(coverageCard);
+
+  const provenanceCard = insightCard('Concept provenance <span class="beta-tag">Beta</span>');
+  const provenanceHint = document.createElement('p'); provenanceHint.className = 'hint';
+  provenanceHint.textContent = 'Concepts each student typed or dragged in themselves vs. added from an Explore suggestion.';
+  provenanceCard.appendChild(provenanceHint);
+  provenanceCard.appendChild(insightList(provenance, (row, li) => {
+    const span = document.createElement('span'); span.textContent = row.name;
+    li.appendChild(badgeRow(span, `${row.own} student-created, ${row.aiAdded} from suggestions`));
+  }, 'No students yet.'));
+  grid.appendChild(provenanceCard);
 }
 
 // Assembles one class's full dashboard view into `wrap`. `saveFn` is passed
