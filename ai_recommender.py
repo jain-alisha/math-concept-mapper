@@ -5,6 +5,7 @@ import os
 import re
 from collections import Counter
 import numpy as np
+import requests
 
 app = Flask(__name__, static_folder='static', static_url_path='')
 CORS(app)
@@ -164,6 +165,99 @@ def relationship_suggestions(selected_label, selected_meta, used_labels, questio
         })
     return results
 
+# --- Optional: real-LLM recommendations ---
+# Off by default (falls back to the heuristic above) unless LLM_API_KEY is
+# set. Written against the OpenAI-compatible chat-completions shape that
+# Qwen (Alibaba DashScope), OpenAI, OpenRouter, Groq, Together, and most
+# other hosted-model providers all expose, so swapping providers is just
+# changing LLM_BASE_URL/LLM_MODEL env vars, not code. Defaults point at
+# DashScope's Qwen endpoint since that's what was asked for, but nothing
+# here is Qwen-specific.
+LLM_API_KEY = os.environ.get('LLM_API_KEY')
+LLM_BASE_URL = os.environ.get('LLM_BASE_URL', 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1')
+LLM_MODEL = os.environ.get('LLM_MODEL', 'qwen-plus')
+
+QUESTION_PROMPTS = {
+    'builds_on': 'What does this concept build on? The student wants likely PREREQUISITES - concepts that should come before this one and that this one depends on.',
+    'leads_to': 'What does this concept lead to? The student wants likely SUCCESSORS - concepts that build on this one as a foundation.',
+    'related': "What else is related? The student wants useful SIDEWAYS connections - concepts that share ideas with this one but aren't a strict prerequisite or successor.",
+}
+
+def llm_relationship_suggestions(selected_label, grade, unit, used_labels, question, topk=3):
+    """Returns a list of suggestions on success, [] if the model returned
+    nothing usable, or None if the LLM path isn't configured/failed - the
+    caller distinguishes None (fall back entirely) from a short list (top
+    up with the heuristic) so a flaky API call degrades gracefully instead
+    of breaking Explore."""
+    if not LLM_API_KEY:
+        return None
+    if grade and unit and unit in curriculum.get(grade, {}):
+        candidates = [t for t in curriculum[grade][unit] if t not in used_labels and t != selected_label]
+    else:
+        candidates = [t for t in curriculum_topics if t not in used_labels and t != selected_label]
+    if not candidates:
+        return []
+
+    where = f' ({grade}, {unit})' if grade and unit else ''
+    prompt = f"""You are a math curriculum expert helping a student explore how concepts connect, inside a concept-mapping tool. The student is looking at "{selected_label}"{where}.
+
+They asked: {QUESTION_PROMPTS.get(question, QUESTION_PROMPTS['related'])}
+
+Choose up to {topk} suggestions ONLY from this list of real curriculum topics - do not invent a topic that isn't in this list:
+{json.dumps(candidates, ensure_ascii=False)}
+
+For each suggestion, write a specific, non-generic reason (1-2 sentences) that names the actual mathematical or cognitive mechanism connecting the two concepts - not a template phrase like "X is what Y builds on." Help the student understand WHY the connection matters, not just THAT it exists.
+
+Respond with ONLY valid JSON, no markdown fences, no commentary, in exactly this shape:
+{{"suggestions": [{{"label": "<exact topic from the list above>", "reason": "<specific reason>"}}]}}"""
+
+    try:
+        resp = requests.post(
+            f'{LLM_BASE_URL}/chat/completions',
+            headers={'Authorization': f'Bearer {LLM_API_KEY}', 'Content-Type': 'application/json'},
+            json={
+                'model': LLM_MODEL,
+                'messages': [{'role': 'user', 'content': prompt}],
+                'temperature': 0.7,
+                'max_tokens': 800,
+            },
+            timeout=20,
+        )
+        resp.raise_for_status()
+        content = resp.json()['choices'][0]['message']['content'].strip()
+        if content.startswith('```'):
+            content = content.strip('`')
+            if content.lower().startswith('json'):
+                content = content[4:]
+        raw_suggestions = json.loads(content).get('suggestions', [])
+    except Exception as e:
+        print('LLM recommend error:', e)
+        return None
+
+    valid_labels = set(candidates)
+    results = []
+    for item in raw_suggestions[:topk]:
+        label = (item or {}).get('label')
+        reason = (item or {}).get('reason', '').strip()
+        if label not in valid_labels or not reason:
+            continue  # skip hallucinated topics or empty reasons
+        meta = concept_lookup.get(label)
+        if not meta:
+            continue
+        if question == 'builds_on':
+            source, target = label, selected_label
+        else:
+            source, target = selected_label, label
+        results.append({
+            'label': label,
+            'meta': meta,
+            'source': source,
+            'target': target,
+            'relationship': RELATIONSHIP_LABEL[question],
+            'reason': reason,
+        })
+    return results
+
 @app.route('/')
 def index():
     return app.send_static_file('index.html')
@@ -182,8 +276,20 @@ def recommend():
         used_labels = set(n['label'] for n in nodes) | set(exclude)
         selected_label = selected.get('label', '')
         selected_meta = selected.get('meta', {})
+        grade, unit = resolved_meta(selected_label, selected_meta)
 
-        suggestions = relationship_suggestions(selected_label, selected_meta, used_labels, question, topk=3)
+        suggestions = llm_relationship_suggestions(selected_label, grade, unit, used_labels, question, topk=3)
+        if suggestions is None:
+            # Not configured, or the call/parse failed - the heuristic is
+            # the whole feature in that case, not just a backfill.
+            suggestions = relationship_suggestions(selected_label, selected_meta, used_labels, question, topk=3)
+        elif len(suggestions) < 3:
+            # Model returned fewer than asked (or some got filtered for
+            # naming a topic outside the candidate list) - top up rather
+            # than short the student a suggestion.
+            backfill_used = used_labels | set(s['label'] for s in suggestions)
+            suggestions += relationship_suggestions(selected_label, selected_meta, backfill_used, question, topk=3 - len(suggestions))
+
         return jsonify({'suggestions': suggestions})
     except Exception as e:
         print("Error in /recommend:", e)

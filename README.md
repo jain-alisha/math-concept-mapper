@@ -40,15 +40,31 @@ A visual, patent-ready educational software tool for mapping math concepts, powe
 ## How to Run Locally
 
 1. **Start Backend (AI Recommendation Engine)**
-   - Ensure you have Python 3 and Flask:
+   - Ensure you have Python 3 and the dependencies in `requirements.txt`:
      ```sh
-     pip install flask flask-cors
+     pip install -r requirements.txt
      ```
    - Start the server:
      ```sh
      python ai_recommender.py
      ```
    - By default, runs at `http://localhost:5000`
+   - **Optional: real-LLM recommendations.** Without any setup, `/recommend` uses a fast local
+     heuristic (curriculum order + word-overlap similarity). To have it call an actual model for
+     more thoughtful, specific reasoning instead, set these environment variables before starting
+     the server:
+     ```sh
+     export LLM_API_KEY=your-api-key
+     export LLM_BASE_URL=https://dashscope-intl.aliyuncs.com/compatible-mode/v1   # default; optional
+     export LLM_MODEL=qwen-plus                                                    # default; optional
+     ```
+     `LLM_BASE_URL`/`LLM_MODEL` default to Alibaba Cloud DashScope's Qwen endpoint, but the code
+     just speaks the standard OpenAI-compatible chat-completions shape - point it at OpenAI,
+     OpenRouter, Groq, Together, or any other compatible provider by changing those two values.
+     If `LLM_API_KEY` is unset, or the call fails for any reason (bad key, timeout, rate limit),
+     `/recommend` silently falls back to the heuristic - Explore never breaks, it just gets a
+     better source for its reasoning when a key is configured. On Render, set these under the
+     service's **Environment** tab rather than in a local `.env` file.
 
 2. **Open the demo site**
    - Either open `static/index.html` directly in your browser (no web server needed), or
@@ -58,8 +74,10 @@ A visual, patent-ready educational software tool for mapping math concepts, powe
 3. **Usage**
    - Drag topics from the sidebar to the canvas.
    - Connect nodes with arrows. Double-click a link to add a note.
-   - Long-press a node to see AI recommendations and add them instantly (requires the backend
-     from step 1 to be running, since the playground calls `http://localhost:5000/recommend`).
+   - Click a node for **Edit**, **Connect**, or **Explore**. Explore asks what the concept builds
+     on, leads to, or relates to, then shows up to 3 suggestions as ghost nodes right on the map -
+     each one lets you Add it, ask Why, or dismiss it (requires the backend from step 1 to be
+     running, since the playground calls `http://localhost:5000/recommend`).
 
 ---
 
