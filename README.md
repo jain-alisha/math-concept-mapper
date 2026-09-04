@@ -51,20 +51,28 @@ A visual, patent-ready educational software tool for mapping math concepts, powe
    - By default, runs at `http://localhost:5000`
    - **Optional: real-LLM recommendations.** Without any setup, `/recommend` uses a fast local
      heuristic (curriculum order + word-overlap similarity). To have it call an actual model for
-     more thoughtful, specific reasoning instead, set these environment variables before starting
-     the server:
+     more thoughtful, specific reasoning instead, set a primary provider's key (get a free one at
+     [aistudio.google.com](https://aistudio.google.com) - no card, no expiration):
      ```sh
-     export LLM_API_KEY=your-api-key
-     export LLM_BASE_URL=https://dashscope-intl.aliyuncs.com/compatible-mode/v1   # default; optional
-     export LLM_MODEL=qwen-plus                                                    # default; optional
+     export LLM_API_KEY=your-gemini-key
+     export LLM_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai   # default; optional
+     export LLM_MODEL=gemini-2.5-flash                                              # default; optional
      ```
-     `LLM_BASE_URL`/`LLM_MODEL` default to Alibaba Cloud DashScope's Qwen endpoint, but the code
-     just speaks the standard OpenAI-compatible chat-completions shape - point it at OpenAI,
-     OpenRouter, Groq, Together, or any other compatible provider by changing those two values.
-     If `LLM_API_KEY` is unset, or the call fails for any reason (bad key, timeout, rate limit),
-     `/recommend` silently falls back to the heuristic - Explore never breaks, it just gets a
-     better source for its reasoning when a key is configured. On Render, set these under the
-     service's **Environment** tab rather than in a local `.env` file.
+     Optionally add a second provider as a fallback, tried if the primary fails or isn't
+     configured (defaults to Groq - also free, no card, and very low latency; get a key at
+     [console.groq.com](https://console.groq.com)):
+     ```sh
+     export LLM_FALLBACK_API_KEY=your-groq-key
+     export LLM_FALLBACK_BASE_URL=https://api.groq.com/openai/v1        # default; optional
+     export LLM_FALLBACK_MODEL=llama-3.3-70b-versatile                  # default; optional
+     ```
+     Both slots just speak the standard OpenAI-compatible chat-completions shape, so either one
+     can point at OpenAI, OpenRouter, Qwen (DashScope), Together, or any other compatible provider
+     instead by changing its `*_BASE_URL`/`*_MODEL`. If neither key is set, or both calls fail for
+     any reason (bad key, timeout, rate limit), `/recommend` silently falls back to the heuristic -
+     Explore never breaks, it just gets a better source for its reasoning when a key is configured.
+     On Render, set these under the service's **Environment** tab rather than in a local `.env`
+     file.
 
 2. **Open the demo site**
    - Either open `static/index.html` directly in your browser (no web server needed), or

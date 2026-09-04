@@ -166,16 +166,32 @@ def relationship_suggestions(selected_label, selected_meta, used_labels, questio
     return results
 
 # --- Optional: real-LLM recommendations ---
-# Off by default (falls back to the heuristic above) unless LLM_API_KEY is
-# set. Written against the OpenAI-compatible chat-completions shape that
-# Qwen (Alibaba DashScope), OpenAI, OpenRouter, Groq, Together, and most
-# other hosted-model providers all expose, so swapping providers is just
-# changing LLM_BASE_URL/LLM_MODEL env vars, not code. Defaults point at
-# DashScope's Qwen endpoint since that's what was asked for, but nothing
-# here is Qwen-specific.
-LLM_API_KEY = os.environ.get('LLM_API_KEY')
-LLM_BASE_URL = os.environ.get('LLM_BASE_URL', 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1')
-LLM_MODEL = os.environ.get('LLM_MODEL', 'qwen-plus')
+# Off by default (falls back to the heuristic above) unless at least one
+# provider below has an API key set. Written against the OpenAI-compatible
+# chat-completions shape that Gemini, Groq, Qwen (DashScope), OpenAI,
+# OpenRouter, Together, and most other hosted-model providers all expose,
+# so adding/swapping a provider is an env var, not code.
+#
+# Two slots, tried in order: PRIMARY then FALLBACK, then the heuristic.
+# Defaults to Gemini (genuinely free indefinitely, no card - see
+# README) as primary and Groq (also free/no-card, very low latency) as
+# fallback, so a rate-limit or outage on one doesn't take Explore down to
+# the heuristic on its own - both env-configurable if you'd rather use
+# something else for either slot.
+LLM_PROVIDERS = [
+    {
+        'name': 'primary',
+        'api_key': os.environ.get('LLM_API_KEY'),
+        'base_url': os.environ.get('LLM_BASE_URL', 'https://generativelanguage.googleapis.com/v1beta/openai'),
+        'model': os.environ.get('LLM_MODEL', 'gemini-2.5-flash'),
+    },
+    {
+        'name': 'fallback',
+        'api_key': os.environ.get('LLM_FALLBACK_API_KEY'),
+        'base_url': os.environ.get('LLM_FALLBACK_BASE_URL', 'https://api.groq.com/openai/v1'),
+        'model': os.environ.get('LLM_FALLBACK_MODEL', 'llama-3.3-70b-versatile'),
+    },
+]
 
 QUESTION_PROMPTS = {
     'builds_on': 'What does this concept build on? The student wants likely PREREQUISITES - concepts that should come before this one and that this one depends on.',
@@ -183,22 +199,10 @@ QUESTION_PROMPTS = {
     'related': "What else is related? The student wants useful SIDEWAYS connections - concepts that share ideas with this one but aren't a strict prerequisite or successor.",
 }
 
-def llm_relationship_suggestions(selected_label, grade, unit, used_labels, question, topk=3):
-    """Returns a list of suggestions on success, [] if the model returned
-    nothing usable, or None if the LLM path isn't configured/failed - the
-    caller distinguishes None (fall back entirely) from a short list (top
-    up with the heuristic) so a flaky API call degrades gracefully instead
-    of breaking Explore."""
-    if not LLM_API_KEY:
-        return None
-    if grade and unit and unit in curriculum.get(grade, {}):
-        candidates = [t for t in curriculum[grade][unit] if t not in used_labels and t != selected_label]
-    else:
-        candidates = [t for t in curriculum_topics if t not in used_labels and t != selected_label]
-    if not candidates:
-        return []
-
-    where = f' ({grade}, {unit})' if grade and unit else ''
+def _call_llm_provider(provider, selected_label, where, question, candidates, topk):
+    """One provider, one attempt. Returns a raw suggestions list, or raises
+    on any failure (network, auth, malformed JSON) - the caller decides
+    what "failure" means (try the next provider, then the heuristic)."""
     prompt = f"""You are a math curriculum expert helping a student explore how concepts connect, inside a concept-mapping tool. The student is looking at "{selected_label}"{where}.
 
 They asked: {QUESTION_PROMPTS.get(question, QUESTION_PROMPTS['related'])}
@@ -211,28 +215,52 @@ For each suggestion, write a specific, non-generic reason (1-2 sentences) that n
 Respond with ONLY valid JSON, no markdown fences, no commentary, in exactly this shape:
 {{"suggestions": [{{"label": "<exact topic from the list above>", "reason": "<specific reason>"}}]}}"""
 
-    try:
-        resp = requests.post(
-            f'{LLM_BASE_URL}/chat/completions',
-            headers={'Authorization': f'Bearer {LLM_API_KEY}', 'Content-Type': 'application/json'},
-            json={
-                'model': LLM_MODEL,
-                'messages': [{'role': 'user', 'content': prompt}],
-                'temperature': 0.7,
-                'max_tokens': 800,
-            },
-            timeout=20,
-        )
-        resp.raise_for_status()
-        content = resp.json()['choices'][0]['message']['content'].strip()
-        if content.startswith('```'):
-            content = content.strip('`')
-            if content.lower().startswith('json'):
-                content = content[4:]
-        raw_suggestions = json.loads(content).get('suggestions', [])
-    except Exception as e:
-        print('LLM recommend error:', e)
+    resp = requests.post(
+        f"{provider['base_url']}/chat/completions",
+        headers={'Authorization': f"Bearer {provider['api_key']}", 'Content-Type': 'application/json'},
+        json={
+            'model': provider['model'],
+            'messages': [{'role': 'user', 'content': prompt}],
+            'temperature': 0.7,
+            'max_tokens': 800,
+        },
+        timeout=20,
+    )
+    resp.raise_for_status()
+    content = resp.json()['choices'][0]['message']['content'].strip()
+    if content.startswith('```'):
+        content = content.strip('`')
+        if content.lower().startswith('json'):
+            content = content[4:]
+    return json.loads(content).get('suggestions', [])
+
+def llm_relationship_suggestions(selected_label, grade, unit, used_labels, question, topk=3):
+    """Returns a list of suggestions on success, [] if every configured
+    provider returned nothing usable, or None if nothing is configured at
+    all - the caller distinguishes None (fall back entirely) from a short
+    list (top up with the heuristic) so a flaky API call degrades
+    gracefully instead of breaking Explore."""
+    configured = [p for p in LLM_PROVIDERS if p['api_key']]
+    if not configured:
         return None
+    if grade and unit and unit in curriculum.get(grade, {}):
+        candidates = [t for t in curriculum[grade][unit] if t not in used_labels and t != selected_label]
+    else:
+        candidates = [t for t in curriculum_topics if t not in used_labels and t != selected_label]
+    if not candidates:
+        return []
+
+    where = f' ({grade}, {unit})' if grade and unit else ''
+    raw_suggestions = []
+    for provider in configured:
+        try:
+            raw_suggestions = _call_llm_provider(provider, selected_label, where, question, candidates, topk)
+            break
+        except Exception as e:
+            print(f"LLM recommend error ({provider['name']}, {provider['model']}):", e)
+            continue
+    else:
+        return None  # every configured provider failed
 
     valid_labels = set(candidates)
     results = []
