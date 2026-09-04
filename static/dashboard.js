@@ -789,7 +789,7 @@ function buildSampleClassData() {
   // student.
   const jordanNodes = [
     node('Unit rate definition', 60, 100),
-    node('Unit rate calc Ints/decimals', 500, 220),
+    node('Calculate unit rates with integers and decimals', 500, 220),
     node('Percent of quantity', 100, 420),
     node('Percent word problems', 500, 460),
     node('Rate word problems', 900, 340),
@@ -981,9 +981,16 @@ function setupDashboardAuth() {
     errEl.style.color = '';
     errEl.textContent = '';
     try {
-      await window.SpanAuth.signUp(email, password, name);
-      errEl.style.color = '#1f8a4c';
-      errEl.textContent = 'Check your email to confirm your account, then sign in.';
+      const result = await window.SpanAuth.signUp(email, password, name);
+      if (result.session) {
+        // Email confirmation is off for this project - signUp() already
+        // returned an active session, so there's no email to check. The
+        // auth-state listener picks up the session; just close the modal.
+        closeModal();
+      } else {
+        errEl.style.color = '#1f8a4c';
+        errEl.textContent = 'Check your email to confirm your account, then sign in.';
+      }
     } catch (err) {
       errEl.textContent = err.message || 'Sign up failed.';
     }

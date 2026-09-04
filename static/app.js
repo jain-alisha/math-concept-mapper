@@ -631,8 +631,8 @@ function computeMapSummary(nodesArr, linksArr) {
     if (!isolatedIds.length) {
       return {
         text: pickPhrase(strong.unit + today, [
-          `Everything in ${strong.unit} is connected to something else — good coverage.`,
-          `${strong.unit} is fully linked up so far.`,
+          `Your map is fully connected so far — nice work.`,
+          `Everything on your map connects to something else — solid start.`,
         ]),
         highlightIds: [],
       };
@@ -1065,9 +1065,16 @@ function setupAuthUI() {
     errEl.style.color = '';
     errEl.textContent = '';
     try {
-      await window.SpanAuth.signUp(email, password, name);
-      errEl.style.color = '#1f8a4c';
-      errEl.textContent = 'Check your email to confirm your account, then sign in.';
+      const result = await window.SpanAuth.signUp(email, password, name);
+      if (result.session) {
+        // Email confirmation is off for this project - signUp() already
+        // returned an active session, so there's no email to check. The
+        // auth-state listener picks up the session; just close the modal.
+        closeModal();
+      } else {
+        errEl.style.color = '#1f8a4c';
+        errEl.textContent = 'Check your email to confirm your account, then sign in.';
+      }
     } catch (err) {
       errEl.textContent = err.message || 'Sign up failed.';
     }
@@ -2168,41 +2175,8 @@ async function requestSuggestions(node, question, exclude) {
   return data.suggestions || [];
 }
 
-// Hint-mode phrasing: a vague conceptual nudge, then a stronger one built
-// by taking the real reason and masking the concealed concept's name out
-// of it (real content, identity still withheld) - not a second, separately
-// authored hint, so it always agrees with the eventual reveal.
-const HINT1_TEMPLATES = {
-  prerequisite: [
-    "Think about what idea usually comes right before this one in the unit.",
-    "What foundational skill would make this topic click?",
-  ],
-  'builds toward': [
-    "Think about where this idea naturally gets used once it's understood.",
-    "What comes next once you've got this down?",
-  ],
-  related: [
-    "Think about what other idea in this unit shares a similar theme.",
-    "What's a nearby idea that isn't a strict prerequisite?",
-  ],
-};
-
-function hint1For(s) {
-  const options = HINT1_TEMPLATES[s.relationship] || HINT1_TEMPLATES.related;
-  return options[_hintTemplateIndex(s.source + s.target, options.length)];
-}
-function _hintTemplateIndex(seed, n) {
-  let h = 0;
-  for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0;
-  return h % n;
-}
-function hint2For(s) {
-  const re = new RegExp(s.label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
-  return s.reason.replace(re, 'this concept');
-}
-
-async function openExploreQuestion(node, question, hintMode) {
-  ghostState = { node, question, suggestions: [], shownLabels: new Set(), loading: true, error: false, hintMode: !!hintMode };
+async function openExploreQuestion(node, question) {
+  ghostState = { node, question, suggestions: [], shownLabels: new Set(), loading: true, error: false };
   renderCanvas();
   let suggestions = [];
   try {
@@ -2215,7 +2189,7 @@ async function openExploreQuestion(node, question, hintMode) {
     return;
   }
   if (!ghostState || ghostState.node !== node || ghostState.question !== question) return; // stale response
-  suggestions.forEach(s => { ghostState.shownLabels.add(s.label); s.revealLevel = ghostState.hintMode ? 0 : 3; });
+  suggestions.forEach(s => ghostState.shownLabels.add(s.label));
   ghostState.suggestions = suggestions;
   ghostState.loading = false;
   renderCanvas();
@@ -2223,7 +2197,7 @@ async function openExploreQuestion(node, question, hintMode) {
 
 async function showMoreSuggestions() {
   if (!ghostState) return;
-  const { node, question, shownLabels, hintMode } = ghostState;
+  const { node, question, shownLabels } = ghostState;
   ghostState.loading = true;
   renderCanvas();
   let suggestions = [];
@@ -2234,7 +2208,7 @@ async function showMoreSuggestions() {
     return;
   }
   if (!ghostState || ghostState.node !== node || ghostState.question !== question) return;
-  suggestions.forEach(s => { shownLabels.add(s.label); s.revealLevel = hintMode ? 0 : 3; });
+  suggestions.forEach(s => shownLabels.add(s.label));
   ghostState.suggestions = suggestions;
   ghostState.loading = false;
   renderCanvas();
@@ -2280,24 +2254,6 @@ function showGhostReason(s, anchorRect) {
   pop.querySelector('#closeReasonBtn').onclick = e => { e.stopPropagation(); pop.style.display = 'none'; };
 }
 
-// Same popover as showGhostReason, but for a still-concealed ghost - no
-// source/target/relationship line, since one of those two labels *is* the
-// answer being withheld at this reveal level.
-function showGhostHint(s, anchorRect, title, text) {
-  const pop = document.getElementById('ghostReasonPopover');
-  if (!pop) return;
-  pop.style.display = 'block';
-  pop.style.left = Math.max(8, anchorRect.left - 60) + 'px';
-  pop.style.top = (anchorRect.bottom + 8) + 'px';
-  pop.innerHTML = `
-    <div class="reason-rel">${title}</div>
-    <p></p>
-    <button id="closeReasonBtn" title="Close">&times;</button>
-  `;
-  pop.querySelector('p').textContent = text;
-  pop.querySelector('#closeReasonBtn').onclick = e => { e.stopPropagation(); pop.style.display = 'none'; };
-}
-
 // Ghost suggestion nodes are real SVG elements appended after the real map
 // (so they pan/scroll/scale with everything else) - dashed border, lower
 // opacity, a small sparkle + "Suggested" tag distinguish them from real
@@ -2316,8 +2272,12 @@ function renderGhostSuggestions(svg) {
   const total = ghostState.suggestions.length;
 
   ghostState.suggestions.forEach((s, i) => {
-    const pos = layoutGhostPosition(anchor, i, total, ghostState.question);
-    s._pos = pos;
+    // Computed once per suggestion and cached, not recomputed every render -
+    // recomputing from the *current* index/total meant adding or dismissing
+    // one ghost changed the total, which reshuffled every remaining ghost
+    // to new positions (the "collapse in" toward the center effect).
+    if (!s._pos) s._pos = layoutGhostPosition(anchor, i, total, ghostState.question);
+    const pos = s._pos;
     const w = getNodeWidth(s.label);
 
     const fromGhost = s.source === s.label; // ghost is the edge's source -> arrow points at anchor
@@ -2344,9 +2304,8 @@ function renderGhostSuggestions(svg) {
     rect.setAttribute('class', 'ghost-node-rect');
     g.appendChild(rect);
 
-    const revealed = (s.revealLevel === undefined ? 3 : s.revealLevel) >= 3;
     const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-    text.textContent = revealed ? ('✦ ' + s.label) : '✦ ?';
+    text.textContent = '✦ ' + s.label;
     text.setAttribute('x', w / 2);
     text.setAttribute('y', NODE_HEIGHT / 2 - 7);
     text.setAttribute('text-anchor', 'middle');
@@ -2355,7 +2314,7 @@ function renderGhostSuggestions(svg) {
     g.appendChild(text);
 
     const tag = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-    tag.textContent = revealed ? ('Suggested · ' + s.relationship) : ('Hint level ' + Math.min(s.revealLevel, 2) + ' · ' + s.relationship);
+    tag.textContent = 'Suggested · ' + s.relationship;
     tag.setAttribute('x', w / 2);
     tag.setAttribute('y', NODE_HEIGHT / 2 + 12);
     tag.setAttribute('text-anchor', 'middle');
@@ -2449,17 +2408,14 @@ function updateNodeOverlays() {
       exploreMenu.innerHTML = `
         <div class="explore-menu-title">Explore this concept</div>
         ${EXPLORE_QUESTIONS.map(q => `<button data-q="${q.key}"><div class="eq-title">${q.title}</div><div class="eq-hint">${q.hint}</div></button>`).join('')}
-        <label class="hint-mode-toggle"><input type="checkbox" id="hintModeToggle" /> Give me hints instead of the answer</label>
       `;
       exploreMenu.onclick = e => {
-        if (e.target.closest('label')) return; // let the checkbox itself handle its own click
         e.stopPropagation();
         const btn = e.target.closest('button');
         if (!btn) return;
         const q = btn.getAttribute('data-q');
-        const hintMode = exploreMenu.querySelector('#hintModeToggle').checked;
         exploreMenuState = null;
-        openExploreQuestion(node, q, hintMode);
+        openExploreQuestion(node, q);
       };
     } else {
       exploreMenu.style.display = 'none';
@@ -2479,25 +2435,13 @@ function updateNodeOverlays() {
       bar.className = 'ghost-actions';
       bar.style.left = (rect.left + rect.width / 2) + 'px';
       bar.style.top = (rect.bottom + 4) + 'px';
-      const level = s.revealLevel === undefined ? 3 : s.revealLevel;
-      if (level === 0) {
-        bar.innerHTML = `<button data-act="hint1">Hint</button><button data-act="dismiss" title="Dismiss">&times;</button>`;
-      } else if (level === 1) {
-        bar.innerHTML = `<button data-act="hint2">Need another hint?</button><button data-act="dismiss" title="Dismiss">&times;</button>`;
-      } else if (level === 2) {
-        bar.innerHTML = `<button data-act="reveal">Show suggestion</button><button data-act="dismiss" title="Dismiss">&times;</button>`;
-      } else {
-        bar.innerHTML = `<button data-act="add">+ Add</button><button data-act="why">Why?</button><button data-act="dismiss" title="Dismiss">&times;</button>`;
-      }
+      bar.innerHTML = `<button data-act="add">+ Add</button><button data-act="why">Why?</button><button data-act="dismiss" title="Dismiss">&times;</button>`;
       bar.onclick = e => {
         e.stopPropagation();
         const act = e.target.getAttribute('data-act');
         if (act === 'add') addGhostSuggestion(s, s._pos);
         else if (act === 'dismiss') dismissGhostSuggestion(s.label);
         else if (act === 'why') showGhostReason(s, rect);
-        else if (act === 'hint1') { s.revealLevel = 1; renderCanvas(); showGhostHint(s, rect, 'Hint', hint1For(s)); }
-        else if (act === 'hint2') { s.revealLevel = 2; renderCanvas(); showGhostHint(s, rect, 'Another hint', hint2For(s)); }
-        else if (act === 'reveal') { s.revealLevel = 3; renderCanvas(); }
       };
       ghostLayer.appendChild(bar);
     });
