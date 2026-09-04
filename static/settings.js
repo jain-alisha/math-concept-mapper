@@ -71,11 +71,11 @@ function setupRolePreviewToggle() {
     studentBtn.classList.toggle('active', role === 'student');
     if (role === 'teacher') {
       note.textContent = "This is a demo of what you'd see as a teacher: a class roster, at-a-glance student maps, and AI-driven insights across the whole class.";
-      cta.href = 'dashboard.html?sample=1';
+      cta.href = 'dashboard?sample=1';
       cta.textContent = 'Open Teacher Dashboard demo →';
     } else {
       note.textContent = "This is a demo of what you'd see as a student: your own saved maps, a summary of where you're strongest, and the classes you've joined.";
-      cta.href = 'student.html?sample=1';
+      cta.href = 'student?sample=1';
       cta.textContent = 'Open Student Dashboard demo →';
     }
   }
@@ -190,7 +190,7 @@ function setupAuthAndClasses() {
     classes.forEach(cls => {
       const card = document.createElement('a');
       card.className = 'class-card';
-      card.href = `dashboard.html?class=${cls.id}`;
+      card.href = `dashboard?class=${cls.id}`;
       card.innerHTML = `
         <div class="class-card-head">
           <div>

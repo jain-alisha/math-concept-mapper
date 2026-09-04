@@ -171,7 +171,7 @@ function applyReadonlyUI() {
   if (playDemoBtn) playDemoBtn.style.display = 'none';
 }
 
-// --- "Explore a sample map" (playground.html?sample=1) ---
+// --- "Explore a sample map" (playground?sample=1) ---
 function loadSampleMap() {
   // A real prerequisite pathway pulled from concepts.json (6th-8th grade),
   // from ratios/basic equations up through linear functions and stats -
@@ -376,9 +376,9 @@ async function playDemo() {
     const nodeA = nodes.find(n => n.label === LABEL_A && n.x === DROP_A.x && n.y === DROP_A.y);
     const nodeB = nodes.find(n => n.label === LABEL_B && n.x === DROP_B.x && n.y === DROP_B.y);
 
-    // --- 3: connect them (Ctrl+drag from one node to the other) ---
+    // --- 3: connect them (Shift+drag from one node to the other) ---
     if (nodeA && nodeB) {
-      showDemoToast('Ctrl+drag between nodes to connect them…');
+      showDemoToast('Shift+drag between nodes to connect them…');
       const aCenter = canvasToScreen(DROP_A.x + getNodeWidth(nodeA.label) / 2, DROP_A.y + NODE_HEIGHT / 2);
       const bCenter = canvasToScreen(DROP_B.x + getNodeWidth(nodeB.label) / 2, DROP_B.y + NODE_HEIGHT / 2);
       await moveDemoCursor(aCenter.left, aCenter.top, 500);
@@ -1423,7 +1423,7 @@ function setupAuthUI() {
       userLabel.textContent = `${name} (${role})`;
       if (dashboardLink) {
         dashboardLink.style.display = '';
-        dashboardLink.href = role === 'teacher' ? 'dashboard.html' : 'student.html';
+        dashboardLink.href = role === 'teacher' ? 'dashboard' : 'student';
       }
     } else {
       signInBtn.style.display = '';
@@ -1821,8 +1821,8 @@ function renderCanvas() {
     // --- One mousedown handler for all node actions ---
     rect.onmousedown = e => {
       if (isReadonly) return;
-      if (e.ctrlKey) {
-        // Ctrl+drag: Start link-creation
+      if (e.shiftKey) {
+        // Shift+drag: Start link-creation
         startLinkDrag(e, node, g, w);
       } else {
         // Drag: Move node

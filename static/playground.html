@@ -195,11 +195,6 @@
       color: #c2503a; font-size: 0.82em; font-weight: 600; padding: 0.5em 0.9em 0.5em 0.7em;
       border-radius: 9px; box-shadow: var(--shadow-sm);
     }
-    .beta-tag {
-      font-size: 0.75em; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase;
-      color: #c2503a; background: #fff0ee; border: 1px solid #f5b8ab; padding: 0.15em 0.5em;
-      border-radius: 999px;
-    }
     #aiSummaryBtn {
       display: inline-flex; align-items: center; gap: 0.5em;
       background: var(--surface); color: var(--text); border: 1px solid var(--border);
@@ -207,7 +202,6 @@
       border-radius: 8px; font-family: inherit; transition: background 0.12s, transform 0.1s;
     }
     #aiSummaryBtn:hover { background: var(--bg); transform: translateY(-1px); }
-    #aiSummaryBtn .icon { width: 15px; height: 15px; color: var(--brand); }
     #aiSummaryPanel {
       display: none; position: absolute; top: 44px; left: 0; width: 300px;
       background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
@@ -226,7 +220,6 @@
       border-radius: 8px; font-family: inherit; transition: background 0.12s, transform 0.1s;
     }
     #checkMapBtn:hover { background: var(--bg); transform: translateY(-1px); }
-    #checkMapBtn .icon { width: 15px; height: 15px; color: #c98a12; }
     #checkMapPanel {
       display: none; position: absolute; top: 44px; left: 0; width: 360px; max-height: 70vh; overflow-y: auto;
       background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
@@ -597,30 +590,26 @@
 </head>
 <body>
 <div id="topbar">
-  <a href="index.html" class="brand">
+  <a href="index" class="brand">
     <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="6" rx="1"/><rect x="2" y="16" width="6" height="6" rx="1"/><rect x="16" y="16" width="6" height="6" rx="1"/><path d="M12 8v4"/><path d="M5 16v-2a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v2"/></svg>
     Span
   </a>
   <nav>
     <div id="aiSummaryWrap" style="position:relative;">
       <button id="aiSummaryBtn" title="A quick AI-generated read on this map">
-        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/></svg>
         <span>AI Summary</span>
-        <span class="beta-tag">Beta</span>
       </button>
       <div id="aiSummaryPanel">
-        <header>AI Summary <span class="beta-tag">Beta</span></header>
+        <header>AI Summary</header>
         <p id="aiSummaryText"></p>
       </div>
     </div>
     <div id="checkMapWrap" style="position:relative;">
       <button id="checkMapBtn" title="Look for gaps, isolated concepts, and connections worth a second look">
-        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/></svg>
         <span>Check my map</span>
-        <span class="beta-tag">Beta</span>
       </button>
       <div id="checkMapPanel">
-        <header>Map check <span class="beta-tag">Beta</span></header>
+        <header>Map check</header>
         <div id="checkMapBody"></div>
       </div>
     </div>
@@ -632,7 +621,7 @@
       <button id="signInBtn">Sign in</button>
       <div id="userMenu">
         <button id="myMapsBtn">My Maps</button>
-        <button id="timelineBtn">Timeline <span class="beta-tag">Beta</span></button>
+        <button id="timelineBtn">Timeline</button>
         <span id="userLabel"></span>
         <button id="signOutBtn">Log out</button>
         <div id="myMapsPanel">
@@ -644,7 +633,7 @@
           <ul id="myMapsList"></ul>
         </div>
         <div id="timelinePanel">
-          <header>Map Timeline <span class="beta-tag">Beta</span></header>
+          <header>Map Timeline</header>
           <div id="timelineListView">
             <p class="hint">Group saved maps into a sequence, then scrub through how a map evolved over time.</p>
             <div class="my-maps-save-row">
@@ -668,9 +657,9 @@
         </div>
       </div>
     </div>
-    <a href="dashboard.html" id="dashboardLink" class="text-link" style="display:none;">Dashboard</a>
-    <a href="settings.html" class="text-link">Settings</a>
-    <a href="index.html" class="text-link">Home</a>
+    <a href="dashboard" id="dashboardLink" class="text-link" style="display:none;">Dashboard</a>
+    <a href="settings" class="text-link">Settings</a>
+    <a href="index" class="text-link">Home</a>
   </nav>
 </div>
 
@@ -707,7 +696,7 @@
         <li><b>Custom node:</b> Enter any label below and add your own concept to the map.</li>
         <li>Click a node for <b>Edit</b>, <b>Connect</b>, or <b>&#10022; Explore</b>.</li>
         <li><b>Explore</b> asks what a concept builds on, leads to, or relates to, then shows suggestions as ghost nodes on the map - each one lets you Add, ask Why?, or dismiss it.</li>
-        <li>To create a link: use <b>Connect</b>, or <b>Ctrl+drag</b> from one node to another.</li>
+        <li>To create a link: use <b>Connect</b>, or <b>Shift+drag</b> from one node to another.</li>
         <li>To add a note to a link: <b>Double-click</b> on the link line.</li>
         <li>To move a node: <b>Drag</b> it on the map.</li>
         <li><b>&#10022; Check my map</b> (top of the page) looks for isolated concepts, missing connections, and connections worth a second look, across your whole map.</li>
@@ -734,7 +723,7 @@
   </div>
   <div id="canvasArea">
     <div id="readonlyBanner" style="display:none;"></div>
-    <div id="isolatedLegend"><span class="beta-tag">Beta</span> Dashed nodes aren't connected to anything yet</div>
+    <div id="isolatedLegend">Dashed nodes aren't connected to anything yet</div>
     <svg id="mapCanvas"></svg>
   </div>
 </div>

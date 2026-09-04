@@ -559,7 +559,7 @@ function renderClassInsights(summaryEl, grid, roster, mapsData, curriculum, taug
   const banner = document.createElement('div');
   banner.className = 'ai-summary-banner';
   banner.innerHTML = `<p></p>`;
-  banner.querySelector('p').innerHTML = `<strong>Class summary</strong><span class="beta-tag">Beta</span><br>`;
+  banner.querySelector('p').innerHTML = `<strong>Class summary</strong><br>`;
   banner.querySelector('p').append(computeClassSummary(mapsData));
   summaryEl.appendChild(banner);
 
@@ -582,7 +582,7 @@ function renderClassInsights(summaryEl, grid, roster, mapsData, curriculum, taug
   }, 'Nothing yet.'));
   grid.appendChild(freqCard);
 
-  const hubCard = insightCard('Hub concepts <span class="beta-tag">Beta</span>');
+  const hubCard = insightCard('Hub concepts');
   const hubHint = document.createElement('p'); hubHint.className = 'hint';
   hubHint.textContent = 'Total connections across the whole class, not just how many students used it.';
   hubCard.appendChild(hubHint);
@@ -627,7 +627,7 @@ function renderClassInsights(summaryEl, grid, roster, mapsData, curriculum, taug
   }, 'No prerequisite gaps spotted in curriculum-tagged concepts.'));
   grid.appendChild(missingCard);
 
-  const progressCard = insightCard('Student progress <span class="beta-tag">Beta</span>');
+  const progressCard = insightCard('Student progress');
   const progressHint = document.createElement('p'); progressHint.className = 'hint';
   progressHint.textContent = 'Distinct concepts + total connections per student, lowest first.';
   progressCard.appendChild(progressHint);
@@ -637,7 +637,7 @@ function renderClassInsights(summaryEl, grid, roster, mapsData, curriculum, taug
   }, 'No students yet.'));
   grid.appendChild(progressCard);
 
-  const coverageCard = insightCard('Curriculum coverage <span class="beta-tag">Beta</span>');
+  const coverageCard = insightCard('Curriculum coverage');
   const coverageHint = document.createElement('p'); coverageHint.className = 'hint';
   coverageHint.textContent = 'Where the class is working, by grade and unit.';
   coverageCard.appendChild(coverageHint);
@@ -647,7 +647,7 @@ function renderClassInsights(summaryEl, grid, roster, mapsData, curriculum, taug
   }, 'No curriculum-tagged concepts yet.'));
   grid.appendChild(coverageCard);
 
-  const provenanceCard = insightCard('Concept provenance <span class="beta-tag">Beta</span>');
+  const provenanceCard = insightCard('Concept provenance');
   const provenanceHint = document.createElement('p'); provenanceHint.className = 'hint';
   provenanceHint.textContent = 'Concepts each student typed or dragged in themselves vs. added from an Explore suggestion.';
   provenanceCard.appendChild(provenanceHint);
@@ -666,7 +666,7 @@ function renderClassDashboard(wrap, cls, roster, maps, mapsWithData, curriculum,
 
   const glanceCard = document.createElement('div');
   glanceCard.className = 'dash-card';
-  glanceCard.innerHTML = '<h2>Class at a Glance <span class="beta-tag">Beta</span></h2>';
+  glanceCard.innerHTML = '<h2>Class at a Glance</h2>';
   const glanceGrid = document.createElement('div');
   glanceCard.appendChild(glanceGrid);
   wrap.appendChild(glanceCard);
@@ -687,7 +687,7 @@ function renderClassDashboard(wrap, cls, roster, maps, mapsWithData, curriculum,
 
   const taughtCard = document.createElement('div');
   taughtCard.className = 'dash-card';
-  taughtCard.innerHTML = '<h2>What have you taught? <span class="beta-tag">Beta</span></h2>';
+  taughtCard.innerHTML = '<h2>What have you taught?</h2>';
   const taughtBody = document.createElement('div');
   taughtCard.appendChild(taughtBody);
   wrap.appendChild(taughtCard);
@@ -740,7 +740,7 @@ function renderClassDashboard(wrap, cls, roster, maps, mapsWithData, curriculum,
 }
 
 // ============================================================
-// Sample dashboard (dashboard.html?sample=1): no login, no Supabase calls.
+// Sample dashboard (dashboard?sample=1): no login, no Supabase calls.
 // Real curriculum topics (6th + 7th grade Ratios & Proportional
 // Relationships), arranged to show off every insight: a strong/ahead
 // student, a mixed-progress student, a needs-support student, a just-
@@ -880,7 +880,7 @@ function renderSampleDashboard() {
 
   const banner = document.createElement('div');
   banner.className = 'sample-banner';
-  banner.innerHTML = 'Sample preview (no account needed). This is what a teacher sees for a real class. <a href="settings.html">Sign in for your own →</a>';
+  banner.innerHTML = 'Sample preview (no account needed). This is what a teacher sees for a real class. <a href="settings">Sign in for your own →</a>';
   dashWrap.appendChild(banner);
 
   const header = document.createElement('div');
@@ -902,7 +902,7 @@ function renderSampleDashboard() {
 
   renderClassDashboard(
     body, sampleClass, roster, maps, maps, curriculumData,
-    (m) => `playground.html?share=${encodeMapForShare(m.data)}`,
+    (m) => `playground?share=${encodeMapForShare(m.data)}`,
     async () => {} // fake save: no account, nothing to persist
   );
 }
@@ -929,7 +929,7 @@ function setupDashboardAuth() {
       <div class="dash-empty-state">
         <p>Sign in to see your Teacher Dashboard.</p>
         <button id="dashSignInBtn" style="background:var(--brand);color:#fff;border:none;padding:0.7em 1.4em;border-radius:8px;font-family:inherit;font-size:0.95em;font-weight:600;cursor:pointer;">Sign in</button>
-        <p style="margin-top:1.6em;">Curious what this looks like? <a href="dashboard.html?sample=1">Preview a sample class →</a></p>
+        <p style="margin-top:1.6em;">Curious what this looks like? <a href="dashboard?sample=1">Preview a sample class →</a></p>
       </div>
     `;
     document.getElementById('dashSignInBtn').onclick = openModal;
@@ -1046,7 +1046,7 @@ function setupDashboardAuth() {
     dashWrap.appendChild(body);
     renderClassDashboard(
       body, cls, roster, maps, mapsWithData, curriculumData,
-      (m) => `playground.html?view=${m.id}&readonly=1`
+      (m) => `playground?view=${m.id}&readonly=1`
     );
   }
 
@@ -1064,7 +1064,7 @@ function setupDashboardAuth() {
       dashWrap.innerHTML = `
         <div class="dash-empty-state">
           <p>You don't have any classes yet.</p>
-          <p><a href="settings.html">Create one in Settings →</a></p>
+          <p><a href="settings">Create one in Settings →</a></p>
         </div>
       `;
       return;
@@ -1088,7 +1088,7 @@ function setupDashboardAuth() {
         dashWrap.innerHTML = `
           <div class="dash-empty-state">
             <p>The Teacher Dashboard is for teacher accounts.</p>
-            <p><a href="settings.html">Back to Settings →</a></p>
+            <p><a href="settings">Back to Settings →</a></p>
           </div>
         `;
       }

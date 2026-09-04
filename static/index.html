@@ -35,7 +35,7 @@
     body {
       background-color: var(--bg);
       background-repeat: repeat;
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150'%3E%3Cg fill='none' stroke='%23e9ecf1' stroke-width='1'%3E%3Cpath d='M22,26 L104,20 M104,20 L68,92 M68,92 L16,128 M68,92 L128,116'/%3E%3C/g%3E%3Cg fill='%23e9ecf1'%3E%3Ccircle cx='22' cy='26' r='2.2'/%3E%3Ccircle cx='104' cy='20' r='2.2'/%3E%3Ccircle cx='68' cy='92' r='2.2'/%3E%3Ccircle cx='128' cy='116' r='2.2'/%3E%3Ccircle cx='16' cy='128' r='2.2'/%3E%3C/g%3E%3C/svg%3E");
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cg fill='none' stroke='%23e9ecf1' stroke-width='1'%3E%3Cpath d='M60,60 L150,50 M60,60 L100,110 M150,50 L100,110 M100,110 L55,155 M100,110 L160,150 M55,155 L100,200 M160,150 L200,100 M60,60 L100,0 M55,155 L0,100'/%3E%3C/g%3E%3Cg fill='%23e9ecf1'%3E%3Ccircle cx='60' cy='60' r='2.2'/%3E%3Ccircle cx='150' cy='50' r='2.2'/%3E%3Ccircle cx='100' cy='110' r='2.2'/%3E%3Ccircle cx='55' cy='155' r='2.2'/%3E%3Ccircle cx='160' cy='150' r='2.2'/%3E%3Ccircle cx='100' cy='0' r='2.2'/%3E%3Ccircle cx='100' cy='200' r='2.2'/%3E%3Ccircle cx='0' cy='100' r='2.2'/%3E%3Ccircle cx='200' cy='100' r='2.2'/%3E%3C/g%3E%3C/svg%3E");
     }
     .icon { width: 20px; height: 20px; display: block; }
 
@@ -167,15 +167,6 @@
     .use-case-card .support { font-size: 0.95em; line-height: 1.55; color: var(--text-secondary); margin: 0; }
 
     /* ---------- Beta features ---------- */
-    .beta-pill {
-      display: inline-block; font-size: 0.62em; font-weight: 800; letter-spacing: 0.05em;
-      text-transform: uppercase; color: var(--coral-tx); background: var(--coral-bg);
-      border: 1px solid var(--coral-bd); padding: 0.2em 0.6em; border-radius: 999px;
-      vertical-align: middle; margin-left: 0.6em;
-    }
-    .beta-card { position: relative; }
-    .beta-card .beta-pill { position: absolute; top: 1.4em; right: 1.4em; margin-left: 0; }
-    .beta-card h3 { padding-right: 4.5em; }
     .beta-card a.beta-link {
       display: inline-block; margin-top: 0.2em; font-size: 0.88em; font-weight: 600;
       color: var(--brand); text-decoration: none;
@@ -205,14 +196,14 @@
 </head>
 <body>
   <div id="topbar">
-    <a href="index.html" class="brand">
+    <a href="index" class="brand">
       <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="6" rx="1"/><rect x="2" y="16" width="6" height="6" rx="1"/><rect x="16" y="16" width="6" height="6" rx="1"/><path d="M12 8v4"/><path d="M5 16v-2a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v2"/></svg>
       Span
     </a>
     <nav>
       <a href="#about" class="text-link">About</a>
-      <a href="playground.html?auth=1" class="text-link">Sign in</a>
-      <a href="playground.html" class="nav-cta">Open Playground</a>
+      <a href="playground?auth=1" class="text-link">Sign in</a>
+      <a href="playground" class="nav-cta">Open Playground</a>
     </nav>
   </div>
 
@@ -225,10 +216,10 @@
           and learning pathways.
         </p>
         <div class="cta-row">
-          <a class="btn btn-primary" href="playground.html">Try the Playground</a>
-          <a class="btn btn-secondary" href="playground.html?sample=1">Explore a sample map</a>
-          <a class="btn btn-secondary" href="dashboard.html?sample=1">Explore a mock teacher dashboard</a>
-          <a class="btn btn-secondary" href="student.html?sample=1">Explore a mock student dashboard</a>
+          <a class="btn btn-primary" href="playground">Try the Playground</a>
+          <a class="btn btn-secondary" href="playground?sample=1">Explore a sample map</a>
+          <a class="btn btn-secondary" href="dashboard?sample=1">Explore a mock teacher dashboard</a>
+          <a class="btn btn-secondary" href="student?sample=1">Explore a mock student dashboard</a>
         </div>
       </div>
 
@@ -369,7 +360,7 @@
           <rect x="160" y="8" width="102" height="26" rx="13" fill="var(--surface)" stroke="var(--amber-bd)" stroke-dasharray="3 2"/>
           <text x="211" y="25" text-anchor="middle" font-size="9" font-weight="600" fill="var(--amber-tx)" font-family="-apple-system,Segoe UI,Arial,sans-serif">Percentages</text>
         </svg>
-        <p class="support" style="margin-top:1em;"><a href="dashboard.html?sample=1" style="color: var(--brand); font-weight: 600; text-decoration: none;">See a sample class dashboard →</a></p>
+        <p class="support" style="margin-top:1em;"><a href="dashboard?sample=1" style="color: var(--brand); font-weight: 600; text-decoration: none;">See a sample class dashboard →</a></p>
       </div>
       <div class="use-case-card student">
         <span class="label">For Students</span>
@@ -386,42 +377,37 @@
           <rect x="198" y="16" width="70" height="24" rx="12" fill="var(--surface)" stroke="var(--border)" stroke-dasharray="3 2"/>
           <text x="233" y="32" text-anchor="middle" font-size="8.5" fill="var(--text-muted)" font-family="-apple-system,Segoe UI,Arial,sans-serif">Proportions</text>
         </svg>
-        <p class="support" style="margin-top:1em;"><a href="student.html?sample=1" style="color: var(--brand); font-weight: 600; text-decoration: none;">See a sample student dashboard →</a></p>
+        <p class="support" style="margin-top:1em;"><a href="student?sample=1" style="color: var(--brand); font-weight: 600; text-decoration: none;">See a sample student dashboard →</a></p>
       </div>
     </div>
   </section>
 
   <section>
-    <h2>Coming soon<span class="beta-pill">Beta</span></h2>
+    <h2>Coming soon</h2>
     <div class="features">
 
       <div class="feature-card beta-card">
-        <span class="beta-pill">Beta</span>
         <h3>Map summary</h3>
         <p>Get a quick nudge toward one concept worth connecting next, highlighted right on your map — plus a shoutout when you've added new connections since your last visit.</p>
       </div>
 
       <div class="feature-card beta-card">
-        <span class="beta-pill">Beta</span>
         <h3>Isolated concept highlighting</h3>
         <p>Concepts that have been added but never connected are flagged so they are easier to spot.</p>
       </div>
 
       <div class="feature-card beta-card">
-        <span class="beta-pill">Beta</span>
         <h3>Classwide gap analysis</h3>
         <p>Teachers can mark what they have already taught so classwide analysis reflects the actual course sequence.</p>
       </div>
 
       <div class="feature-card beta-card">
-        <span class="beta-pill">Beta</span>
         <h3>Sample teacher dashboard</h3>
         <p>Explore a populated mock class with sample student maps before creating your own.</p>
-        <a class="beta-link" href="dashboard.html?sample=1">Preview it →</a>
+        <a class="beta-link" href="dashboard?sample=1">Preview it →</a>
       </div>
 
       <div class="feature-card beta-card">
-        <span class="beta-pill">Beta</span>
         <h3>Map timeline</h3>
         <p>Save map snapshots to your dashboard, label them, and move between dates to see how a map changes over time.</p>
       </div>
@@ -431,7 +417,7 @@
 
   <div class="footer-cta">
     <h2>Build your first map</h2>
-    <a class="btn btn-primary" href="playground.html">Open the Playground →</a>
+    <a class="btn btn-primary" href="playground">Open the Playground →</a>
   </div>
 
   <footer class="site-footer">Span · demo site</footer>

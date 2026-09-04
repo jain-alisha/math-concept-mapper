@@ -129,6 +129,21 @@ function renderTimelineFrame(svg, mapData) {
 // a real one.
 function computeStudentSummary(mapsData) {
   if (!mapsData.length) return "No saved maps yet — build one in the Playground to see a summary here.";
+  // Maps saved into a timeline as repeated "save as new" snapshots share a
+  // title and represent one evolving map, not several distinct ones - sum
+  // every row as-is and a well-used timeline inflates the totals (a map
+  // saved 5 times over would count its own concepts up to 5x). Keep only
+  // the most recently updated row per title so each conceptual map counts
+  // once, at its current state.
+  const latestByTitle = new Map();
+  for (const m of mapsData) {
+    const existing = latestByTitle.get(m.title);
+    if (!existing || new Date(m.updated_at) > new Date(existing.updated_at)) {
+      latestByTitle.set(m.title, m);
+    }
+  }
+  mapsData = [...latestByTitle.values()];
+
   // Keyed by grade+unit, not unit alone - curriculum unit names repeat
   // across grades, and a unit-only key would silently conflate two
   // different grades' connectedness into one misleading number (same fix
@@ -173,7 +188,7 @@ function computeStudentSummary(mapsData) {
 function renderMyMapCards(container, maps, hrefFor) {
   container.innerHTML = '';
   if (!maps.length) {
-    container.innerHTML = '<p class="settings-empty">No saved maps yet. <a href="playground.html">Build one in the Playground →</a></p>';
+    container.innerHTML = '<p class="settings-empty">No saved maps yet. <a href="playground">Build one in the Playground →</a></p>';
     return;
   }
   const grid = document.createElement('div');
@@ -211,7 +226,7 @@ function renderMyMapCards(container, maps, hrefFor) {
 function renderClassList(container, classes) {
   container.innerHTML = '';
   if (!classes.length) {
-    container.innerHTML = '<p class="settings-empty">You haven\'t joined a class yet. <a href="settings.html">Join one in Settings →</a></p>';
+    container.innerHTML = '<p class="settings-empty">You haven\'t joined a class yet. <a href="settings">Join one in Settings →</a></p>';
     return;
   }
   const ul = document.createElement('ul');
@@ -239,7 +254,7 @@ function renderStudentDashboardBody(wrap, mapsWithData, classes, hrefFor, timeli
   const banner = document.createElement('div');
   banner.className = 'ai-summary-banner';
   banner.innerHTML = '<p></p>';
-  banner.querySelector('p').innerHTML = '<strong>My summary</strong><span class="beta-tag">Beta</span><br>';
+  banner.querySelector('p').innerHTML = '<strong>My summary</strong><br>';
   banner.querySelector('p').append(computeStudentSummary(mapsWithData));
   wrap.appendChild(banner);
 
@@ -254,7 +269,7 @@ function renderStudentDashboardBody(wrap, mapsWithData, classes, hrefFor, timeli
   if (timelineMaps && timelineMaps.length) {
     const timelineCard = document.createElement('div');
     timelineCard.className = 'dash-card';
-    timelineCard.innerHTML = '<h2>My Timeline <span class="beta-tag">Beta</span></h2><p class="hint">Scrub through saved snapshots of a map in order, or press play to watch it build up over time.</p>';
+    timelineCard.innerHTML = '<h2>My Timeline</h2><p class="hint">Scrub through saved snapshots of a map in order, or press play to watch it build up over time.</p>';
     const timelineBody = document.createElement('div');
     timelineCard.appendChild(timelineBody);
     wrap.appendChild(timelineCard);
@@ -265,7 +280,7 @@ function renderStudentDashboardBody(wrap, mapsWithData, classes, hrefFor, timeli
     // one, so its absence here would otherwise look like a missing feature).
     const timelineCard = document.createElement('div');
     timelineCard.className = 'dash-card';
-    timelineCard.innerHTML = '<h2>My Timeline <span class="beta-tag">Beta</span></h2><p class="settings-empty">No timeline yet - save a map, then add it to a timeline from the Playground\'s Timeline panel.</p>';
+    timelineCard.innerHTML = '<h2>My Timeline</h2><p class="settings-empty">No timeline yet - save a map, then add it to a timeline from the Playground\'s Timeline panel.</p>';
     wrap.appendChild(timelineCard);
   }
 
@@ -328,75 +343,79 @@ function renderTimelineViewer(container, timelineMaps) {
 }
 
 // ============================================================
-// Sample dashboard (student.html?sample=1): no login, no Supabase calls.
+// Sample dashboard (student?sample=1): no login, no Supabase calls.
 // One well-connected map and one just-started map, so the summary has a
 // real (not manufactured) gap to point at, plus one joined class.
 // ============================================================
 
-function buildSampleStudentData() {
-  const G6 = '6th Grade Math', G7 = '7th Grade Math', R_P = 'Ratios & Proportional Relationships';
-  let nid = 1;
-  const node = (l, x, y, grade) => ({ i: nid++, l, x, y, m: { grade, unit: R_P } });
-
-  const ratiosNodes = [
-    node('Ratio notation (a:b)', 60, 140, G6),
-    node('Ratio vocabulary', 500, 70, G6),
-    node('Equivalent ratios – tables', 940, 180, G6),
-    node('Ratio word problems', 1380, 90, G6),
-  ];
-  const ratiosMap = {
-    id: 'sample-my-ratios', title: 'Ratios Unit Map',
-    updated_at: new Date(Date.now() - 86400000).toISOString(),
-    data: {
-      n: ratiosNodes,
-      e: [
-        { i: 1, s: ratiosNodes[0].i, t: ratiosNodes[1].i, no: 'Notation is how we write a ratio - vocabulary is the words for talking about it.' },
-        { i: 2, s: ratiosNodes[1].i, t: ratiosNodes[2].i, no: '' },
-        { i: 3, s: ratiosNodes[2].i, t: ratiosNodes[3].i, no: '' },
-      ],
-    },
-  };
-
-  const percentsNodes = [
-    node('Percent of quantity', 80, 140, G7),
-    node('Percent word problems', 520, 260, G7),
-  ];
-  const percentsMap = {
-    id: 'sample-my-percents', title: 'Percents Practice',
-    updated_at: new Date().toISOString(),
-    data: { n: percentsNodes, e: [] },
-  };
-
-  const classes = [{ id: 'sample-class', name: 'Period 3 - Ratios & Proportions' }];
-
-  return { maps: [percentsMap, ratiosMap], classes };
+// Sample classes are unrelated to maps/timeline - just the one joined class.
+function buildSampleClasses() {
+  return [{ id: 'sample-class', name: 'Period 3 - Ratios & Proportions' }];
 }
 
-// Four snapshots of the same "Ratios Unit Map" story from buildSampleStudentData,
-// growing one step at a time - so the sample Timeline has something real to
-// scrub/play through instead of unrelated maps side by side.
+// A full unit's worth of real curriculum topics (all 20 in 6th grade
+// Ratios & Proportional Relationships), added in three rough threads -
+// ratios, then rates, then percents, bridged where the curriculum itself
+// bridges them (unit rate -> percent as a rate) - so scrubbing through the
+// timeline reads as an actual student's map filling in over three weeks,
+// not just a handful of boxes appearing.
 function buildSampleTimelineMaps() {
   const G6 = '6th Grade Math', R_P = 'Ratios & Proportional Relationships';
   const DAY = 86400000;
   const meta = { grade: G6, unit: R_P };
   const n = (i, l, x, y) => ({ i, l, x, y, m: meta });
 
-  const snapshots = [
-    { daysAgo: 21, nodeCount: 2, edgeCount: 0 },
-    { daysAgo: 14, nodeCount: 3, edgeCount: 1 },
-    { daysAgo: 7, nodeCount: 4, edgeCount: 3 },
-    { daysAgo: 0, nodeCount: 4, edgeCount: 3 },
-  ];
   const allNodes = [
-    n(1, 'Ratio notation (a:b)', 60, 140),
-    n(2, 'Ratio vocabulary', 500, 70),
-    n(3, 'Equivalent ratios – tables', 940, 180),
-    n(4, 'Ratio word problems', 1380, 90),
+    n(1, 'Ratio notation (a:b)', 60, 100),
+    n(2, 'Ratio vocabulary', 380, 60),
+    n(3, 'Equivalent ratios – tables', 700, 110),
+    n(4, 'Equivalent ratios – tape diagrams', 700, 260),
+    n(5, 'Ratio word problems', 1020, 180),
+    n(6, 'Unit rate definition', 1020, 340),
+    n(7, 'Calculate unit rates with integers and decimals', 1340, 280),
+    n(8, 'Calculate unit rates with fractions', 1340, 420),
+    n(9, 'Speed as distance divided by time', 1660, 350),
+    n(10, 'Rate word problems', 1660, 500),
+    n(11, 'Scale diagrams', 1340, 560),
+    n(12, 'Percent as a rate', 1020, 500),
+    n(13, 'Percent of quantity', 700, 560),
+    n(14, 'Percent word problems', 380, 500),
+    n(15, 'Percent increase', 60, 560),
+    n(16, 'Percent decrease', 60, 700),
+    n(17, 'Percent problems: tax', 380, 700),
+    n(18, 'Percent problems: tip', 700, 700),
+    n(19, 'Percent problems: discount', 1020, 700),
+    n(20, 'Convert between ratios, fractions, and percents', 1340, 700),
   ];
   const allEdges = [
     { i: 1, s: 1, t: 2, no: '' },
     { i: 2, s: 2, t: 3, no: '' },
     { i: 3, s: 3, t: 4, no: '' },
+    { i: 4, s: 4, t: 5, no: '' },
+    { i: 5, s: 5, t: 6, no: '' },
+    { i: 6, s: 6, t: 7, no: '' },
+    { i: 7, s: 6, t: 8, no: '' },
+    { i: 8, s: 7, t: 9, no: '' },
+    { i: 9, s: 8, t: 11, no: '' },
+    { i: 10, s: 9, t: 10, no: '' },
+    { i: 11, s: 6, t: 12, no: 'A percent is just a rate out of 100 - same idea as unit rate, different denominator.' },
+    { i: 12, s: 12, t: 13, no: '' },
+    { i: 13, s: 13, t: 14, no: '' },
+    { i: 14, s: 14, t: 15, no: '' },
+    { i: 15, s: 15, t: 16, no: '' },
+    { i: 16, s: 13, t: 17, no: '' },
+    { i: 17, s: 13, t: 18, no: '' },
+    { i: 18, s: 13, t: 19, no: '' },
+    { i: 19, s: 19, t: 20, no: '' },
+    { i: 20, s: 12, t: 20, no: '' },
+  ];
+
+  const snapshots = [
+    { daysAgo: 24, nodeCount: 3, edgeCount: 2 },
+    { daysAgo: 17, nodeCount: 8, edgeCount: 7 },
+    { daysAgo: 10, nodeCount: 13, edgeCount: 12 },
+    { daysAgo: 4, nodeCount: 18, edgeCount: 17 },
+    { daysAgo: 0, nodeCount: 20, edgeCount: 20 },
   ];
 
   return snapshots.map((s, idx) => ({
@@ -423,7 +442,7 @@ function renderSampleStudentDashboard() {
 
   const banner = document.createElement('div');
   banner.className = 'sample-banner';
-  banner.innerHTML = 'Sample preview (no account needed). This is what a student sees for their own maps. <a href="settings.html">Sign in for your own →</a>';
+  banner.innerHTML = 'Sample preview (no account needed). This is what a student sees for their own maps. <a href="settings">Sign in for your own →</a>';
   dashWrap.appendChild(banner);
 
   const header = document.createElement('div');
@@ -435,13 +454,21 @@ function renderSampleStudentDashboard() {
   meta.textContent = 'Sample data';
   dashWrap.appendChild(meta);
 
-  const { maps, classes } = buildSampleStudentData();
+  // "My maps" and "My Timeline" share one source: every timeline snapshot
+  // really is its own saved map (same as the real, Supabase-backed path -
+  // each "save as new" into a timeline is its own row in listMyMaps()), so
+  // the two sections stay in sync by construction instead of drifting out
+  // of sync the way two independently-authored sample datasets would.
+  const timelineMaps = buildSampleTimelineMaps();
+  const maps = [...timelineMaps].reverse().map(m => ({ ...m, updated_at: m.created_at }));
+  const classes = buildSampleClasses();
+
   const body = document.createElement('div');
   dashWrap.appendChild(body);
   renderStudentDashboardBody(
     body, maps, classes,
-    (m) => `playground.html?share=${encodeMapForShare(m.data)}`,
-    buildSampleTimelineMaps()
+    (m) => `playground?share=${encodeMapForShare(m.data)}`,
+    timelineMaps
   );
 }
 
@@ -467,7 +494,7 @@ function setupStudentDashboardAuth() {
       <div class="dash-empty-state">
         <p>Sign in to see your Student Dashboard.</p>
         <button id="dashSignInBtn" style="background:var(--brand);color:#fff;border:none;padding:0.7em 1.4em;border-radius:8px;font-family:inherit;font-size:0.95em;font-weight:600;cursor:pointer;">Sign in</button>
-        <p style="margin-top:1.6em;">Curious what this looks like? <a href="student.html?sample=1">Preview a sample student →</a></p>
+        <p style="margin-top:1.6em;">Curious what this looks like? <a href="student?sample=1">Preview a sample student →</a></p>
       </div>
     `;
     document.getElementById('dashSignInBtn').onclick = openModal;
@@ -579,7 +606,7 @@ function setupStudentDashboardAuth() {
 
     const body = document.createElement('div');
     dashWrap.appendChild(body);
-    renderStudentDashboardBody(body, mapsWithData, classes, (m) => `playground.html?view=${m.id}&readonly=1`, timelineMaps);
+    renderStudentDashboardBody(body, mapsWithData, classes, (m) => `playground?view=${m.id}&readonly=1`, timelineMaps);
   }
 
   function updateAuthUI(session) {
@@ -593,7 +620,7 @@ function setupStudentDashboardAuth() {
         dashWrap.innerHTML = `
           <div class="dash-empty-state">
             <p>The Student Dashboard is for student accounts.</p>
-            <p><a href="dashboard.html">Go to your Teacher Dashboard →</a></p>
+            <p><a href="dashboard">Go to your Teacher Dashboard →</a></p>
           </div>
         `;
       } else {
