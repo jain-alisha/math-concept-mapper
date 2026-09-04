@@ -189,7 +189,7 @@ LLM_PROVIDERS = [
         'name': 'fallback',
         'api_key': os.environ.get('LLM_FALLBACK_API_KEY'),
         'base_url': os.environ.get('LLM_FALLBACK_BASE_URL', 'https://api.groq.com/openai/v1'),
-        'model': os.environ.get('LLM_FALLBACK_MODEL', 'llama-3.3-70b-versatile'),
+        'model': os.environ.get('LLM_FALLBACK_MODEL', 'openai/gpt-oss-120b'),
     },
 ]
 
