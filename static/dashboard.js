@@ -658,6 +658,152 @@ function renderClassInsights(summaryEl, grid, roster, mapsData, curriculum, taug
   grid.appendChild(provenanceCard);
 }
 
+async function rasterizeSvgToPngDataUrl(svgEl, w, h) {
+  const svgData = new XMLSerializer().serializeToString(svgEl);
+  const svgUrl = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgData);
+  const img = new Image();
+  await new Promise((resolve, reject) => { img.onload = resolve; img.onerror = reject; img.src = svgUrl; });
+  const scale = 2;
+  const canvas = document.createElement('canvas');
+  canvas.width = w * scale; canvas.height = h * scale;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+  return canvas.toDataURL('image/png');
+}
+
+// html2canvas (which jsPDF's html() plugin shells out to) can't reliably
+// render inline <svg> content - it fails to decode them as images and
+// leaves a blank box - and renders CSS linear-gradient backgrounds as solid
+// black instead of the gradient. Both only show up in the exported PDF, not
+// the live page, so they're worked around on a detached clone: student map
+// thumbnails get pre-rasterized to PNG <img>s (sized from the *live*
+// element, since a detached clone has no layout of its own to measure),
+// and the one gradient banner gets a flat fallback color.
+async function prepareReportClone(sourceEl) {
+  const originalSvgs = Array.from(sourceEl.querySelectorAll('svg'));
+  const clone = sourceEl.cloneNode(true);
+  const cloneSvgs = Array.from(clone.querySelectorAll('svg'));
+
+  clone.querySelectorAll('.ai-summary-banner').forEach(el => {
+    el.style.background = '#eef4fd';
+  });
+
+  // html2canvas's own text renderer doesn't reliably have glyph coverage
+  // for ▸/▾/→ even though the live page renders them fine, so they come
+  // out as mojibake in the PDF. The chevrons exist purely as a
+  // click-to-expand affordance, which is meaningless once static - drop
+  // them and expand every "N students" sublist instead, which also makes
+  // the printed report more complete than a screenshot of whatever
+  // happened to be expanded on screen. The "→" arrows just need an
+  // ASCII-safe swap.
+  clone.querySelectorAll('.insights-chevron').forEach(el => el.remove());
+  clone.querySelectorAll('.taught-save-btn').forEach(el => el.remove());
+  clone.querySelectorAll('.insights-substudents').forEach(el => { el.style.display = 'block'; });
+  const walker = document.createTreeWalker(clone, NodeFilter.SHOW_TEXT);
+  const textNodes = [];
+  while (walker.nextNode()) textNodes.push(walker.currentNode);
+  textNodes.forEach(node => {
+    if (node.nodeValue.includes('→')) node.nodeValue = node.nodeValue.replace(/→/g, '->');
+  });
+
+  for (let i = 0; i < originalSvgs.length; i++) {
+    const liveSvg = originalSvgs[i], cloneSvg = cloneSvgs[i];
+    if (!cloneSvg) continue;
+    const rect = liveSvg.getBoundingClientRect();
+    if (!rect.width || !rect.height) continue;
+    const w = Math.round(rect.width), h = Math.round(rect.height);
+    try {
+      const dataUrl = await rasterizeSvgToPngDataUrl(liveSvg, w, h);
+      const img = document.createElement('img');
+      img.src = dataUrl;
+      img.style.width = w + 'px'; img.style.height = h + 'px'; img.style.display = 'block';
+      cloneSvg.replaceWith(img);
+    } catch (e) {
+      // Leave the (blank) svg in place rather than fail the whole export.
+    }
+  }
+
+  return clone;
+}
+
+// Renders `el` (the class report body: at-a-glance cards, insights,
+// taught-topics checklist, roster) into a paginated PDF via jsPDF's html()
+// plugin. Unlike the map export, a text/card report doesn't have a
+// meaningful "autofit" - it just needs to paginate cleanly across A4 pages,
+// which jsPDF's default slicing handles for us.
+async function exportElementToPdf(el, filenameBase) {
+  const clone = await prepareReportClone(el);
+  // Negative/fixed offscreen positioning makes html2canvas capture a blank
+  // page (it measures the clone's position in real page coordinates) - keep
+  // it in-flow at the top of the page instead, just tucked behind
+  // everything else so it isn't visible.
+  clone.style.position = 'absolute';
+  clone.style.top = '0';
+  clone.style.left = '0';
+  clone.style.zIndex = '-1';
+  clone.style.width = (el.scrollWidth || el.offsetWidth || 900) + 'px';
+  document.body.appendChild(clone);
+  try {
+    await new Promise((resolve, reject) => {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF('p', 'pt', 'a4');
+      const margin = 24;
+      const pageWidth = doc.internal.pageSize.getWidth();
+      doc.html(clone, {
+        x: margin,
+        y: margin,
+        width: pageWidth - margin * 2,
+        windowWidth: el.scrollWidth || el.offsetWidth || 900,
+        callback: (doc) => {
+          try {
+            doc.save(`${filenameBase}.pdf`);
+            resolve();
+          } catch (e) { reject(e); }
+        },
+      });
+    });
+  } finally {
+    clone.remove();
+  }
+}
+
+function filenameFor(className) {
+  return (className || 'class-report').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'class-report';
+}
+
+// Wires an "Export PDF" button into a class's dash-header, next to the
+// class-code pill. Grouped in the same header markup rather than a
+// standalone helper, since renderSampleDashboard and the real
+// Supabase-backed flow each build their own header and need this attached
+// the same way.
+function setupExportReportButton(header, className, reportEl) {
+  const actions = document.createElement('div');
+  actions.className = 'dash-header-actions';
+  while (header.firstChild) actions.appendChild(header.firstChild);
+  header.appendChild(actions);
+
+  const btn = document.createElement('button');
+  btn.id = 'exportReportBtn';
+  btn.textContent = 'Export PDF';
+  btn.title = 'Export this class report as a PDF';
+  actions.appendChild(btn);
+
+  btn.onclick = async () => {
+    btn.disabled = true;
+    const original = btn.textContent;
+    btn.textContent = 'Exporting…';
+    try {
+      await exportElementToPdf(reportEl, filenameFor(className));
+    } catch (e) {
+      console.error('PDF export failed:', e);
+      alert('Could not export PDF. Please try again.');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = original;
+    }
+  };
+}
+
 // Assembles one class's full dashboard view into `wrap`. `saveFn` is passed
 // straight through to renderTaughtTopicsChecklist (real backend by default,
 // in-memory fake for the sample dashboard).
@@ -899,6 +1045,7 @@ function renderSampleDashboard() {
   const sampleClass = { id: 'sample-class', taught_topics: taughtTopics };
   const body = document.createElement('div');
   dashWrap.appendChild(body);
+  setupExportReportButton(header, 'Period 3 - Ratios & Proportions', body);
 
   renderClassDashboard(
     body, sampleClass, roster, maps, maps, curriculumData,
@@ -1044,6 +1191,7 @@ function setupDashboardAuth() {
 
     const body = document.createElement('div');
     dashWrap.appendChild(body);
+    setupExportReportButton(header, cls.name, body);
     renderClassDashboard(
       body, cls, roster, maps, mapsWithData, curriculumData,
       (m) => `playground?view=${m.id}&readonly=1`

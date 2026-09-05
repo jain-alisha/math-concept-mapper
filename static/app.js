@@ -114,6 +114,7 @@ window.onload = async function() {
   setupSidebarEvents();
   setupSearchEvents();
   setupShareButton();
+  setupExportPdfButton();
   setupAiSummaryButton();
   setupCheckMapButton();
   setupAuthUI();
@@ -537,6 +538,161 @@ function setupShareButton() {
     const original = label.textContent;
     label.textContent = 'Copied!';
     setTimeout(() => { label.textContent = original; }, 1600);
+  };
+}
+
+// --- Export current map to PDF, cropped tight to the nodes ---
+// Rebuilt as a standalone SVG (not a clone of #mapCanvas) because the live
+// canvas is sized to fill the scrollable viewport plus padding - exporting
+// it as-is would bake in a lot of empty margin instead of fitting the map.
+function mapExportBoundingBox() {
+  if (!nodes.length) return null;
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const n of nodes) {
+    const w = getNodeWidth(n.label);
+    minX = Math.min(minX, n.x);
+    minY = Math.min(minY, n.y);
+    maxX = Math.max(maxX, n.x + w);
+    maxY = Math.max(maxY, n.y + NODE_HEIGHT);
+  }
+  return { minX, minY, maxX, maxY };
+}
+
+function buildMapExportSvg() {
+  const box = mapExportBoundingBox();
+  if (!box) return null;
+  const PAD = 40;
+  const x0 = box.minX - PAD, y0 = box.minY - PAD;
+  const w = box.maxX - box.minX + PAD * 2, h = box.maxY - box.minY + PAD * 2;
+  const svgNS = 'http://www.w3.org/2000/svg';
+
+  const svg = document.createElementNS(svgNS, 'svg');
+  svg.setAttribute('xmlns', svgNS);
+  svg.setAttribute('viewBox', `${x0} ${y0} ${w} ${h}`);
+  svg.setAttribute('width', w);
+  svg.setAttribute('height', h);
+
+  const bg = document.createElementNS(svgNS, 'rect');
+  bg.setAttribute('x', x0); bg.setAttribute('y', y0);
+  bg.setAttribute('width', w); bg.setAttribute('height', h);
+  bg.setAttribute('fill', '#ffffff');
+  svg.appendChild(bg);
+
+  const defs = document.createElementNS(svgNS, 'defs');
+  defs.innerHTML = '<marker id="exportArrow" markerWidth="12" markerHeight="7" refX="11" refY="3.5" orient="auto" markerUnits="strokeWidth"><polygon points="0 0, 12 3.5, 0 7" fill="#8191aa"/></marker>';
+  svg.appendChild(defs);
+
+  for (const link of links) {
+    const pts = linkEndpoints(link);
+    if (!pts) continue;
+    const path = document.createElementNS(svgNS, 'path');
+    path.setAttribute('d', curvedPathD(pts.start, pts.end));
+    path.setAttribute('fill', 'none');
+    path.setAttribute('stroke', '#8191aa');
+    path.setAttribute('stroke-width', '2');
+    path.setAttribute('marker-end', 'url(#exportArrow)');
+    svg.appendChild(path);
+  }
+
+  for (const node of nodes) {
+    const nw = getNodeWidth(node.label);
+    const color = nodeColorFor(node);
+    const g = document.createElementNS(svgNS, 'g');
+
+    const rect = document.createElementNS(svgNS, 'rect');
+    rect.setAttribute('x', node.x); rect.setAttribute('y', node.y);
+    rect.setAttribute('width', nw); rect.setAttribute('height', NODE_HEIGHT);
+    rect.setAttribute('rx', NODE_RADIUS); rect.setAttribute('ry', NODE_RADIUS);
+    rect.setAttribute('fill', color.fill);
+    rect.setAttribute('stroke', color.stroke);
+    rect.setAttribute('stroke-width', '1.5');
+    g.appendChild(rect);
+
+    const text = document.createElementNS(svgNS, 'text');
+    text.textContent = node.label;
+    text.setAttribute('x', node.x + nw / 2);
+    text.setAttribute('y', node.y + NODE_HEIGHT / 2);
+    text.setAttribute('text-anchor', 'middle');
+    text.setAttribute('dominant-baseline', 'middle');
+    text.setAttribute('font-size', '13');
+    text.setAttribute('font-weight', '600');
+    text.setAttribute('fill', color.text || '#1a2233');
+    text.setAttribute('font-family', "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif");
+    g.appendChild(text);
+
+    svg.appendChild(g);
+  }
+
+  return { svg, w, h };
+}
+
+function mapExportFilename() {
+  const input = document.getElementById('mapTitleInput');
+  const title = (input && input.value.trim()) || 'span-map';
+  return title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'span-map';
+}
+
+async function exportMapToPdf() {
+  const built = buildMapExportSvg();
+  if (!built) { alert('Add some concepts to your map before exporting.'); return; }
+  const { svg, w, h } = built;
+
+  const RASTER_SCALE = 2; // crisp at normal print/zoom levels without ballooning file size
+  svg.setAttribute('width', w * RASTER_SCALE);
+  svg.setAttribute('height', h * RASTER_SCALE);
+
+  const svgData = new XMLSerializer().serializeToString(svg);
+  const svgUrl = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgData);
+
+  const img = new Image();
+  await new Promise((resolve, reject) => {
+    img.onload = resolve;
+    img.onerror = reject;
+    img.src = svgUrl;
+  });
+
+  const canvas = document.createElement('canvas');
+  canvas.width = w * RASTER_SCALE;
+  canvas.height = h * RASTER_SCALE;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.drawImage(img, 0, 0);
+  // JPEG, not PNG: the map is opaque (white bg painted above, no
+  // transparency), and jsPDF can't pass a PNG's compressed IDAT stream
+  // through untouched when it has to decode it first - it was re-embedding
+  // as a raw, uncompressed bitmap (a 22-node map came out to 23MB). JPEG at
+  // high quality is indistinguishable here and lands under 500KB.
+  const imgData = canvas.toDataURL('image/jpeg', 0.92);
+
+  // Points, not raw px - our coordinates are CSS px (~96/inch); treating
+  // them as-is as PDF points (72/inch) would inflate the physical page
+  // size by a third.
+  const wPt = w * 0.75, hPt = h * 0.75;
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({
+    orientation: wPt >= hPt ? 'landscape' : 'portrait',
+    unit: 'pt',
+    format: [wPt, hPt],
+  });
+  doc.addImage(imgData, 'JPEG', 0, 0, wPt, hPt);
+  doc.save(`${mapExportFilename()}.pdf`);
+}
+
+function setupExportPdfButton() {
+  const btn = document.getElementById('exportPdfBtn');
+  if (!btn) return;
+  btn.onclick = async () => {
+    btn.disabled = true;
+    try {
+      await exportMapToPdf();
+    } catch (e) {
+      console.error('PDF export failed:', e);
+      alert('Could not export PDF. Please try again.');
+    } finally {
+      btn.disabled = false;
+    }
   };
 }
 

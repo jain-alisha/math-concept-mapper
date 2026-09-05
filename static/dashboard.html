@@ -99,6 +99,14 @@
       font-family: ui-monospace, monospace; font-size: 0.85em; color: var(--brand);
       background: var(--surface); border: 1px solid var(--border); padding: 0.3em 0.7em; border-radius: 7px;
     }
+    .dash-header-actions { display: flex; align-items: center; gap: 0.8em; }
+    #exportReportBtn {
+      background: none; border: 1px solid var(--border); color: var(--text);
+      font-size: 0.9em; font-weight: 600; padding: 0.5em 1em; border-radius: 8px;
+      font-family: inherit; cursor: pointer; transition: background 0.12s;
+    }
+    #exportReportBtn:hover { background: var(--bg); }
+    #exportReportBtn:disabled { opacity: 0.6; cursor: default; }
     .dash-meta { color: var(--text-secondary); font-size: 0.92em; margin: 0 0 1.6em; }
     .beta-tag {
       font-size: 0.68em; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase;
@@ -247,6 +255,8 @@
 </div>
 
 <script src="vendor/supabase.js"></script>
+<script src="vendor/jspdf.umd.min.js"></script>
+<script src="vendor/html2canvas.min.js"></script>
 <script src="auth.js"></script>
 <script src="dashboard.js"></script>
 </body>

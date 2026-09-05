@@ -49,6 +49,13 @@
     }
     #shareBtn:hover { background: #1568bd; transform: translateY(-1px); }
     #shareBtn .icon { width: 16px; height: 16px; }
+    #exportPdfBtn {
+      background: none; border: 1px solid var(--border); color: var(--text);
+      font-size: 0.9em; font-weight: 600; padding: 0.5em 1em; border-radius: 8px;
+      font-family: inherit; cursor: pointer; transition: background 0.12s;
+    }
+    #exportPdfBtn:hover { background: var(--bg); }
+    #exportPdfBtn:disabled { opacity: 0.6; cursor: default; }
 
     /* --- Auth: sign in button, user menu, modal, My Maps panel --- */
     #signInBtn {
@@ -617,6 +624,9 @@
       <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
       <span class="share-label">Share</span>
     </button>
+    <button id="exportPdfBtn" title="Export this map as a PDF, cropped to fit your concepts">
+      <span>Export PDF</span>
+    </button>
     <div id="authArea">
       <button id="signInBtn">Sign in</button>
       <div id="userMenu">
@@ -739,6 +749,7 @@
   window.AI_BACKEND_URL = 'https://math-concept-mapper-api.onrender.com';
 </script>
 <script src="vendor/supabase.js"></script>
+<script src="vendor/jspdf.umd.min.js"></script>
 <script src="auth.js"></script>
 <script src="app.js"></script>
 </body>
