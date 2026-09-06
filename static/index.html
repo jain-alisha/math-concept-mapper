@@ -201,7 +201,7 @@
       Span
     </a>
     <nav>
-      <a href="#about" class="text-link">About</a>
+      <a href="#about" class="text-link" id="aboutLink">About</a>
       <a href="playground?auth=1" class="text-link">Sign in</a>
       <a href="playground" class="nav-cta">Open Playground</a>
     </nav>
@@ -421,5 +421,11 @@
   </div>
 
   <footer class="site-footer">Span · demo site</footer>
+  <script>
+    document.getElementById('aboutLink').addEventListener('click', (e) => {
+      e.preventDefault();
+      document.getElementById('about').scrollIntoView({ behavior: 'smooth' });
+    });
+  </script>
 </body>
 </html>
