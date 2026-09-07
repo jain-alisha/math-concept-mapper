@@ -38,8 +38,9 @@ let checkMapDismissed = new Set();   // questionable-relationship link ids the s
 // RLS has no concept of and can't protect.
 let isReadonly = false;
 
-const NODE_HEIGHT = 54, NODE_RADIUS = 17, NODE_MIN_WIDTH = 100, NODE_HORIZ_PADDING = 22;
+const NODE_HEIGHT = 54, NODE_RADIUS = 17, NODE_MIN_WIDTH = 100, NODE_MAX_WIDTH = 420, NODE_HORIZ_PADDING = 22;
 const nodeWidthCache = new Map();
+const nodeTextWidthCache = new Map();
 
 // --- Soft contextual node colors ---
 // Default palette, used if theme.js isn't loaded (keeps app.js standalone).
@@ -92,16 +93,38 @@ function setupSvgTextMeasure() {
     window.svgTextMeasurer = text;
   }
 }
-function getNodeWidth(label) {
-  if (nodeWidthCache.has(label)) return nodeWidthCache.get(label);
+// Raw text width, uncapped - separate from getNodeWidth's box width so the
+// renderer can tell whether a label had to be squeezed to fit its box.
+function measureNodeTextWidth(label) {
+  if (nodeTextWidthCache.has(label)) return nodeTextWidthCache.get(label);
   setupSvgTextMeasure();
   let textEl = window.svgTextMeasurer;
   textEl.textContent = label;
   let _ = textEl.getBoundingClientRect();
-  let bbox = textEl.getBBox();
-  let width = Math.ceil(bbox.width) + NODE_HORIZ_PADDING * 2;
-  width = Math.max(NODE_MIN_WIDTH, Math.min(width, 350));
+  let width = textEl.getBBox().width;
+  nodeTextWidthCache.set(label, width);
+  return width;
+}
+function getNodeWidth(label) {
+  if (nodeWidthCache.has(label)) return nodeWidthCache.get(label);
+  let width = Math.ceil(measureNodeTextWidth(label)) + NODE_HORIZ_PADDING * 2;
+  width = Math.max(NODE_MIN_WIDTH, Math.min(width, NODE_MAX_WIDTH));
   nodeWidthCache.set(label, width);
+  return width;
+}
+// One-off measurement at an arbitrary font size, for the PDF export's text
+// (13px flat, vs. the canvas's 1.11em) - not cached like the two above
+// since it's only used for the handful of labels long enough to need
+// textLength compression.
+function measureTextWidthAtSize(label, fontSize) {
+  setupSvgTextMeasure();
+  const textEl = window.svgTextMeasurer;
+  const prevSize = textEl.getAttribute('font-size');
+  textEl.setAttribute('font-size', fontSize + 'px');
+  textEl.textContent = label;
+  textEl.getBoundingClientRect();
+  const width = textEl.getBBox().width;
+  textEl.setAttribute('font-size', prevSize);
   return width;
 }
 
@@ -618,6 +641,11 @@ function buildMapExportSvg() {
     text.setAttribute('font-weight', '600');
     text.setAttribute('fill', color.text || '#1a2233');
     text.setAttribute('font-family', "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif");
+    const availableExportTextWidth = nw - NODE_HORIZ_PADDING * 2;
+    if (measureTextWidthAtSize(node.label, 13) > availableExportTextWidth) {
+      text.setAttribute('textLength', availableExportTextWidth);
+      text.setAttribute('lengthAdjust', 'spacingAndGlyphs');
+    }
     g.appendChild(text);
 
     svg.appendChild(g);
@@ -2040,6 +2068,14 @@ function renderCanvas() {
     textEl.setAttribute('pointer-events', 'none');
     textEl.setAttribute('text-anchor', 'middle');
     textEl.setAttribute('dominant-baseline', 'middle');
+    // Box width is capped (NODE_MAX_WIDTH) so a handful of very long
+    // curriculum labels don't blow up the whole layout - condense those
+    // labels to fit instead of letting them overflow the node.
+    const availableTextWidth = w - NODE_HORIZ_PADDING * 2;
+    if (measureNodeTextWidth(labelText) > availableTextWidth) {
+      textEl.setAttribute('textLength', availableTextWidth);
+      textEl.setAttribute('lengthAdjust', 'spacingAndGlyphs');
+    }
     g.appendChild(rect);
     g.appendChild(textEl);
 
