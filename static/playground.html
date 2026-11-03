@@ -57,6 +57,18 @@
     }
     #exportPdfBtn:hover { background: var(--bg); }
     #exportPdfBtn:disabled { opacity: 0.6; cursor: default; }
+    #clearMapBtn {
+      background: none; border: 1px solid var(--border); color: #c2503a;
+      font-size: 0.9em; font-weight: 600; padding: 0.5em 1em; border-radius: 8px;
+      font-family: inherit; cursor: pointer; transition: background 0.12s;
+    }
+    #clearMapBtn:hover { background: #fff0ee; border-color: #f5b8ab; }
+    .my-maps-clear-row { margin: -0.1em 0 0.7em; }
+    .my-maps-clear-row button {
+      background: none; border: none; color: #c2503a; font-family: inherit;
+      font-size: 0.82em; font-weight: 600; cursor: pointer; padding: 0.1em 0;
+    }
+    .my-maps-clear-row button:hover { text-decoration: underline; }
 
     /* --- Auth: sign in button, user menu, modal, My Maps panel --- */
     #signInBtn {
@@ -628,6 +640,9 @@
     <button id="exportPdfBtn" title="Export this map as a PDF, cropped to fit your concepts">
       <span>Export PDF</span>
     </button>
+    <button id="clearMapBtn" title="Remove every concept and connection from this map">
+      <span>Clear Map</span>
+    </button>
     <div id="authArea">
       <button id="signInBtn">Sign in</button>
       <div id="userMenu">
@@ -637,6 +652,9 @@
         <button id="signOutBtn">Log out</button>
         <div id="myMapsPanel">
           <header>My Maps</header>
+          <div class="my-maps-clear-row">
+            <button id="clearMapBtnInPanel">Clear current map</button>
+          </div>
           <div class="my-maps-save-row">
             <input type="text" id="mapTitleInput" placeholder="Map title..." maxlength="80" />
             <button id="saveMapBtn">Save</button>

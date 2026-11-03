@@ -138,6 +138,7 @@ window.onload = async function() {
   setupSearchEvents();
   setupShareButton();
   setupExportPdfButton();
+  setupClearMapButton();
   setupAiSummaryButton();
   setupCheckMapButton();
   setupAuthUI();
@@ -187,6 +188,8 @@ function applyReadonlyUI() {
   }
   const shareBtn = document.getElementById('shareBtn');
   if (shareBtn) shareBtn.style.display = 'none';
+  const clearMapBtn = document.getElementById('clearMapBtn');
+  if (clearMapBtn) clearMapBtn.style.display = 'none';
   const authArea = document.getElementById('authArea');
   if (authArea) authArea.style.display = 'none';
   const customConceptRow = document.querySelector('.custom-concept-row');
@@ -562,6 +565,39 @@ function setupShareButton() {
     label.textContent = 'Copied!';
     setTimeout(() => { label.textContent = original; }, 1600);
   };
+}
+
+// --- Clear the working canvas ---
+// Detaches from whatever cloud-saved map was loaded (cloudMapId = null)
+// rather than clearing-then-autosaving over it - "Clear Map" means "start
+// over on the canvas", not "wipe the saved copy in My Maps". The saved row
+// itself is untouched unless the user explicitly saves over it again.
+function clearMap() {
+  if (isReadonly) return;
+  if (!nodes.length && !links.length) return;
+  if (!confirm('Clear this map? This removes every concept and connection from the canvas. Anything already saved to My Maps is not affected.')) return;
+  nodes = [];
+  links = [];
+  nodeIdCounter = 1;
+  linkIdCounter = 1;
+  selectedNode = null;
+  selectedLink = null;
+  connectPending = null;
+  closeAllNodeOverlays();
+  cloudMapId = null;
+  cloudMapTitle = null;
+  cloudMapUpdatedAt = null;
+  const mapTitleInput = document.getElementById('mapTitleInput');
+  if (mapTitleInput) mapTitleInput.value = '';
+  renderNotesSidebar();
+  renderCanvas();
+  autosave();
+}
+function setupClearMapButton() {
+  const topbarBtn = document.getElementById('clearMapBtn');
+  if (topbarBtn) topbarBtn.onclick = clearMap;
+  const panelBtn = document.getElementById('clearMapBtnInPanel');
+  if (panelBtn) panelBtn.onclick = clearMap;
 }
 
 // --- Export current map to PDF, cropped tight to the nodes ---
