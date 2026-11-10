@@ -112,6 +112,23 @@ function measureNodeTextWidth(label) {
   nodeTextWidthCache.set(label, width);
   return width;
 }
+// Binary-searches the longest prefix (plus an ellipsis) that fits within
+// maxWidth at the canvas's actual node-label font/size, rather than
+// estimating from character count (monospace-style guesses read wrong for
+// a proportional font with punctuation and digits mixed in).
+function truncateLabelForDisplay(label, maxWidth) {
+  setupSvgTextMeasure();
+  const textEl = window.svgTextMeasurer;
+  let lo = 1, hi = label.length, best = '…';
+  while (lo <= hi) {
+    const mid = Math.floor((lo + hi) / 2);
+    const candidate = label.slice(0, mid).trimEnd() + '…';
+    textEl.textContent = candidate;
+    const w = textEl.getBBox().width;
+    if (w <= maxWidth) { best = candidate; lo = mid + 1; } else hi = mid - 1;
+  }
+  return best;
+}
 function getNodeWidth(label) {
   if (nodeWidthCache.has(label)) return nodeWidthCache.get(label);
   let width = Math.ceil(measureNodeTextWidth(label)) + NODE_HORIZ_PADDING * 2;
@@ -2288,7 +2305,7 @@ function renderCanvas() {
       const edgeLen = Math.hypot(end.x - start.x, end.y - start.y);
       const cap = Math.max(10, Math.min(26, Math.floor(edgeLen * 0.45 / 5.5)));
       const preview = link.note.length > cap ? link.note.slice(0, cap).trimEnd() + '…' : link.note;
-      noteChips.push({ x: mid.x, y: mid.y, w: preview.length * 5.5 + 16, h: 19, text: preview });
+      noteChips.push({ x: mid.x, y: mid.y, w: preview.length * 5.5 + 16, h: 19, text: preview, link });
     }
   }
 
@@ -2416,12 +2433,25 @@ function renderCanvas() {
     textEl.setAttribute('text-anchor', 'middle');
     textEl.setAttribute('dominant-baseline', 'middle');
     // Box width is capped (NODE_MAX_WIDTH) so a handful of very long
-    // curriculum labels don't blow up the whole layout - condense those
-    // labels to fit instead of letting them overflow the node.
+    // curriculum labels don't blow up the whole layout. A mild squeeze
+    // (textLength) still reads fine; beyond MIN_READABLE_RATIO it starts
+    // crushing letters together illegibly, so truncate with an ellipsis
+    // instead and expose the full label as a native hover tooltip (<title>
+    // on the whole node group, not just the text) rather than one
+    // unreadable squeezed-together line.
     const availableTextWidth = w - NODE_HORIZ_PADDING * 2;
-    if (measureNodeTextWidth(labelText) > availableTextWidth) {
-      textEl.setAttribute('textLength', availableTextWidth);
-      textEl.setAttribute('lengthAdjust', 'spacingAndGlyphs');
+    const naturalTextWidth = measureNodeTextWidth(labelText);
+    const MIN_READABLE_RATIO = 0.82;
+    if (naturalTextWidth > availableTextWidth) {
+      if (availableTextWidth / naturalTextWidth >= MIN_READABLE_RATIO) {
+        textEl.setAttribute('textLength', availableTextWidth);
+        textEl.setAttribute('lengthAdjust', 'spacingAndGlyphs');
+      } else {
+        textEl.textContent = truncateLabelForDisplay(node.label, availableTextWidth);
+        const titleEl = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+        titleEl.textContent = node.label;
+        g.appendChild(titleEl);
+      }
     }
     g.appendChild(rect);
     g.appendChild(textEl);
@@ -2512,7 +2542,10 @@ function renderCanvas() {
     for (const chip of noteChips) {
       const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
       g.setAttribute('class', 'link-note');
-      g.style.pointerEvents = 'none';
+      // Previously pointer-events: none - the only documented way to edit
+      // a note was double-clicking the thin link line itself. The pill is
+      // the visible, readable target; it should be the clickable one too.
+      g.style.cursor = isReadonly ? 'default' : 'pointer';
 
       const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
       bg.setAttribute('x', chip.x - chip.w / 2);
@@ -2529,8 +2562,22 @@ function renderCanvas() {
       label.setAttribute('text-anchor', 'middle');
       label.setAttribute('class', 'link-note-text');
 
+      const titleEl = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+      titleEl.textContent = chip.link.note;
+      g.appendChild(titleEl);
       g.appendChild(bg);
       g.appendChild(label);
+      g.onclick = e => {
+        e.stopPropagation();
+        selectedLink = chip.link; selectedNode = null;
+        if (isReadonly) { renderCanvas(); return; }
+        showNoteEditor(chip.link, (note) => {
+          chip.link.note = note;
+          renderNotesSidebar();
+          renderCanvas();
+          autosave();
+        });
+      };
       svg.appendChild(g);
     }
   }
