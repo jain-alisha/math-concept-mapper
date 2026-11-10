@@ -38,6 +38,13 @@ let checkMapDismissed = new Set();   // questionable-relationship link ids the s
 // RLS has no concept of and can't protect.
 let isReadonly = false;
 
+// Set only in share-link mode (see loadShareMode) - a shared link's URL
+// param is a pristine, immutable snapshot, so edits go to this per-link
+// localStorage slot instead of either the viewer's own personal autosave
+// (AUTOSAVE_KEY) or the link itself, and are loaded back on refresh. See
+// autosave() and loadShareMode() below.
+let shareDraftKey = null;
+
 const NODE_HEIGHT = 54, NODE_RADIUS = 17, NODE_MIN_WIDTH = 100, NODE_MAX_WIDTH = 420, NODE_HORIZ_PADDING = 22;
 const nodeWidthCache = new Map();
 const nodeTextWidthCache = new Map();
@@ -149,7 +156,7 @@ window.onload = async function() {
     await loadReadonlyMap(params.get('view'));
     applyReadonlyUI();
   } else if (params.get('share')) {
-    if (!loadSharedMap(params.get('share'))) loadAutosave();
+    loadShareMode(params.get('share'));
     await setupActivityContext(params);
   } else if (params.get('sample') === '1') {
     loadSampleMap();
@@ -530,7 +537,7 @@ function applyMapData(data) {
 function autosave() {
   if (isReadonly) return;
   try {
-    localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(serializeMap()));
+    localStorage.setItem(shareDraftKey || AUTOSAVE_KEY, JSON.stringify(serializeMap()));
   } catch (e) { /* storage unavailable/full - not critical, just skip */ }
   queueCloudSave();
 }
@@ -573,6 +580,48 @@ function loadSharedMap(param) {
     return false;
   }
 }
+
+// Fixes the "edits to a shared map disappear on refresh" bug: re-decoding
+// params.get('share') on every load was the whole problem, since the URL
+// param itself never changes - any edit made while viewing it was really
+// just mutating the in-memory nodes/links arrays, then getting silently
+// thrown away the moment the page reloaded and re-decoded the pristine
+// original. A per-link draft, checked first, makes edits durable across
+// refresh without ever touching the link itself or the viewer's own
+// personal map.
+function loadShareMode(param) {
+  shareDraftKey = 'spanSharedDraft:' + param;
+  let draftRaw;
+  try { draftRaw = localStorage.getItem(shareDraftKey); } catch (e) { draftRaw = null; }
+  if (draftRaw) {
+    try {
+      applyMapData(JSON.parse(draftRaw));
+      showShareBanner(true);
+      return;
+    } catch (e) { /* corrupted draft - fall through to the original snapshot */ }
+  }
+  if (!loadSharedMap(param)) loadAutosave();
+  showShareBanner(false);
+}
+
+function showShareBanner(hasDraft) {
+  const el = document.getElementById('readonlyBanner');
+  if (!el) return;
+  el.innerHTML = hasDraft
+    ? 'Editing a copy of this shared map — your changes are saved in this browser only. '
+      + '<button id="resetShareDraftBtn" style="margin-left:0.3em;background:none;border:none;color:var(--brand);text-decoration:underline;cursor:pointer;font-weight:600;font-family:inherit;font-size:1em;">Reset to original</button>'
+    : 'Viewing a shared map — edits are saved as your own copy in this browser, not sent back to whoever shared it.';
+  el.style.display = 'block';
+  const resetBtn = document.getElementById('resetShareDraftBtn');
+  if (resetBtn) resetBtn.onclick = () => {
+    if (!confirm('Discard your changes and go back to the originally shared map?')) return;
+    try { localStorage.removeItem(shareDraftKey); } catch (e) { /* ignore */ }
+    loadSharedMap(new URLSearchParams(window.location.search).get('share'));
+    showShareBanner(false);
+    renderCanvas();
+  };
+}
+
 function setupShareButton() {
   const btn = document.getElementById('shareBtn');
   if (!btn) return;
