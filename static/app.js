@@ -45,6 +45,13 @@ let isReadonly = false;
 // autosave() and loadShareMode() below.
 let shareDraftKey = null;
 
+// Set in loadSampleMap() - the demo map isn't anyone's authored work, so
+// its edit history shouldn't feed the "new connections since last visit"
+// momentum message (see computeMomentumMessage): opening the sample after
+// using your own map would otherwise compare the sample's link count
+// against whatever you'd left your own map at.
+let isSampleMode = false;
+
 const NODE_HEIGHT = 54, NODE_RADIUS = 17, NODE_MIN_WIDTH = 100, NODE_MAX_WIDTH = 420, NODE_HORIZ_PADDING = 22;
 const nodeWidthCache = new Map();
 const nodeTextWidthCache = new Map();
@@ -248,6 +255,7 @@ function applyReadonlyUI() {
 
 // --- "Explore a sample map" (playground?sample=1) ---
 function loadSampleMap() {
+  isSampleMode = true;
   // A real prerequisite pathway pulled from concepts.json (6th-8th grade),
   // from ratios/basic equations up through linear functions and stats -
   // meant to show off drag-drop, linking, notes, node coloring, and AI
@@ -880,8 +888,17 @@ function pickPhrase(seedStr, options) {
 // once enough time has passed since the last check-in, and only when the
 // map actually grew - no "0 new connections" message.
 function computeMomentumMessage(linksArr) {
+  // Not the student's own authored map - comparing link counts across
+  // different maps/snapshots is meaningless (and was exactly how opening
+  // the sample map could report invented "growth"). Only ever compare a
+  // map against its own previous visit.
+  if (isSampleMode || isReadonly || shareDraftKey) return null;
+  // Scoped per map identity (the cloud map id once signed in and saved,
+  // otherwise a fixed local-only key) so switching between two of your
+  // own saved maps doesn't get compared against each other either.
+  const scopeKey = SUMMARY_MOMENTUM_KEY + ':' + (cloudMapId || 'local');
   let stored = null;
-  try { stored = JSON.parse(localStorage.getItem(SUMMARY_MOMENTUM_KEY) || 'null'); } catch (e) { stored = null; }
+  try { stored = JSON.parse(localStorage.getItem(scopeKey) || 'null'); } catch (e) { stored = null; }
   const now = Date.now();
   const linkCount = linksArr.length;
   const hoursSince = stored ? (now - stored.timestamp) / 36e5 : Infinity;
@@ -889,11 +906,11 @@ function computeMomentumMessage(linksArr) {
   if (stored && hoursSince >= SUMMARY_MOMENTUM_MIN_HOURS) {
     const delta = linkCount - stored.linkCount;
     if (delta > 0) {
-      message = `You've added ${delta} new connection${delta === 1 ? '' : 's'} since your last visit — nice work.`;
+      message = `You've added ${delta} new connection${delta === 1 ? '' : 's'} to this map since your last visit — nice work.`;
     }
   }
   if (!stored || hoursSince >= SUMMARY_MOMENTUM_MIN_HOURS) {
-    try { localStorage.setItem(SUMMARY_MOMENTUM_KEY, JSON.stringify({ linkCount, timestamp: now })); } catch (e) {}
+    try { localStorage.setItem(scopeKey, JSON.stringify({ linkCount, timestamp: now })); } catch (e) {}
   }
   return message;
 }
@@ -2346,6 +2363,24 @@ function renderCanvas() {
     let g = document.createElementNS('http://www.w3.org/2000/svg','g');
     g.setAttribute('transform', `translate(${node.x},${node.y})`);
     g.setAttribute('data-node-id', node.id);
+    // Keyboard route onto the graph: Tab reaches each node in document
+    // order, Enter/Space opens the same Edit/Connect/Explore toolbar a
+    // click does (those are real <button> elements once open, so Tab
+    // continues into them normally), and Delete removes the node - same
+    // actions a mouse user gets from a click and a right-click.
+    g.setAttribute('tabindex', '0');
+    g.setAttribute('role', 'button');
+    g.setAttribute('aria-label', `${node.label} concept node`);
+    g.classList.add('node-group');
+    g.onkeydown = e => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        rect.onclick(e);
+      } else if ((e.key === 'Delete' || e.key === 'Backspace') && !isReadonly) {
+        e.preventDefault();
+        if (confirm(`Delete "${node.label}"?`)) deleteNode(node.id);
+      }
+    };
 
     const isIsolated = (degree.get(node.id) || 0) === 0;
     if (isIsolated) anyIsolated = true;

@@ -268,12 +268,17 @@ function computeClassSummary(mapsData) {
     .map(r => ({ ...r, label: `${r.unit} (${r.grade})`, ratio: r.connected / r.total }))
     .sort((a, b) => b.ratio - a.ratio || b.total - a.total);
   const strong = units[0], thin = units[units.length - 1];
+  // Deliberately describes map structure (how many concepts got
+  // connected to something), not understanding - a longer or
+  // more-connected map isn't automatically a better one, and this number
+  // says nothing about whether a connection's reasoning is correct,
+  // specific, or original. See each student's link notes for that.
   if (units.length === 1) {
-    return `The class is focused on ${strong.label} — ${strong.connected} of ${strong.total} concept-instances connected across all students.`;
+    return `${strong.connected} of ${strong.total} concept-instances in ${strong.label} are connected to something, across all students' maps.`;
   }
-  const strongPhrase = strong.ratio >= 0.6 ? 'Strong as a class on' : 'Most developed as a class:';
-  const thinPhrase = thin.ratio < 0.5 ? 'thin on' : 'lighter on';
-  return `${strongPhrase} ${strong.label}, ${thinPhrase} ${thin.label}.`;
+  const mostPhrase = strong.ratio >= 0.6 ? 'Most connected as a class on' : 'Most active as a class in';
+  const leastPhrase = thin.ratio < 0.5 ? 'least connected on' : 'least active in';
+  return `${mostPhrase} ${strong.label}, ${leastPhrase} ${thin.label}. (This reflects map connectivity, not correctness — check link notes for that.)`;
 }
 
 // taughtSet (optional): a Set of "grade::unit::prereq" strings the teacher

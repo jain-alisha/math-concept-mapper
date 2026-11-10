@@ -433,6 +433,12 @@
       stroke-width: 2.6px;
       filter: drop-shadow(0 0 10px rgba(25,118,210,0.35));
     }
+    .node-group:focus { outline: none; }
+    .node-group:focus-visible .node {
+      stroke: var(--brand) !important;
+      stroke-width: 2.6px;
+      filter: drop-shadow(0 0 10px rgba(25,118,210,0.5));
+    }
     .node.isolated {
       stroke-dasharray: 5 4;
     }
