@@ -294,7 +294,14 @@
       <input type="email" id="signInEmail" placeholder="Email" autocomplete="email" required />
       <input type="password" id="signInPassword" placeholder="Password" autocomplete="current-password" required />
       <button type="submit">Sign In</button>
+      <button type="button" id="forgotPasswordLink" style="background:none;border:none;color:#2e90fa;text-decoration:underline;cursor:pointer;padding:0;font-size:0.85em;align-self:flex-start;">Forgot password?</button>
       <div class="auth-error" id="signInError"></div>
+    </form>
+    <form id="forgotPasswordForm" style="display:none;">
+      <input type="email" id="forgotEmail" placeholder="Email" autocomplete="email" required />
+      <button type="submit">Send reset link</button>
+      <button type="button" id="forgotBackBtn" style="background:none;border:none;color:#5b6472;text-decoration:underline;cursor:pointer;padding:0;font-size:0.85em;align-self:flex-start;">Back to sign in</button>
+      <div class="auth-error" id="forgotError"></div>
     </form>
     <form id="signUpForm" style="display:none;">
       <input type="text" id="signUpName" placeholder="Display name" autocomplete="name" />

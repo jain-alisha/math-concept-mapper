@@ -546,6 +546,9 @@ function setupStudentDashboardAuth() {
   const tabSignUp = document.getElementById('tabSignUp');
   const signInForm = document.getElementById('signInForm');
   const signUpForm = document.getElementById('signUpForm');
+  const forgotPasswordLink = document.getElementById('forgotPasswordLink');
+  const forgotPasswordForm = document.getElementById('forgotPasswordForm');
+  const forgotBackBtn = document.getElementById('forgotBackBtn');
 
   function showSignedOutEmptyState() {
     dashWrap.innerHTML = `
@@ -569,10 +572,12 @@ function setupStudentDashboardAuth() {
   function showSignIn() {
     tabSignIn.classList.add('active'); tabSignUp.classList.remove('active');
     signInForm.style.display = ''; signUpForm.style.display = 'none';
+    if (forgotPasswordForm) forgotPasswordForm.style.display = 'none';
   }
   function showSignUp() {
     tabSignUp.classList.add('active'); tabSignIn.classList.remove('active');
     signUpForm.style.display = ''; signInForm.style.display = 'none';
+    if (forgotPasswordForm) forgotPasswordForm.style.display = 'none';
   }
 
   signInBtn.onclick = openModal;
@@ -580,6 +585,30 @@ function setupStudentDashboardAuth() {
   authModal.onclick = (e) => { if (e.target === authModal) closeModal(); };
   tabSignIn.onclick = showSignIn;
   tabSignUp.onclick = showSignUp;
+
+  if (forgotPasswordLink) forgotPasswordLink.onclick = () => {
+    signInForm.style.display = 'none';
+    forgotPasswordForm.style.display = '';
+    document.getElementById('forgotEmail').value = document.getElementById('signInEmail').value;
+  };
+  if (forgotBackBtn) forgotBackBtn.onclick = () => {
+    forgotPasswordForm.style.display = 'none';
+    signInForm.style.display = '';
+  };
+  if (forgotPasswordForm) forgotPasswordForm.onsubmit = async (e) => {
+    e.preventDefault();
+    const email = document.getElementById('forgotEmail').value.trim();
+    const errEl = document.getElementById('forgotError');
+    errEl.style.color = '';
+    errEl.textContent = '';
+    try {
+      await window.SpanAuth.resetPasswordForEmail(email);
+      errEl.style.color = '#1f8a4c';
+      errEl.textContent = 'Check your email for a reset link.';
+    } catch (err) {
+      errEl.textContent = err.message || 'Could not send reset link.';
+    }
+  };
 
   signInForm.onsubmit = async (e) => {
     e.preventDefault();

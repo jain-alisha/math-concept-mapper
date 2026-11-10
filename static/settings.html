@@ -250,7 +250,14 @@
       <input type="email" id="signInEmail" placeholder="Email" autocomplete="email" required />
       <input type="password" id="signInPassword" placeholder="Password" autocomplete="current-password" required />
       <button type="submit">Sign In</button>
+      <button type="button" id="forgotPasswordLink" style="background:none;border:none;color:#2e90fa;text-decoration:underline;cursor:pointer;padding:0;font-size:0.85em;align-self:flex-start;">Forgot password?</button>
       <div class="auth-error" id="signInError"></div>
+    </form>
+    <form id="forgotPasswordForm" style="display:none;">
+      <input type="email" id="forgotEmail" placeholder="Email" autocomplete="email" required />
+      <button type="submit">Send reset link</button>
+      <button type="button" id="forgotBackBtn" style="background:none;border:none;color:#5b6472;text-decoration:underline;cursor:pointer;padding:0;font-size:0.85em;align-self:flex-start;">Back to sign in</button>
+      <div class="auth-error" id="forgotError"></div>
     </form>
     <form id="signUpForm" style="display:none;">
       <input type="text" id="signUpName" placeholder="Display name" autocomplete="name" />
@@ -258,6 +265,12 @@
       <input type="password" id="signUpPassword" placeholder="Password (min 6 characters)" autocomplete="new-password" minlength="6" required />
       <button type="submit">Sign Up</button>
       <div class="auth-error" id="signUpError"></div>
+    </form>
+    <form id="newPasswordForm" style="display:none;">
+      <p style="margin:0 0 0.3em;font-size:0.9em;">Choose a new password for your account.</p>
+      <input type="password" id="newPasswordInput" placeholder="New password (min 6 characters)" autocomplete="new-password" minlength="6" required />
+      <button type="submit">Set new password</button>
+      <div class="auth-error" id="newPasswordError"></div>
     </form>
   </div>
 </div>

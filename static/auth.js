@@ -56,13 +56,29 @@
       if (error) throw error;
     },
 
+    // Supabase emails a link back to this same origin with a recovery token
+    // in the URL; onAuthStateChange fires a PASSWORD_RECOVERY event when
+    // that link is opened, at which point updatePassword() below can be
+    // called to actually set the new password.
+    async resetPasswordForEmail(email) {
+      const { error } = await client.auth.resetPasswordForEmail(email, {
+        redirectTo: window.location.origin + '/settings',
+      });
+      if (error) throw error;
+    },
+
+    async updatePassword(newPassword) {
+      const { error } = await client.auth.updateUser({ password: newPassword });
+      if (error) throw error;
+    },
+
     async getSession() {
       const { data } = await client.auth.getSession();
       return data.session;
     },
 
     onAuthStateChange(cb) {
-      client.auth.onAuthStateChange((_event, session) => cb(session));
+      client.auth.onAuthStateChange((event, session) => cb(session, event));
     },
 
     role: roleOf,

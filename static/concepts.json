@@ -58,7 +58,7 @@
         "Operations with negative fractions",
         "Graph (x,y) in four quadrants",
         "Distance between points (same x or y)",
-        "Coordinate coordinate problems"
+        "Coordinate plane word problems"
       ],
       "Expressions & Equations": [
         "Evaluate exponents (whole)",
@@ -159,8 +159,8 @@
     },
     "7th Grade Math": {
       "Ratios & Proportional Relationships": [
-        "Compute unit rates of fractions lengths",
-        "Compute unit rates of fractions areas",
+        "Compute unit rates with fractional lengths",
+        "Compute unit rates with fractional areas",
         "Unit rates in different units",
         "Identify proportional relationships in tables",
         "Identify proportional relationships in graphs",
@@ -351,7 +351,7 @@
         "Identify √2 as irrational",
         "Simplify √(a × b)",
         "Simplify √(a / b)",
-        "Convert √(a²) to a",
+        "Simplify √(a²) = |a|",
         "Properties of real numbers closure",
         "Rational operations closure",
         "Irrational ± rational = irrational",
@@ -410,7 +410,7 @@
         "Evaluate function f(x)",
         "Identify functions from graphs",
         "Identify non-functions",
-        "Compare_multiple function tables",
+        "Compare multiple function tables",
         "Compare multiple graphs",
         "Recognize linear and non-linear functions",
         "Interpret slope as rate of change",

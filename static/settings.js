@@ -101,6 +101,9 @@ function setupAuthAndClasses() {
   const tabSignUp = document.getElementById('tabSignUp');
   const signInForm = document.getElementById('signInForm');
   const signUpForm = document.getElementById('signUpForm');
+  const forgotPasswordLink = document.getElementById('forgotPasswordLink');
+  const forgotPasswordForm = document.getElementById('forgotPasswordForm');
+  const forgotBackBtn = document.getElementById('forgotBackBtn');
 
   setupRolePreviewToggle();
 
@@ -115,10 +118,12 @@ function setupAuthAndClasses() {
   function showSignIn() {
     tabSignIn.classList.add('active'); tabSignUp.classList.remove('active');
     signInForm.style.display = ''; signUpForm.style.display = 'none';
+    if (forgotPasswordForm) forgotPasswordForm.style.display = 'none';
   }
   function showSignUp() {
     tabSignUp.classList.add('active'); tabSignIn.classList.remove('active');
     signUpForm.style.display = ''; signInForm.style.display = 'none';
+    if (forgotPasswordForm) forgotPasswordForm.style.display = 'none';
   }
 
   signInBtn.onclick = openModal;
@@ -127,6 +132,30 @@ function setupAuthAndClasses() {
   authModal.onclick = (e) => { if (e.target === authModal) closeModal(); };
   tabSignIn.onclick = showSignIn;
   tabSignUp.onclick = showSignUp;
+
+  if (forgotPasswordLink) forgotPasswordLink.onclick = () => {
+    signInForm.style.display = 'none';
+    forgotPasswordForm.style.display = '';
+    document.getElementById('forgotEmail').value = document.getElementById('signInEmail').value;
+  };
+  if (forgotBackBtn) forgotBackBtn.onclick = () => {
+    forgotPasswordForm.style.display = 'none';
+    signInForm.style.display = '';
+  };
+  if (forgotPasswordForm) forgotPasswordForm.onsubmit = async (e) => {
+    e.preventDefault();
+    const email = document.getElementById('forgotEmail').value.trim();
+    const errEl = document.getElementById('forgotError');
+    errEl.style.color = '';
+    errEl.textContent = '';
+    try {
+      await window.SpanAuth.resetPasswordForEmail(email);
+      errEl.style.color = '#1f8a4c';
+      errEl.textContent = 'Check your email for a reset link.';
+    } catch (err) {
+      errEl.textContent = err.message || 'Could not send reset link.';
+    }
+  };
 
   signInForm.onsubmit = async (e) => {
     e.preventDefault();
@@ -305,6 +334,38 @@ function setupAuthAndClasses() {
     }
   }
 
+  // Supabase's reset-password email links back here with a recovery
+  // token already exchanged for a session by the client SDK, surfaced as
+  // this specific event - that's the cue to show "set a new password"
+  // instead of treating it like an ordinary sign-in.
+  const newPasswordForm = document.getElementById('newPasswordForm');
+  function showNewPasswordPrompt() {
+    openModal();
+    signInForm.style.display = 'none';
+    signUpForm.style.display = 'none';
+    if (forgotPasswordForm) forgotPasswordForm.style.display = 'none';
+    document.querySelector('.auth-tabs').style.display = 'none';
+    newPasswordForm.style.display = '';
+  }
+  if (newPasswordForm) newPasswordForm.onsubmit = async (e) => {
+    e.preventDefault();
+    const newPassword = document.getElementById('newPasswordInput').value;
+    const errEl = document.getElementById('newPasswordError');
+    errEl.style.color = '';
+    errEl.textContent = '';
+    try {
+      await window.SpanAuth.updatePassword(newPassword);
+      newPasswordForm.style.display = 'none';
+      document.querySelector('.auth-tabs').style.display = '';
+      closeModal();
+    } catch (err) {
+      errEl.textContent = err.message || 'Could not set new password.';
+    }
+  };
+
   window.SpanAuth.getSession().then(updateAuthUI);
-  window.SpanAuth.onAuthStateChange(updateAuthUI);
+  window.SpanAuth.onAuthStateChange((session, event) => {
+    updateAuthUI(session);
+    if (event === 'PASSWORD_RECOVERY') showNewPasswordPrompt();
+  });
 }
