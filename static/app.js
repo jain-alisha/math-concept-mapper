@@ -1971,15 +1971,83 @@ function setupSearchEvents() {
   input.addEventListener('input', () => filterSidebar(input.value));
 }
 
+// A random spot in a small fixed box (the old behavior) was guaranteed to
+// collide once a student added more than a couple of custom concepts.
+// This instead starts from the visible viewport's center and, if that's
+// occupied, searches outward ring by ring on a grid sized to the new
+// node's own box until it finds a spot that doesn't overlap any existing
+// node (with a little breathing room).
+function findOpenNodePosition(label) {
+  const w = getNodeWidth(label), h = NODE_HEIGHT, PAD = 16;
+  const area = document.getElementById('canvasArea');
+  const baseX = Math.max(10, area ? area.scrollLeft + area.clientWidth / 2 - w / 2 : 90);
+  const baseY = Math.max(10, area ? area.scrollTop + area.clientHeight / 2 - h / 2 : 90);
+  const stepX = w + PAD, stepY = h + PAD;
+  const overlapsExisting = (x, y) => nodes.some(n => {
+    const nw = getNodeWidth(n.label);
+    return x < n.x + nw + PAD && x + w + PAD > n.x && y < n.y + NODE_HEIGHT + PAD && y + h + PAD > n.y;
+  });
+  if (!overlapsExisting(baseX, baseY)) return { x: baseX, y: baseY };
+  for (let ring = 1; ring <= 12; ring++) {
+    for (let dx = -ring; dx <= ring; dx++) {
+      for (let dy = -ring; dy <= ring; dy++) {
+        if (Math.max(Math.abs(dx), Math.abs(dy)) !== ring) continue; // only the ring's boundary cells
+        const x = Math.max(10, baseX + dx * stepX), y = Math.max(10, baseY + dy * stepY);
+        if (!overlapsExisting(x, y)) return { x, y };
+      }
+    }
+  }
+  return { x: baseX, y: baseY }; // extremely crowded map - fall back rather than search forever
+}
+
+// Scrolls the new node into the center of the viewport, then gives it a
+// brief pulsing highlight (reusing the AI Summary panel's amber glow
+// class) so it's obvious where a node landed when it wasn't placed where
+// the student was already looking.
+function revealNewNode(node) {
+  const area = document.getElementById('canvasArea');
+  if (area) {
+    const w = getNodeWidth(node.label);
+    area.scrollTo({
+      left: Math.max(0, node.x + w / 2 - area.clientWidth / 2),
+      top: Math.max(0, node.y + NODE_HEIGHT / 2 - area.clientHeight / 2),
+      behavior: 'smooth',
+    });
+  }
+  summaryHighlightIds = new Set([node.id]);
+  renderCanvas();
+  setTimeout(() => {
+    summaryHighlightIds = new Set();
+    renderCanvas();
+  }, 2200);
+}
+
 function setupCustomConcept() {
   const input = document.getElementById('customConceptInput');
   const btn = document.getElementById('customConceptBtn');
   btn.onclick = () => {
     let val = input.value.trim();
     if (!val) return;
-    let x = 90 + Math.random()*140, y = 90 + Math.random()*120;
+    // A silent duplicate is confusing either way it was meant: the student
+    // may not realize this label is already on the map (and now has two
+    // disconnected "the same thing"), or may genuinely want a second,
+    // distinct instance (e.g. for a different grade/context). Ask once
+    // instead of guessing.
+    const existing = nodes.find(n => n.label.trim().toLowerCase() === val.toLowerCase());
+    if (existing) {
+      const useExisting = confirm(
+        `"${val}" is already on your map.\n\nOK: highlight the existing one instead.\nCancel: add another, separate copy anyway.`
+      );
+      if (useExisting) {
+        revealNewNode(existing);
+        input.value = '';
+        return;
+      }
+    }
+    const { x, y } = findOpenNodePosition(val);
     addNode(val, x, y, {custom: true});
     input.value = '';
+    revealNewNode(nodes[nodes.length - 1]);
   };
   input.onkeydown = e => {
     if (e.key === 'Enter') btn.click();
@@ -2575,7 +2643,14 @@ function closeAllNodeOverlays() {
 function layoutGhostPosition(anchor, index, total, question) {
   const anchorW = getNodeWidth(anchor.label);
   const spread = 250;
-  const startX = anchor.x + anchorW / 2 - ((total - 1) * spread) / 2 - 100;
+  // Deliberately NOT centered on `total`: each ghost's position is cached
+  // the first time it renders (see renderGhostSuggestions), so "Show 3
+  // more" appending to ghostState.suggestions changes `total` for the
+  // *new* ones only - centering on total would put them on a different
+  // grid than the already-placed ghosts and collide with them. Starting
+  // from a fixed offset and extending by index keeps every batch on one
+  // shared grid, growing outward instead of recentering.
+  const startX = anchor.x + anchorW / 2 - 100;
   let pos;
   if (question === 'builds_on') pos = { x: startX + index * spread, y: anchor.y - 150 };
   else if (question === 'leads_to') pos = { x: startX + index * spread, y: anchor.y + NODE_HEIGHT + 110 };
