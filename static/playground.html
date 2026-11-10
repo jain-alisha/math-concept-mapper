@@ -57,6 +57,12 @@
     }
     #exportPdfBtn:hover { background: var(--bg); }
     #exportPdfBtn:disabled { opacity: 0.6; cursor: default; }
+    #fitMapBtn {
+      background: none; border: 1px solid var(--border); color: var(--text);
+      font-size: 0.9em; font-weight: 600; padding: 0.5em 1em; border-radius: 8px;
+      font-family: inherit; cursor: pointer; transition: background 0.12s;
+    }
+    #fitMapBtn:hover { background: var(--bg); }
     #clearMapBtn {
       background: none; border: 1px solid var(--border); color: #c2503a;
       font-size: 0.9em; font-weight: 600; padding: 0.5em 1em; border-radius: 8px;
@@ -658,6 +664,9 @@
         <div id="checkMapBody"></div>
       </div>
     </div>
+    <button id="fitMapBtn" title="Scroll to the top-left corner of your map">
+      <span>Fit to map</span>
+    </button>
     <button id="shareBtn" title="Copy a shareable link to this map">
       <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
       <span class="share-label">Share</span>
@@ -754,7 +763,8 @@
   <div id="sidebar">
     <button id="collapseBtn" title="Collapse/Expand Sidebar">≡</button>
     <div class="sidebar-section" id="sidebarInstructions">
-      <strong>How to use:</strong>
+      <strong id="instructionsToggle" style="cursor:pointer;user-select:none;">How to use: <span id="instructionsCaret">▾</span></strong>
+      <div id="instructionsBody">
       <ul style="padding-left:1.2em;">
         <li>Drag a concept from the sidebar onto the map.</li>
         <li><b>Custom node:</b> Enter any label below and add your own concept to the map.</li>
@@ -767,6 +777,7 @@
         <li>Right-click a node or link to delete.</li>
       </ul>
       <button id="playDemoBtn">&#9654; Play demo</button>
+      </div>
     </div>
     <div class="sidebar-section">
       <strong>Add your own concept:</strong>
@@ -781,7 +792,10 @@
       <input type="search" id="conceptSearchInput" placeholder="Search concepts..." />
     </div>
     <div id="sidebarList"></div>
-    <div class="no-results" id="noResults">No concepts match your search.</div>
+    <div class="no-results" id="noResults">
+      No concepts match your search. The catalogue currently covers 6th-8th grade math, so it may just not be in there yet.
+      <button type="button" id="noResultsAddBtn" style="display:block;margin-top:0.5em;background:none;border:none;color:var(--brand);text-decoration:underline;cursor:pointer;padding:0;font-size:0.95em;font-family:inherit;">Add it as a custom concept →</button>
+    </div>
     <hr style="margin:1em 0 0.5em 0; border:none; border-top:1.5px solid #e7e7e7;">
     <div id="notesSidebar"></div>
   </div>

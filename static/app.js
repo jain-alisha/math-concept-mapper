@@ -170,6 +170,7 @@ window.onload = async function() {
   setupShareButton();
   setupExportPdfButton();
   setupClearMapButton();
+  setupFitMapButton();
   setupAiSummaryButton();
   setupCheckMapButton();
   setupAuthUI();
@@ -696,6 +697,22 @@ function setupClearMapButton() {
   if (topbarBtn) topbarBtn.onclick = clearMap;
   const panelBtn = document.getElementById('clearMapBtnInPanel');
   if (panelBtn) panelBtn.onclick = clearMap;
+}
+
+// There's no zoom/scale on this canvas, so "fit" can't shrink the whole
+// map into view the way a true zoom-to-fit would - it scrolls to the
+// map's top-left corner instead, which is still the main thing a student
+// needs on a map that's grown past the visible viewport: a reliable way
+// back to "the start" instead of scrolling around looking for an edge.
+function setupFitMapButton() {
+  const btn = document.getElementById('fitMapBtn');
+  if (!btn) return;
+  btn.onclick = () => {
+    const box = mapExportBoundingBox();
+    const area = document.getElementById('canvasArea');
+    if (!box || !area) { if (area) area.scrollTo({ top: 0, left: 0, behavior: 'smooth' }); return; }
+    area.scrollTo({ top: Math.max(0, box.minY - 30), left: Math.max(0, box.minX - 30), behavior: 'smooth' });
+  };
 }
 
 // --- Export current map to PDF, cropped tight to the nodes ---
@@ -1999,6 +2016,33 @@ function setupSidebarEvents() {
     sidebar.classList.toggle('collapsed');
     collapseBtn.textContent = sidebar.classList.contains('collapsed') ? '→' : '≡';
   };
+  setupInstructionsCollapse();
+}
+
+// The long "How to use" block is only useful once, before a student has
+// placed a first concept - after that it's mostly in the way of the
+// actually-useful curriculum search below it. Collapses itself the first
+// time a node gets added (remembered across visits), but stays a
+// one-click toggle either way rather than disappearing for good.
+const INSTRUCTIONS_COLLAPSED_KEY = 'spanInstructionsCollapsed';
+function setInstructionsCollapsed(collapsed) {
+  const body = document.getElementById('instructionsBody');
+  const caret = document.getElementById('instructionsCaret');
+  if (!body) return;
+  body.style.display = collapsed ? 'none' : '';
+  if (caret) caret.textContent = collapsed ? '▸' : '▾';
+  try { localStorage.setItem(INSTRUCTIONS_COLLAPSED_KEY, collapsed ? '1' : '0'); } catch (e) { /* ignore */ }
+}
+function setupInstructionsCollapse() {
+  const toggle = document.getElementById('instructionsToggle');
+  if (!toggle) return;
+  let startedCollapsed = false;
+  try { startedCollapsed = localStorage.getItem(INSTRUCTIONS_COLLAPSED_KEY) === '1'; } catch (e) { /* ignore */ }
+  setInstructionsCollapsed(startedCollapsed);
+  toggle.onclick = () => {
+    const body = document.getElementById('instructionsBody');
+    setInstructionsCollapsed(body.style.display !== 'none');
+  };
 }
 
 // --- Concept search: filters the sidebar list and auto-expands matches ---
@@ -2052,6 +2096,13 @@ function filterSidebar(query) {
 function setupSearchEvents() {
   const input = document.getElementById('conceptSearchInput');
   input.addEventListener('input', () => filterSidebar(input.value));
+  const addBtn = document.getElementById('noResultsAddBtn');
+  if (addBtn) addBtn.onclick = () => {
+    const customInput = document.getElementById('customConceptInput');
+    if (!customInput) return;
+    customInput.value = input.value.trim();
+    customInput.focus();
+  };
 }
 
 // A random spot in a small fixed box (the old behavior) was guaranteed to
@@ -2181,9 +2232,14 @@ function addNode(label, x, y, meta={}) {
     label, x, y,
     meta: {...meta}
   };
+  const wasEmpty = nodes.length === 0;
   nodes.push(node);
   renderCanvas();
   autosave();
+  // Onboarding's done the moment there's a first real concept on the map
+  // (not the sample/demo map, which starts pre-populated) - collapse the
+  // instructions out of the way automatically, same as a manual toggle.
+  if (wasEmpty && !isSampleMode) setInstructionsCollapsed(true);
 }
 
 // --- Shared link geometry: endpoints trimmed to node edges, plus a gentle curve ---
