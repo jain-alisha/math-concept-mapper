@@ -135,10 +135,20 @@
     .class-list { list-style: none; margin: 0; padding: 0; }
     .class-list li {
       padding: 0.6em 0; font-size: 0.94em; color: var(--text);
-      border-bottom: 1px solid var(--bg); display: flex; align-items: center; justify-content: space-between; gap: 0.8em;
+      border-bottom: 1px solid var(--bg);
     }
     .class-list li:last-child { border-bottom: none; }
+    .class-list-row { display: flex; align-items: center; justify-content: space-between; gap: 0.8em; }
     .class-list .class-name { font-weight: 600; }
+    .class-activities-toggle {
+      background: none; border: 1px solid var(--border); color: var(--text-secondary); padding: 0.3em 0.7em;
+      border-radius: 7px; font-family: inherit; font-size: 0.82em; font-weight: 600; cursor: pointer;
+    }
+    .class-activities-toggle:hover { background: var(--bg); }
+    .class-activities-list { list-style: none; margin: 0.5em 0 0; padding: 0; }
+    .class-activities-list li { padding: 0.3em 0; border: none; font-size: 0.9em; }
+    .class-activities-list a { color: var(--brand); text-decoration: none; font-weight: 600; }
+    .class-activities-list a:hover { text-decoration: underline; }
 
     #timelineFrameWrap {
       width: 100%; height: 260px; background: var(--bg); border: 1px solid var(--border);

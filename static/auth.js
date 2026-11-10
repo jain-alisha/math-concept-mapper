@@ -90,7 +90,7 @@
       if (!session) return [];
       const { data, error } = await client
         .from('maps')
-        .select('id,title,updated_at,created_at,timeline_id')
+        .select('id,title,updated_at,created_at,timeline_id,activity_id')
         .eq('owner_id', session.user.id)
         .order('updated_at', { ascending: false });
       if (error) throw error;
@@ -105,8 +105,10 @@
 
     // Returns { row } on success, { conflict: true } if a stale write was
     // rejected (id + lastKnownUpdatedAt supplied but no longer matches -
-    // the map changed elsewhere since it was loaded).
-    async saveMap({ id, title, data, lastKnownUpdatedAt }) {
+    // the map changed elsewhere since it was loaded). activityId is only
+    // ever set on insert (a map's activity assignment doesn't change after
+    // creation - see app.js's currentActivityId for why).
+    async saveMap({ id, title, data, lastKnownUpdatedAt, activityId }) {
       const nowIso = new Date().toISOString();
       if (id) {
         let query = client.from('maps').update({ title, data, updated_at: nowIso }).eq('id', id);
@@ -118,7 +120,7 @@
       }
       const { data: rows, error } = await client
         .from('maps')
-        .insert({ title, data, updated_at: nowIso })
+        .insert({ title, data, updated_at: nowIso, activity_id: activityId || null })
         .select();
       if (error) throw error;
       return { row: rows[0] };
@@ -246,11 +248,46 @@
       if (!studentIds.length) return [];
       const { data, error } = await client
         .from('maps')
-        .select('id,title,owner_id,data,updated_at')
+        .select('id,title,owner_id,data,updated_at,activity_id')
         .in('owner_id', studentIds)
         .order('updated_at', { ascending: false });
       if (error) throw error;
       return data;
+    },
+
+    // --- Activities: a teacher-defined assignment with its own concept
+    // set, scoping Class Insights to "this specific assignment" instead of
+    // a student's whole map history (see supabase-schema.sql). ---
+
+    async getActivity(id) {
+      const { data, error } = await client.from('activities').select('id,class_id,name,concepts').eq('id', id).single();
+      if (error) throw error;
+      return data;
+    },
+
+    async listClassActivities(classId) {
+      const { data, error } = await client
+        .from('activities')
+        .select('id,name,concepts,created_at')
+        .eq('class_id', classId)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+
+    async createActivity(classId, name, concepts) {
+      const { data, error } = await client
+        .from('activities')
+        .insert({ class_id: classId, name, concepts })
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+
+    async deleteActivity(id) {
+      const { error } = await client.from('activities').delete().eq('id', id);
+      if (error) throw error;
     },
   };
 })();

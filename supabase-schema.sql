@@ -294,3 +294,52 @@ $$;
 
 revoke execute on function public.claim_teacher_role() from public;
 grant execute on function public.claim_teacher_role() to authenticated;
+
+-- ============================================================
+-- Activities: a teacher-defined, named assignment with its own concept
+-- set (e.g. "Week 3: Ratios Review"). Lets Class Insights be scoped to
+-- "this specific assignment" instead of a student's whole map history -
+-- classwide connection counts and activity-filtered dashboard views both
+-- read from here. `concepts` is a flat array of "grade::unit::topic"
+-- strings, same shape as classes.taught_topics.
+-- ============================================================
+create table public.activities (
+  id uuid primary key default gen_random_uuid(),
+  class_id uuid not null references public.classes(id) on delete cascade,
+  name text not null,
+  concepts jsonb not null default '[]'::jsonb,
+  created_at timestamptz not null default now()
+);
+create index on public.activities(class_id);
+alter table public.activities enable row level security;
+
+create policy "teachers select own class activities" on public.activities
+  for select to authenticated
+  using (public.is_class_teacher(class_id));
+
+create policy "teachers insert own class activities" on public.activities
+  for insert to authenticated
+  with check (public.is_class_teacher(class_id));
+
+create policy "teachers update own class activities" on public.activities
+  for update to authenticated
+  using (public.is_class_teacher(class_id))
+  with check (public.is_class_teacher(class_id));
+
+create policy "teachers delete own class activities" on public.activities
+  for delete to authenticated
+  using (public.is_class_teacher(class_id));
+
+-- Additive second SELECT policy (same OR-together pattern as "teachers view
+-- their students maps" on public.maps) - students need to see the concept
+-- set and name of activities in their own classes to work on them.
+create policy "students view activities in their classes" on public.activities
+  for select to authenticated
+  using (public.is_class_member(class_id));
+
+-- Nullable, on delete set null: deleting an activity ungroups the maps
+-- tagged to it rather than deleting them - same rationale as timeline_id
+-- below it. maps already has an owner-scoped, non-column-restricted UPDATE
+-- policy ("update own maps"), so setting activity_id needs no new policy.
+alter table public.maps add column if not exists activity_id uuid references public.activities(id) on delete set null;
+create index on public.maps(activity_id);

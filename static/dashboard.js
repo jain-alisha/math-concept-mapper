@@ -155,6 +155,83 @@ function computeGradeUnitCoverage(mapsData) {
     .sort((a, b) => b.students - a.students);
 }
 
+// Scopes classwide stats to one specific assignment: only maps tagged with
+// this activity, and only each student's single latest-updated one among
+// those - without this, a student's older map (or an earlier "Save a
+// copy" checkpoint) would get summed in right alongside their current
+// one, double-counting concepts/connections and distorting class patterns.
+// No activityId -> existing behavior (every map, unfiltered), so selecting
+// "All maps" in the activity picker doesn't change anything.
+function filterMapsForActivity(mapsWithData, activityId) {
+  if (!activityId) return mapsWithData;
+  const tagged = mapsWithData.filter(m => m.activity_id === activityId);
+  const latestByOwner = new Map();
+  for (const m of tagged) {
+    const existing = latestByOwner.get(m.owner_id);
+    if (!existing || new Date(m.updated_at) > new Date(existing.updated_at)) {
+      latestByOwner.set(m.owner_id, m);
+    }
+  }
+  return [...latestByOwner.values()];
+}
+
+// Every unordered pair within an activity's assigned concept set, with how
+// many distinct students drew a connection between them (in either
+// direction, counted once per student even if linked twice) - including
+// pairs nobody connected at all, which the frequency-sorted insight cards
+// above deliberately can't show since they only list concepts/pairs that
+// appear at least once.
+function computePairConnectionCounts(mapsData, conceptLabels) {
+  const labelSet = new Set(conceptLabels);
+  const pairKey = (a, b) => [a, b].sort().join(' || ');
+  const counts = new Map();
+  for (const m of mapsData) {
+    const nodesArr = (m.data && m.data.n) || [];
+    const edgesArr = (m.data && m.data.e) || [];
+    const byId = new Map(nodesArr.map(n => [n.i, n]));
+    const seenThisStudent = new Set();
+    for (const e of edgesArr) {
+      const src = byId.get(e.s), tgt = byId.get(e.t);
+      if (!src || !tgt || src.l === tgt.l) continue;
+      if (!labelSet.has(src.l) || !labelSet.has(tgt.l)) continue;
+      const key = pairKey(src.l, tgt.l);
+      if (seenThisStudent.has(key)) continue;
+      seenThisStudent.add(key);
+      counts.set(key, (counts.get(key) || 0) + 1);
+    }
+  }
+  const pairs = [];
+  for (let i = 0; i < conceptLabels.length; i++) {
+    for (let j = i + 1; j < conceptLabels.length; j++) {
+      const a = conceptLabels[i], b = conceptLabels[j];
+      pairs.push({ a, b, count: counts.get(pairKey(a, b)) || 0 });
+    }
+  }
+  pairs.sort((x, y) => y.count - x.count || (x.a + x.b).localeCompare(y.a + y.b));
+  return pairs;
+}
+
+// "grade::unit::topic" -> the bare topic label, matching how map nodes
+// store a concept's name (n.l) - every existing classwide stat (hub
+// concepts, frequency, etc.) already matches by label alone with the same
+// grade-collision caveat, so this stays consistent rather than inventing a
+// different, stricter key scheme just for this one card.
+function activityConceptLabels(activity) {
+  if (!activity || !activity.concepts) return [];
+  return activity.concepts.map(key => {
+    const parts = key.split('::');
+    return parts.length === 3 ? parts[2] : key;
+  });
+}
+
+// Projector-safe roster: same shape and order, names replaced with stable
+// "Student N" labels (numbered by join order) so every existing render
+// function that already does `student.student_display_name || ...` shows
+// the anonymized name for free, with zero changes to those functions.
+function anonymizeRoster(roster) {
+  return roster.map((r, i) => ({ ...r, student_display_name: `Student ${i + 1}`, student_email: '' }));
+}
+
 // A one-line, class-wide read on where the whole class collectively stands
 // - same heuristic as the playground's per-map "Instant AI Summary", rolled
 // up across every student's maps instead of one map at a time.
@@ -380,6 +457,53 @@ function renderStudentMapCards(container, roster, mapsWithData, hrefFor) {
   container.appendChild(grid);
 }
 
+// Shared by the taught-topics checklist above and the activity concept
+// picker below - same checkbox-per-topic, grouped-by-unit rendering, just
+// over a different unit list (units actually touched by student maps vs.
+// the whole curriculum) and a different pre-checked set.
+function renderConceptChecklist(container, curriculum, units, checkedKeys) {
+  container.innerHTML = '';
+  const checked = checkedKeys instanceof Set ? checkedKeys : new Set(checkedKeys || []);
+  const checkboxes = [];
+  units.forEach(({ grade, unit }) => {
+    const topics = (curriculum[grade] && curriculum[grade][unit]) || [];
+    if (!topics.length) return;
+    const unitDiv = document.createElement('div');
+    unitDiv.className = 'taught-unit';
+    const title = document.createElement('div');
+    title.className = 'taught-unit-title';
+    title.textContent = `${unit} (${grade})`;
+    unitDiv.appendChild(title);
+    const list = document.createElement('ul');
+    list.className = 'taught-topic-list';
+    topics.forEach(topic => {
+      const key = grade + '::' + unit + '::' + topic;
+      const li = document.createElement('li');
+      const label = document.createElement('label');
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.checked = checked.has(key);
+      cb.dataset.key = key;
+      checkboxes.push(cb);
+      label.appendChild(cb);
+      label.appendChild(document.createTextNode(topic));
+      li.appendChild(label);
+      list.appendChild(li);
+    });
+    unitDiv.appendChild(list);
+    container.appendChild(unitDiv);
+  });
+  return checkboxes;
+}
+
+function allUnitsFromCurriculum(curriculum) {
+  const units = [];
+  Object.keys(curriculum || {}).forEach(grade => {
+    Object.keys(curriculum[grade] || {}).forEach(unit => units.push({ grade, unit }));
+  });
+  return units;
+}
+
 // saveFn defaults to the real backend call; the sample dashboard (no
 // account, nothing to persist) passes its own in-memory version instead.
 function renderTaughtTopicsChecklist(container, cls, mapsWithData, curriculum, onSave, saveFn) {
@@ -400,37 +524,9 @@ function renderTaughtTopicsChecklist(container, cls, mapsWithData, curriculum, o
     return;
   }
 
-  const taught = new Set(cls.taught_topics || []);
-  const checkboxes = [];
-
-  units.forEach(({ grade, unit }) => {
-    const topics = (curriculum[grade] && curriculum[grade][unit]) || [];
-    if (!topics.length) return;
-    const unitDiv = document.createElement('div');
-    unitDiv.className = 'taught-unit';
-    const title = document.createElement('div');
-    title.className = 'taught-unit-title';
-    title.textContent = `${unit} (${grade})`;
-    unitDiv.appendChild(title);
-    const list = document.createElement('ul');
-    list.className = 'taught-topic-list';
-    topics.forEach(topic => {
-      const key = grade + '::' + unit + '::' + topic;
-      const li = document.createElement('li');
-      const label = document.createElement('label');
-      const cb = document.createElement('input');
-      cb.type = 'checkbox';
-      cb.checked = taught.has(key);
-      cb.dataset.key = key;
-      checkboxes.push(cb);
-      label.appendChild(cb);
-      label.appendChild(document.createTextNode(topic));
-      li.appendChild(label);
-      list.appendChild(li);
-    });
-    unitDiv.appendChild(list);
-    container.appendChild(unitDiv);
-  });
+  const checklistWrap = document.createElement('div');
+  container.appendChild(checklistWrap);
+  const checkboxes = renderConceptChecklist(checklistWrap, curriculum, units, cls.taught_topics || []);
 
   const saveRow = document.createElement('div');
   const saveBtn = document.createElement('button');
@@ -459,6 +555,147 @@ function renderTaughtTopicsChecklist(container, cls, mapsWithData, curriculum, o
       saveBtn.disabled = false;
     }
   };
+}
+
+// Activities: a named assignment with its own concept set, used to scope
+// Class Insights to "this specific assignment" (see filterMapsForActivity
+// and computePairConnectionCounts). activityFns defaults to the real
+// backend; the sample dashboard passes an in-memory version instead, same
+// pattern as renderTaughtTopicsChecklist's saveFn. onChange(activityId,
+// activities) fires on load and on every selection/create/delete, so the
+// caller can re-run its activity-aware render pipeline.
+function renderActivitiesCard(container, cls, curriculum, activityFns, onChange) {
+  activityFns = activityFns || {
+    list: (classId) => window.SpanAuth.listClassActivities(classId),
+    create: (classId, name, concepts) => window.SpanAuth.createActivity(classId, name, concepts),
+    del: (id) => window.SpanAuth.deleteActivity(id),
+  };
+
+  container.innerHTML = '<h2>Activities</h2>';
+  const hint = document.createElement('p');
+  hint.className = 'hint';
+  hint.textContent = "Scope Class Insights to one assignment's concept set, including classwide connection counts within it.";
+  container.appendChild(hint);
+
+  const selectRow = document.createElement('div');
+  selectRow.className = 'activity-select-row';
+  const select = document.createElement('select');
+  selectRow.appendChild(select);
+  const deleteBtn = document.createElement('button');
+  deleteBtn.className = 'activity-delete-btn';
+  deleteBtn.textContent = 'Delete';
+  deleteBtn.disabled = true;
+  selectRow.appendChild(deleteBtn);
+  container.appendChild(selectRow);
+
+  const newBtn = document.createElement('button');
+  newBtn.className = 'activity-new-btn';
+  newBtn.textContent = '+ New Activity';
+  container.appendChild(newBtn);
+
+  const form = document.createElement('div');
+  form.className = 'activity-form';
+  form.style.display = 'none';
+  const nameInput = document.createElement('input');
+  nameInput.type = 'text';
+  nameInput.className = 'activity-name-input';
+  nameInput.placeholder = 'Activity name...';
+  nameInput.maxLength = 80;
+  form.appendChild(nameInput);
+  const conceptsWrap = document.createElement('div');
+  conceptsWrap.className = 'activity-concepts';
+  form.appendChild(conceptsWrap);
+  const formActions = document.createElement('div');
+  formActions.className = 'activity-form-actions';
+  const createBtn = document.createElement('button');
+  createBtn.textContent = 'Create';
+  const cancelBtn = document.createElement('button');
+  cancelBtn.type = 'button';
+  cancelBtn.textContent = 'Cancel';
+  formActions.appendChild(createBtn);
+  formActions.appendChild(cancelBtn);
+  form.appendChild(formActions);
+  container.appendChild(form);
+
+  let activities = [];
+  let checkboxes = [];
+
+  function renderOptions() {
+    select.innerHTML = '<option value="">All maps</option>';
+    activities.forEach(a => {
+      const opt = document.createElement('option');
+      opt.value = a.id;
+      opt.textContent = a.name;
+      select.appendChild(opt);
+    });
+  }
+
+  async function load() {
+    select.innerHTML = '<option value="">Loading…</option>';
+    try {
+      activities = await activityFns.list(cls.id);
+    } catch (e) {
+      activities = [];
+    }
+    renderOptions();
+    deleteBtn.disabled = !select.value;
+    onChange(select.value || null, activities);
+  }
+
+  newBtn.onclick = () => {
+    const opening = form.style.display === 'none';
+    form.style.display = opening ? 'block' : 'none';
+    if (opening) {
+      nameInput.value = '';
+      checkboxes = renderConceptChecklist(conceptsWrap, curriculum, allUnitsFromCurriculum(curriculum), []);
+    }
+  };
+  cancelBtn.onclick = () => { form.style.display = 'none'; };
+
+  createBtn.onclick = async () => {
+    const name = nameInput.value.trim();
+    if (!name) { alert('Give this activity a name.'); return; }
+    const concepts = checkboxes.filter(cb => cb.checked).map(cb => cb.dataset.key);
+    if (!concepts.length) { alert('Pick at least one concept for this activity.'); return; }
+    createBtn.disabled = true;
+    try {
+      const created = await activityFns.create(cls.id, name, concepts);
+      activities = [created, ...activities];
+      renderOptions();
+      select.value = created.id;
+      form.style.display = 'none';
+      deleteBtn.disabled = false;
+      onChange(select.value, activities);
+    } catch (e) {
+      alert('Could not create activity: ' + (e.message || e));
+    } finally {
+      createBtn.disabled = false;
+    }
+  };
+
+  select.onchange = () => {
+    deleteBtn.disabled = !select.value;
+    onChange(select.value || null, activities);
+  };
+
+  deleteBtn.onclick = async () => {
+    const activity = activities.find(a => a.id === select.value);
+    if (!activity) return;
+    if (!confirm(`Delete activity "${activity.name}"? Maps already tagged to it are not deleted - they just become untagged.`)) return;
+    deleteBtn.disabled = true;
+    try {
+      await activityFns.del(activity.id);
+      activities = activities.filter(a => a.id !== activity.id);
+      renderOptions();
+      onChange(null, activities);
+    } catch (e) {
+      alert('Could not delete activity: ' + (e.message || e));
+    } finally {
+      deleteBtn.disabled = !select.value;
+    }
+  };
+
+  load();
 }
 
 function insightCard(titleHtml) {
@@ -548,7 +785,7 @@ function addExpandableRow(li, labelNode, badgeText, badgeClass, studentIds, rost
 // the AI summary banner into `summaryEl`. Six insight types - three
 // original (most-explored, isolated, missing-prereq/classwide-gaps) plus
 // three new ones (hub concepts, student progress, curriculum coverage).
-function renderClassInsights(summaryEl, grid, roster, mapsData, curriculum, taughtSet, hrefFor) {
+function renderClassInsights(summaryEl, grid, roster, mapsData, curriculum, taughtSet, hrefFor, activity) {
   summaryEl.innerHTML = '';
   grid.innerHTML = '';
   if (!mapsData.length) {
@@ -656,6 +893,20 @@ function renderClassInsights(summaryEl, grid, roster, mapsData, curriculum, taug
     li.appendChild(badgeRow(span, `${row.own} student-created, ${row.aiAdded} from suggestions`));
   }, 'No students yet.'));
   grid.appendChild(provenanceCard);
+
+  if (activity) {
+    const conceptLabels = activityConceptLabels(activity);
+    const pairs = computePairConnectionCounts(mapsData, conceptLabels);
+    const pairCard = insightCard(`Classwide connection counts`);
+    const pairHint = document.createElement('p'); pairHint.className = 'hint';
+    pairHint.textContent = `Every possible pair within "${activity.name}"'s ${conceptLabels.length} concepts, including pairs nobody connected.`;
+    pairCard.appendChild(pairHint);
+    pairCard.appendChild(insightList(pairs, (pair, li) => {
+      const span = document.createElement('span'); span.textContent = `${pair.a} ↔ ${pair.b}`;
+      li.appendChild(badgeRow(span, `${pair.count} student${pair.count === 1 ? '' : 's'}`, pair.count === 0 ? 'insights-badge-warn' : ''));
+    }, 'This activity has fewer than two concepts assigned.'));
+    grid.appendChild(pairCard);
+  }
 }
 
 // A first attempt at this rendered the report through jsPDF's html()
@@ -668,11 +919,28 @@ function renderClassInsights(summaryEl, grid, roster, mapsData, curriculum, taug
 // it: real browser layout, real fonts, real gradients. The @media print
 // rules in dashboard.html hide everything except the current class's
 // report and keep cards from splitting awkwardly across pages.
-function setupExportReportButton(header, className) {
+// onToggleAnonymous(nowAnonymous) fires on click; the caller owns the
+// actual re-render (this function only knows about the button itself).
+function setupExportReportButton(header, className, onToggleAnonymous) {
   const actions = document.createElement('div');
   actions.className = 'dash-header-actions';
   while (header.firstChild) actions.appendChild(header.firstChild);
   header.appendChild(actions);
+
+  if (onToggleAnonymous) {
+    const anonBtn = document.createElement('button');
+    anonBtn.id = 'anonymousModeBtn';
+    anonBtn.textContent = 'Anonymous mode';
+    anonBtn.title = 'Hide student names - for projecting class patterns without putting names on screen';
+    let anonymous = false;
+    anonBtn.onclick = () => {
+      anonymous = !anonymous;
+      anonBtn.classList.toggle('active', anonymous);
+      anonBtn.textContent = anonymous ? 'Anonymous mode: on' : 'Anonymous mode';
+      onToggleAnonymous(anonymous);
+    };
+    actions.appendChild(anonBtn);
+  }
 
   const btn = document.createElement('button');
   btn.id = 'exportReportBtn';
@@ -683,11 +951,17 @@ function setupExportReportButton(header, className) {
   btn.onclick = () => window.print();
 }
 
-// Assembles one class's full dashboard view into `wrap`. `saveFn` is passed
-// straight through to renderTaughtTopicsChecklist (real backend by default,
-// in-memory fake for the sample dashboard).
-function renderClassDashboard(wrap, cls, roster, maps, mapsWithData, curriculum, hrefFor, saveFn) {
+// Assembles one class's full dashboard view into `wrap`, plus the header
+// actions (Export PDF, Anonymous mode) into `header`. `saveFn`/`activityFns`
+// are passed straight through to renderTaughtTopicsChecklist/
+// renderActivitiesCard (real backend by default, in-memory fakes for the
+// sample dashboard).
+function renderClassDashboard(wrap, cls, roster, maps, mapsWithData, curriculum, hrefFor, saveFn, header, className, activityFns) {
   wrap.innerHTML = '';
+
+  const activitiesCard = document.createElement('div');
+  activitiesCard.className = 'dash-card';
+  wrap.appendChild(activitiesCard);
 
   const glanceCard = document.createElement('div');
   glanceCard.className = 'dash-card';
@@ -695,11 +969,6 @@ function renderClassDashboard(wrap, cls, roster, maps, mapsWithData, curriculum,
   const glanceGrid = document.createElement('div');
   glanceCard.appendChild(glanceGrid);
   wrap.appendChild(glanceCard);
-  if (roster.length) {
-    renderStudentMapCards(glanceGrid, roster, mapsWithData, hrefFor);
-  } else {
-    glanceGrid.innerHTML = '<p class="settings-empty">No students have joined yet.</p>';
-  }
 
   const summaryEl = document.createElement('div');
   wrap.appendChild(summaryEl);
@@ -707,32 +976,38 @@ function renderClassDashboard(wrap, cls, roster, maps, mapsWithData, curriculum,
   insightsGrid.className = 'insights-grid';
   wrap.appendChild(insightsGrid);
 
-  let taughtSet = new Set(cls.taught_topics || []);
-  renderClassInsights(summaryEl, insightsGrid, roster, mapsWithData, curriculum, taughtSet, hrefFor);
-
   const taughtCard = document.createElement('div');
   taughtCard.className = 'dash-card';
   taughtCard.innerHTML = '<h2>What have you taught?</h2>';
   const taughtBody = document.createElement('div');
   taughtCard.appendChild(taughtBody);
   wrap.appendChild(taughtCard);
-  renderTaughtTopicsChecklist(taughtBody, cls, mapsWithData, curriculum, (newSet) => {
-    taughtSet = newSet;
-    renderClassInsights(summaryEl, insightsGrid, roster, mapsWithData, curriculum, taughtSet, hrefFor);
-  }, saveFn);
 
   const rosterCard = document.createElement('div');
   rosterCard.className = 'dash-card';
-  rosterCard.innerHTML = '<h2>Roster</h2>';
   wrap.appendChild(rosterCard);
-  if (!roster.length) {
-    rosterCard.innerHTML += '<p class="settings-empty">No students have joined yet.</p>';
-  } else {
+
+  let taughtSet = new Set(cls.taught_topics || []);
+  let anonymous = false;
+  let activities = [];
+  let selectedActivityId = null;
+
+  function currentRoster() {
+    return anonymous ? anonymizeRoster(roster) : roster;
+  }
+
+  function renderRosterCard() {
+    const r = currentRoster();
+    rosterCard.innerHTML = '<h2>Roster</h2>';
+    if (!r.length) {
+      rosterCard.innerHTML += '<p class="settings-empty">No students have joined yet.</p>';
+      return;
+    }
     const mapsByStudent = {};
     maps.forEach(m => { (mapsByStudent[m.owner_id] = mapsByStudent[m.owner_id] || []).push(m); });
     const ul = document.createElement('ul');
     ul.className = 'roster-list';
-    roster.forEach(student => {
+    r.forEach(student => {
       const li = document.createElement('li');
       const nameSpan = document.createElement('div');
       nameSpan.textContent = student.student_display_name || student.student_email || student.student_id;
@@ -762,6 +1037,42 @@ function renderClassDashboard(wrap, cls, roster, maps, mapsWithData, curriculum,
     });
     rosterCard.appendChild(ul);
   }
+
+  // Re-runs everything that shows student names or depends on the
+  // activity filter - called on load and whenever anonymous mode, the
+  // activity selection, or taughtSet changes. "What have you taught?"
+  // deliberately isn't re-run here: it shows no names, and it's scoped to
+  // the whole class's curriculum coverage, not one activity.
+  function rerender() {
+    const r = currentRoster();
+    if (r.length) {
+      renderStudentMapCards(glanceGrid, r, mapsWithData, hrefFor);
+    } else {
+      glanceGrid.innerHTML = '<p class="settings-empty">No students have joined yet.</p>';
+    }
+    const activity = activities.find(a => a.id === selectedActivityId) || null;
+    const filteredMaps = filterMapsForActivity(mapsWithData, selectedActivityId);
+    renderClassInsights(summaryEl, insightsGrid, r, filteredMaps, curriculum, taughtSet, hrefFor, activity);
+    renderRosterCard();
+  }
+
+  if (header) {
+    setupExportReportButton(header, className, (nowAnonymous) => {
+      anonymous = nowAnonymous;
+      rerender();
+    });
+  }
+
+  renderActivitiesCard(activitiesCard, cls, curriculum, activityFns, (activityId, newActivities) => {
+    selectedActivityId = activityId;
+    activities = newActivities;
+    rerender();
+  });
+
+  renderTaughtTopicsChecklist(taughtBody, cls, mapsWithData, curriculum, (newSet) => {
+    taughtSet = newSet;
+    rerender();
+  }, saveFn);
 }
 
 // ============================================================
@@ -796,7 +1107,7 @@ function buildSampleClassData() {
     node('Unit rate definition', 2260, 110),
   ];
   const mayaMap = {
-    id: 'sample-maya', title: 'Ratios Unit Map', owner_id: 'sample-maya-id',
+    id: 'sample-maya', title: 'Ratios Unit Map', owner_id: 'sample-maya-id', activity_id: 'sample-activity-ratios',
     data: {
       n: mayaNodes,
       e: [
@@ -820,7 +1131,7 @@ function buildSampleClassData() {
     node('Rate word problems', 900, 340),
   ];
   const jordanMap = {
-    id: 'sample-jordan', title: 'Ratios + Percents', owner_id: 'sample-jordan-id',
+    id: 'sample-jordan', title: 'Ratios + Percents', owner_id: 'sample-jordan-id', activity_id: 'sample-activity-ratios',
     data: {
       n: jordanNodes,
       e: [
@@ -836,7 +1147,7 @@ function buildSampleClassData() {
     node('Ratio notation (a:b)', 500, 280),
   ];
   const priyaMap = {
-    id: 'sample-priya', title: 'Word Problems Practice', owner_id: 'sample-priya-id',
+    id: 'sample-priya', title: 'Word Problems Practice', owner_id: 'sample-priya-id', activity_id: 'sample-activity-ratios',
     data: { n: priyaNodes, e: [] },
   };
 
@@ -847,7 +1158,7 @@ function buildSampleClassData() {
     node('Ratio vocabulary', 500, 220),
   ];
   const samMap = {
-    id: 'sample-sam', title: 'Getting Started', owner_id: 'sample-sam-id',
+    id: 'sample-sam', title: 'Getting Started', owner_id: 'sample-sam-id', activity_id: 'sample-activity-ratios',
     data: { n: samNodes, e: [] },
   };
 
@@ -889,6 +1200,38 @@ function buildSampleClassData() {
   return { roster, maps, taughtTopics };
 }
 
+// In-memory activityFns for the sample dashboard (no account, nothing to
+// persist) - same role as buildSampleClassData's fake saveFn. Seeded with
+// one activity already selected-able so "Classwide connection counts"
+// has something to show without extra clicks; its concepts match exactly
+// the labels buildSampleClassData's maps use (Maya/Jordan/Priya/Sam's
+// activity_id above), not a real curriculum lookup.
+function buildSampleActivityFns() {
+  let activities = [{
+    id: 'sample-activity-ratios',
+    class_id: 'sample-class',
+    name: 'Ratios Checkpoint',
+    concepts: [
+      '6th Grade Math::Ratios & Proportional Relationships::Ratio notation (a:b)',
+      '6th Grade Math::Ratios & Proportional Relationships::Ratio vocabulary',
+      '6th Grade Math::Ratios & Proportional Relationships::Equivalent ratios – tables',
+      '6th Grade Math::Ratios & Proportional Relationships::Equivalent ratios – tape diagrams',
+      '6th Grade Math::Ratios & Proportional Relationships::Ratio word problems',
+      '6th Grade Math::Ratios & Proportional Relationships::Unit rate definition',
+    ],
+    created_at: new Date().toISOString(),
+  }];
+  return {
+    list: async () => activities,
+    create: async (classId, name, concepts) => {
+      const created = { id: 'sample-activity-' + Date.now(), class_id: classId, name, concepts, created_at: new Date().toISOString() };
+      activities = [created, ...activities];
+      return created;
+    },
+    del: async (id) => { activities = activities.filter(a => a.id !== id); },
+  };
+}
+
 // base64url-encodes map data the same way app.js's share-link mechanism
 // does, so "view this student's map" works even for fake, unsaved data.
 function encodeMapForShare(data) {
@@ -924,12 +1267,12 @@ function renderSampleDashboard() {
   const sampleClass = { id: 'sample-class', taught_topics: taughtTopics };
   const body = document.createElement('div');
   dashWrap.appendChild(body);
-  setupExportReportButton(header, 'Period 3 - Ratios & Proportions');
 
   renderClassDashboard(
     body, sampleClass, roster, maps, maps, curriculumData,
     (m) => `playground?share=${encodeMapForShare(m.data)}`,
-    async () => {} // fake save: no account, nothing to persist
+    async () => {}, // fake save: no account, nothing to persist
+    header, 'Period 3 - Ratios & Proportions', buildSampleActivityFns()
   );
 }
 
@@ -1070,10 +1413,10 @@ function setupDashboardAuth() {
 
     const body = document.createElement('div');
     dashWrap.appendChild(body);
-    setupExportReportButton(header, cls.name);
     renderClassDashboard(
       body, cls, roster, maps, mapsWithData, curriculumData,
-      (m) => `playground?view=${m.id}&readonly=1`
+      (m) => `playground?view=${m.id}&readonly=1`,
+      undefined, header, cls.name
     );
   }
 

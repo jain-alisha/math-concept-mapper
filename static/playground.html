@@ -134,6 +134,14 @@
       background: var(--brand); color: #fff; border: none; padding: 0.45em 0.9em; border-radius: 7px;
       font-family: inherit; font-size: 0.9em; font-weight: 600; cursor: pointer; white-space: nowrap;
     }
+    .my-maps-checkpoint-row { margin-bottom: 0.7em; }
+    .my-maps-checkpoint-row button {
+      width: 100%; background: var(--surface); color: var(--text); border: 1px solid var(--border);
+      padding: 0.45em 0.9em; border-radius: 7px; font-family: inherit; font-size: 0.86em;
+      font-weight: 600; cursor: pointer;
+    }
+    .my-maps-checkpoint-row button:hover { background: var(--bg); }
+    .my-maps-checkpoint-row button:disabled { opacity: 0.6; cursor: default; }
     #myMapsList { list-style: none; margin: 0; padding: 0; max-height: 260px; overflow-y: auto; }
     #myMapsList li {
       display: flex; align-items: center; justify-content: space-between; gap: 0.5em;
@@ -206,6 +214,12 @@
     #readonlyBanner {
       position: absolute; top: 12px; left: 50%; transform: translateX(-50%);
       background: var(--surface); border: 1px solid var(--border); color: var(--text-secondary);
+      font-size: 0.88em; font-weight: 600; padding: 0.55em 1.1em; border-radius: 9px;
+      box-shadow: var(--shadow-sm); z-index: 900;
+    }
+    #activityBanner {
+      position: absolute; top: 12px; left: 50%; transform: translateX(-50%);
+      background: var(--blue-bg, #eaf2ff); border: 1px solid var(--blue-bd, #b9d4f8); color: var(--blue-tx, #1f4f91);
       font-size: 0.88em; font-weight: 600; padding: 0.55em 1.1em; border-radius: 9px;
       box-shadow: var(--shadow-sm); z-index: 900;
     }
@@ -659,6 +673,9 @@
             <input type="text" id="mapTitleInput" placeholder="Map title..." maxlength="80" />
             <button id="saveMapBtn">Save</button>
           </div>
+          <div class="my-maps-checkpoint-row">
+            <button id="saveCopyBtn" title="Save the current state as a new map, so your starting map stays exactly as it was">Save a copy</button>
+          </div>
           <ul id="myMapsList"></ul>
         </div>
         <div id="timelinePanel">
@@ -752,6 +769,7 @@
   </div>
   <div id="canvasArea">
     <div id="readonlyBanner" style="display:none;"></div>
+    <div id="activityBanner" style="display:none;"></div>
     <div id="isolatedLegend">Dashed nodes aren't connected to anything yet</div>
     <svg id="mapCanvas"></svg>
   </div>

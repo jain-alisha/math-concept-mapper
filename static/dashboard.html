@@ -108,6 +108,13 @@
     }
     #exportReportBtn:hover { background: var(--bg); }
     #exportReportBtn:disabled { opacity: 0.6; cursor: default; }
+    #anonymousModeBtn {
+      background: none; border: 1px solid var(--border); color: var(--text);
+      font-size: 0.9em; font-weight: 600; padding: 0.5em 1em; border-radius: 8px;
+      font-family: inherit; cursor: pointer; transition: background 0.12s, color 0.12s, border-color 0.12s;
+    }
+    #anonymousModeBtn:hover { background: var(--bg); }
+    #anonymousModeBtn.active { background: var(--brand); color: #fff; border-color: var(--brand); }
     .dash-meta { color: var(--text-secondary); font-size: 0.92em; margin: 0 0 1.6em; }
     .beta-tag {
       font-size: 0.68em; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase;
@@ -207,12 +214,46 @@
     .taught-save-btn:hover { background: #1568bd; }
     .taught-saved-note { font-size: 0.85em; color: #1f8a4c; margin-left: 0.8em; }
 
+    .activity-select-row { display: flex; gap: 0.5em; margin-bottom: 0.7em; }
+    .activity-select-row select {
+      flex: 1; padding: 0.5em 0.6em; border-radius: 7px; border: 1px solid var(--border);
+      font-size: 0.9em; font-family: inherit; background: var(--bg); color: var(--text);
+    }
+    .activity-delete-btn {
+      background: none; border: 1px solid var(--border); color: #c2503a; padding: 0.5em 0.9em;
+      border-radius: 7px; font-family: inherit; font-size: 0.88em; font-weight: 600; cursor: pointer;
+    }
+    .activity-delete-btn:hover:not(:disabled) { background: #fff0ee; border-color: #f5b8ab; }
+    .activity-delete-btn:disabled { opacity: 0.5; cursor: default; }
+    .activity-new-btn {
+      background: none; border: 1px solid var(--border); color: var(--text); padding: 0.45em 0.9em;
+      border-radius: 7px; font-family: inherit; font-size: 0.86em; font-weight: 600; cursor: pointer;
+    }
+    .activity-new-btn:hover { background: var(--bg); }
+    .activity-form { margin-top: 0.9em; padding-top: 0.9em; border-top: 1px solid var(--border); }
+    .activity-name-input {
+      width: 100%; padding: 0.55em 0.7em; border-radius: 7px; border: 1px solid var(--border);
+      font-size: 0.92em; font-family: inherit; background: var(--bg); margin-bottom: 0.8em;
+    }
+    .activity-concepts { max-height: 260px; overflow-y: auto; margin-bottom: 0.8em; }
+    .activity-form-actions { display: flex; gap: 0.5em; }
+    .activity-form-actions button:first-child {
+      background: var(--brand); color: #fff; border: none; padding: 0.5em 1.1em; border-radius: 7px;
+      font-family: inherit; font-size: 0.9em; font-weight: 600; cursor: pointer;
+    }
+    .activity-form-actions button:first-child:hover { background: #1568bd; }
+    .activity-form-actions button:last-child {
+      background: none; border: 1px solid var(--border); color: var(--text-secondary); padding: 0.5em 1.1em;
+      border-radius: 7px; font-family: inherit; font-size: 0.9em; font-weight: 600; cursor: pointer;
+    }
+
     .dash-empty-state { text-align: center; padding: 4em 1.5em; color: var(--text-secondary); }
     .dash-empty-state a { color: var(--brand); font-weight: 600; text-decoration: none; }
 
     /* ---------- Export PDF: print just the report, not the app chrome ---------- */
     @media print {
-      #topbar, .class-picker, .sample-banner, #exportReportBtn, .taught-save-btn, .insights-chevron { display: none !important; }
+      #topbar, .class-picker, .sample-banner, #exportReportBtn, #anonymousModeBtn, .taught-save-btn, .insights-chevron,
+      .activity-select-row, .activity-new-btn, .activity-form { display: none !important; }
       body { background: none; }
       .dash-wrap { max-width: none; padding: 0; }
       .dash-card, .ai-summary-banner { break-inside: avoid; box-shadow: none; }

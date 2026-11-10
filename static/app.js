@@ -150,15 +150,39 @@ window.onload = async function() {
     applyReadonlyUI();
   } else if (params.get('share')) {
     if (!loadSharedMap(params.get('share'))) loadAutosave();
+    await setupActivityContext(params);
   } else if (params.get('sample') === '1') {
     loadSampleMap();
   } else {
     loadAutosave();
+    await setupActivityContext(params);
   }
 
   renderCanvas();
   setupCustomConcept();
 };
+
+// A student reaches the Playground with ?activity=<id> from their Student
+// Dashboard (see student.js's class activity list). Doesn't redirect or
+// force a blank canvas - just tags whatever gets saved next (see
+// currentActivityId, read by saveCurrentMapAsNew) and shows which
+// assignment this is, same as the readonly banner shows "viewing X".
+async function setupActivityContext(params) {
+  const activityId = params.get('activity');
+  if (!activityId || !window.SpanAuth || !window.SpanAuth.isConfigured) return;
+  try {
+    const activity = await window.SpanAuth.getActivity(activityId);
+    currentActivityId = activity.id;
+    currentActivityName = activity.name;
+    const banner = document.getElementById('activityBanner');
+    if (banner) {
+      banner.textContent = `Working on: ${activity.name}`;
+      banner.style.display = 'block';
+    }
+  } catch (e) {
+    console.error('Could not load activity:', e);
+  }
+}
 
 // --- Read-only map viewing (Settings -> Classes -> a student's map) ---
 async function loadReadonlyMap(id) {
@@ -1149,6 +1173,11 @@ let cloudMapId = null;
 let cloudMapTitle = null;
 let cloudMapUpdatedAt = null;
 let cloudSaveTimer = null;
+// Set once, from ?activity=<id> on load (see setupActivityContext) - a map's
+// activity tag is decided at creation time and carried onto any "Save a
+// copy" checkpoint of it, but never reassigned afterward.
+let currentActivityId = null;
+let currentActivityName = null;
 
 function cloudReady() {
   return !!(window.SpanAuth && window.SpanAuth.isConfigured && cloudSession);
@@ -1186,8 +1215,8 @@ function showCloudNotice(msg) {
   el._hideTimer = setTimeout(() => { el.style.display = 'none'; }, 6000);
 }
 
-async function saveCurrentMapAsNew(title) {
-  const result = await window.SpanAuth.saveMap({ id: null, title, data: serializeMap() });
+async function saveCurrentMapAsNew(title, activityId) {
+  const result = await window.SpanAuth.saveMap({ id: null, title, data: serializeMap(), activityId });
   cloudMapId = result.row.id;
   cloudMapTitle = result.row.title;
   cloudMapUpdatedAt = result.row.updated_at;
@@ -1229,6 +1258,7 @@ function setupAuthUI() {
   const myMapsPanel = document.getElementById('myMapsPanel');
   const myMapsList = document.getElementById('myMapsList');
   const saveMapBtn = document.getElementById('saveMapBtn');
+  const saveCopyBtn = document.getElementById('saveCopyBtn');
   const mapTitleInput = document.getElementById('mapTitleInput');
   const timelineBtn = document.getElementById('timelineBtn');
   const timelinePanel = document.getElementById('timelinePanel');
@@ -1479,6 +1509,36 @@ function setupAuthUI() {
       path.setAttribute('fill', 'none');
       path.setAttribute('marker-end', 'url(#timelineArrow)');
       svg.appendChild(path);
+
+      // Arrow notes - the whole point of comparing two checkpoints side by
+      // side is seeing what a student wrote about *why* a connection
+      // exists, not just that it exists, so this view can't drop them the
+      // way the plain thumbnail renderer does.
+      if (e.no) {
+        const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
+        const label = e.no.length > 40 ? e.no.slice(0, 39) + '…' : e.no;
+        const noteWidth = Math.min(200, Math.max(44, label.length * 5.6 + 14));
+        const noteHeight = 18;
+        const noteBg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        noteBg.setAttribute('x', mx - noteWidth / 2);
+        noteBg.setAttribute('y', my - noteHeight / 2);
+        noteBg.setAttribute('width', noteWidth);
+        noteBg.setAttribute('height', noteHeight);
+        noteBg.setAttribute('rx', 5);
+        noteBg.setAttribute('fill', '#fff8f6');
+        noteBg.setAttribute('stroke', '#f0c3b3');
+        svg.appendChild(noteBg);
+        const noteText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        noteText.textContent = label;
+        noteText.setAttribute('x', mx);
+        noteText.setAttribute('y', my);
+        noteText.setAttribute('text-anchor', 'middle');
+        noteText.setAttribute('dominant-baseline', 'middle');
+        noteText.setAttribute('font-size', '0.66em');
+        noteText.setAttribute('fill', '#a6512f');
+        noteText.setAttribute('font-family', "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif");
+        svg.appendChild(noteText);
+      }
     }
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
     for (const n of nodesArr) {
@@ -1614,13 +1674,13 @@ function setupAuthUI() {
         });
         if (result.conflict) {
           showCloudNotice('This map changed elsewhere — saved as a new map instead.');
-          await saveCurrentMapAsNew(title);
+          await saveCurrentMapAsNew(title, currentActivityId);
         } else {
           cloudMapTitle = title;
           cloudMapUpdatedAt = result.row.updated_at;
         }
       } else {
-        await saveCurrentMapAsNew(title);
+        await saveCurrentMapAsNew(title, currentActivityId);
       }
       const original = saveMapBtn.textContent;
       saveMapBtn.textContent = 'Saved!';
@@ -1629,6 +1689,49 @@ function setupAuthUI() {
       alert('Could not save map: ' + (e.message || e));
     } finally {
       saveMapBtn.disabled = false;
+    }
+  };
+
+  // "Save a copy": a checkpoint, not an overwrite. Plain Save above
+  // overwrites cloudMapId in place - exactly the thing a student revising
+  // their starting map doesn't want. This instead always inserts a new
+  // row, then repoints cloudMapId/Title/UpdatedAt at it (same identity
+  // switch as a "Save As"), so every edit and autosave from this point
+  // targets the new copy while the original stays frozen at this moment.
+  // When there was a previous map, both versions get linked into one
+  // timeline (reusing it if the original was already in one) so they can
+  // be scrubbed between and compared.
+  if (saveCopyBtn) saveCopyBtn.onclick = async () => {
+    const previousId = cloudMapId;
+    const previousTitle = cloudMapTitle;
+    const typedTitle = (mapTitleInput.value || '').trim();
+    const title = (typedTitle && typedTitle !== previousTitle)
+      ? typedTitle
+      : `${previousTitle || 'Untitled map'} copy`;
+    saveCopyBtn.disabled = true;
+    try {
+      await saveCurrentMapAsNew(title, currentActivityId);
+      mapTitleInput.value = title;
+      if (previousId) {
+        let timelineId = null;
+        try {
+          const previousRow = await window.SpanAuth.loadMapById(previousId);
+          timelineId = previousRow.timeline_id;
+        } catch (e) { /* previous map may have been deleted meanwhile - fall through to no timeline */ }
+        if (!timelineId) {
+          const timeline = await window.SpanAuth.createTimeline(`${previousTitle || 'Untitled map'} history`);
+          timelineId = timeline.id;
+          await window.SpanAuth.setMapTimeline(previousId, timelineId);
+        }
+        await window.SpanAuth.setMapTimeline(cloudMapId, timelineId);
+      }
+      const original = saveCopyBtn.textContent;
+      saveCopyBtn.textContent = 'Saved a copy!';
+      setTimeout(() => { saveCopyBtn.textContent = original; }, 1500);
+    } catch (e) {
+      alert('Could not save a copy: ' + (e.message || e));
+    } finally {
+      saveCopyBtn.disabled = false;
     }
   };
 

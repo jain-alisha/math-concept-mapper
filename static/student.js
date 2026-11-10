@@ -223,6 +223,18 @@ function renderMyMapCards(container, maps, hrefFor) {
   container.appendChild(grid);
 }
 
+// 'sample-class' can't hit the real Supabase table (it's not a real row),
+// so the sample dashboard's one activity is hardcoded here, matching the
+// seed in dashboard.js's buildSampleActivityFns exactly (same id, so a
+// click-through still lands on a Playground session the teacher-side demo
+// would recognize if they were the same backing data).
+function listActivitiesFor(classId) {
+  if (classId === 'sample-class') {
+    return Promise.resolve([{ id: 'sample-activity-ratios', name: 'Ratios Checkpoint' }]);
+  }
+  return window.SpanAuth.listClassActivities(classId);
+}
+
 function renderClassList(container, classes) {
   container.innerHTML = '';
   if (!classes.length) {
@@ -233,10 +245,56 @@ function renderClassList(container, classes) {
   ul.className = 'class-list';
   classes.forEach(cls => {
     const li = document.createElement('li');
+    const row = document.createElement('div');
+    row.className = 'class-list-row';
     const name = document.createElement('span');
     name.className = 'class-name';
     name.textContent = cls.name;
-    li.appendChild(name);
+    row.appendChild(name);
+    const toggle = document.createElement('button');
+    toggle.className = 'class-activities-toggle';
+    toggle.textContent = 'Activities ▸';
+    row.appendChild(toggle);
+    li.appendChild(row);
+
+    const activitiesUl = document.createElement('ul');
+    activitiesUl.className = 'class-activities-list';
+    activitiesUl.style.display = 'none';
+    li.appendChild(activitiesUl);
+
+    let loaded = false;
+    toggle.onclick = async () => {
+      const isOpen = activitiesUl.style.display !== 'none';
+      if (isOpen) {
+        activitiesUl.style.display = 'none';
+        toggle.textContent = 'Activities ▸';
+        return;
+      }
+      toggle.textContent = 'Activities ▾';
+      activitiesUl.style.display = 'block';
+      if (loaded) return;
+      loaded = true;
+      activitiesUl.innerHTML = '<li class="settings-empty">Loading…</li>';
+      try {
+        const activities = await listActivitiesFor(cls.id);
+        if (!activities.length) {
+          activitiesUl.innerHTML = '<li class="settings-empty">No activities assigned yet.</li>';
+          return;
+        }
+        activitiesUl.innerHTML = '';
+        activities.forEach(a => {
+          const aLi = document.createElement('li');
+          const link = document.createElement('a');
+          link.href = `playground?activity=${a.id}`;
+          link.textContent = a.name;
+          aLi.appendChild(link);
+          activitiesUl.appendChild(aLi);
+        });
+      } catch (e) {
+        activitiesUl.innerHTML = '<li class="settings-empty">Could not load activities.</li>';
+      }
+    };
+
     ul.appendChild(li);
   });
   container.appendChild(ul);
