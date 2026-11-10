@@ -756,6 +756,10 @@ function buildMapExportSvg() {
   defs.innerHTML = '<marker id="exportArrow" markerWidth="12" markerHeight="7" refX="11" refY="3.5" orient="auto" markerUnits="strokeWidth"><polygon points="0 0, 12 3.5, 0 7" fill="#8191aa"/></marker>';
   svg.appendChild(defs);
 
+  // Collected now, drawn after the nodes below (same ordering as
+  // renderCanvas) so a note chip can be nudged clear of node boxes and
+  // still end up on top instead of hidden underneath one.
+  const exportNoteChips = [];
   for (const link of links) {
     const pts = linkEndpoints(link);
     if (!pts) continue;
@@ -766,6 +770,13 @@ function buildMapExportSvg() {
     path.setAttribute('stroke-width', '2');
     path.setAttribute('marker-end', 'url(#exportArrow)');
     svg.appendChild(path);
+
+    if (link.note) {
+      const mid = curveMidpoint(pts.start, pts.end);
+      const cap = 60; // generous vs. the live canvas's chip - a static export has room, and there's no click-to-expand here
+      const text = link.note.length > cap ? link.note.slice(0, cap - 1).trimEnd() + '…' : link.note;
+      exportNoteChips.push({ x: mid.x, y: mid.y, w: measureTextWidthAtSize(text, 11) + 16, h: 18, text });
+    }
   }
 
   for (const node of nodes) {
@@ -800,6 +811,33 @@ function buildMapExportSvg() {
     g.appendChild(text);
 
     svg.appendChild(g);
+  }
+
+  if (exportNoteChips.length) {
+    const nodeRects = nodes.map(n => ({ x: n.x, y: n.y, w: getNodeWidth(n.label), h: NODE_HEIGHT }));
+    resolveChipCollisions(exportNoteChips, nodeRects);
+    for (const chip of exportNoteChips) {
+      const chipBg = document.createElementNS(svgNS, 'rect');
+      chipBg.setAttribute('x', chip.x - chip.w / 2);
+      chipBg.setAttribute('y', chip.y - chip.h / 2);
+      chipBg.setAttribute('width', chip.w);
+      chipBg.setAttribute('height', chip.h);
+      chipBg.setAttribute('rx', chip.h / 2);
+      chipBg.setAttribute('fill', '#fff8f6');
+      chipBg.setAttribute('stroke', '#f0c3b3');
+      svg.appendChild(chipBg);
+
+      const chipText = document.createElementNS(svgNS, 'text');
+      chipText.textContent = chip.text;
+      chipText.setAttribute('x', chip.x);
+      chipText.setAttribute('y', chip.y + 0.5);
+      chipText.setAttribute('text-anchor', 'middle');
+      chipText.setAttribute('dominant-baseline', 'middle');
+      chipText.setAttribute('font-size', '11');
+      chipText.setAttribute('fill', '#a6512f');
+      chipText.setAttribute('font-family', "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif");
+      svg.appendChild(chipText);
+    }
   }
 
   return { svg, w, h };
