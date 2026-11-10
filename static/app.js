@@ -515,13 +515,13 @@ const AUTOSAVE_KEY = 'spanConceptMap';
 function serializeMap() {
   return {
     n: nodes.map(n => ({ i: n.id, l: n.label, x: Math.round(n.x), y: Math.round(n.y), m: n.meta || {} })),
-    e: links.map(l => ({ i: l.id, s: l.source, t: l.target, no: l.note || '' })),
+    e: links.map(l => ({ i: l.id, s: l.source, t: l.target, no: l.note || '', rt: l.relType || '' })),
   };
 }
 
 function applyMapData(data) {
   nodes = (data.n || []).map(n => ({ id: n.i, label: n.l, x: n.x, y: n.y, meta: n.m || {} }));
-  links = (data.e || []).map(l => ({ id: l.i, source: l.s, target: l.t, note: l.no || '' }));
+  links = (data.e || []).map(l => ({ id: l.i, source: l.s, target: l.t, note: l.no || '', relType: l.rt || '' }));
   nodeIdCounter = nodes.reduce((max, n) => Math.max(max, n.id), 0) + 1;
   linkIdCounter = links.reduce((max, l) => Math.max(max, l.id), 0) + 1;
   renderNotesSidebar();
@@ -952,6 +952,24 @@ function setupAiSummaryButton() {
 // edge (Explain / Keep anyway / Remove connection), never a silent edit.
 // ============================================================
 
+const STOPWORDS = new Set(['a','an','the','of','in','on','to','from','with','and','or','as','is','for']);
+function contentWords(label) {
+  return label.toLowerCase().replace(/[^a-z0-9²³√×÷≤≥\s]/g, ' ').split(/\s+/).filter(w => w && !STOPWORDS.has(w));
+}
+// A candidate bridge is usually a sibling skill, not a true intermediate
+// step, when it shares most of its wording with one of the two concepts
+// it would sit between - e.g. "Write two-step equations" between "Write
+// one-step equations" and "Solve one-step equations" (shares "write" +
+// "equations" with the source), or "Constant of proportionality in
+// graphs" between two "...in tables" topics. A genuine prerequisite is
+// usually a topically distinct phrase, not a same-skill variant.
+function isSiblingVariant(candidate, other) {
+  const cWords = contentWords(candidate), oWords = new Set(contentWords(other));
+  if (!cWords.length) return false;
+  const shared = cWords.filter(w => oWords.has(w)).length;
+  return shared / cWords.length >= 0.5;
+}
+
 function curriculumPos(label) {
   for (const grade in conceptsData) {
     for (const unit in conceptsData[grade]) {
@@ -976,6 +994,13 @@ function checkMyMap() {
   const onMapLabels = new Set(nodes.map(n => n.label));
   links.forEach(l => {
     if (checkMapDismissed.has(l.id)) return;
+    // A connection explicitly tagged as a related idea, example, or a
+    // different representation isn't a prerequisite claim at all - Connect
+    // doesn't ask what kind of relationship this is, so an untagged link
+    // (relType === '') still gets the benefit of the doubt here, but one a
+    // student (or Explore's "related" question) has already classified as
+    // non-prerequisite is exempt from both checks below.
+    if (l.relType === 'related' || l.relType === 'example' || l.relType === 'representation') return;
     const src = nodes.find(n => n.id === l.source), tgt = nodes.find(n => n.id === l.target);
     if (!src || !tgt) return;
     const posA = curriculumPos(src.label), posB = curriculumPos(tgt.label);
@@ -991,14 +1016,20 @@ function checkMyMap() {
     if (dist <= 1) return; // adjacent in the curriculum sequence - a direct edge is expected here
     if (dist <= 3) {
       const lo = Math.min(posA.idx, posB.idx), hi = Math.max(posA.idx, posB.idx);
-      const between = posA.topics.slice(lo + 1, hi).filter(t => !onMapLabels.has(t));
+      const between = posA.topics.slice(lo + 1, hi).filter(t =>
+        !onMapLabels.has(t) && !isSiblingVariant(t, src.label) && !isSiblingVariant(t, tgt.label));
       if (between.length) {
         missingBridge.push({ source: src, target: tgt, candidate: between[0], link: l, grade: posA.grade, unit: posA.unit });
       }
     } else {
       questionable.push({
         source: src, target: tgt, link: l,
-        reason: `${src.label} and ${tgt.label} are ${dist} topics apart in ${posA.unit} - worth double-checking this is a direct prerequisite, not a multi-step jump.`,
+        // Framed as something to look at together, not a verdict - distance
+        // in a flat topic list is only a hint, and a long-range connection
+        // is often exactly the kind of cross-topic thinking a concept map
+        // is for. The relationship-type picker below lets a student settle
+        // it in one click instead of treating every long jump as an error.
+        reason: `${src.label} and ${tgt.label} skip over ${dist - 1} other topics in ${posA.unit}. That's not necessarily wrong - just worth tagging what kind of connection this is.`,
       });
     }
   });
@@ -1117,17 +1148,44 @@ function renderCheckMapPanel() {
     return row;
   });
 
-  checkMapSection(body, findings.questionable.length === 1 ? 'connection to reconsider' : 'connections to reconsider', findings.questionable.length, findings.questionable, f => {
+  checkMapSection(body, findings.questionable.length === 1 ? 'connection to discuss' : 'connections to discuss', findings.questionable.length, findings.questionable, f => {
     const row = document.createElement('div');
     row.className = 'checkmap-row';
     const p = document.createElement('p');
-    p.textContent = `Take another look at this connection: ${f.source.label} → ${f.target.label}.`;
+    p.textContent = `Worth a look: ${f.source.label} → ${f.target.label}.`;
     row.appendChild(p);
     const explainP = document.createElement('p');
     explainP.className = 'checkmap-explain';
     explainP.style.display = 'none';
     explainP.textContent = f.reason;
     row.appendChild(explainP);
+
+    // Lets a student settle "what kind of connection is this?" in one
+    // click instead of the checker just assuming "prerequisite" - picking
+    // anything other than Prerequisite re-tags the link and drops it from
+    // this list entirely on the next render (see checkMyMap's relType
+    // guard above), same as "Keep anyway" but with a reason attached.
+    const typeRow = document.createElement('div');
+    typeRow.className = 'checkmap-type-row';
+    const typeLabel = document.createElement('label');
+    typeLabel.textContent = 'This connection is a: ';
+    const typeSelect = document.createElement('select');
+    [['prerequisite', 'Prerequisite'], ['related', 'Related idea'], ['example', 'Example'], ['representation', 'Different representation']].forEach(([val, text]) => {
+      const opt = document.createElement('option');
+      opt.value = val; opt.textContent = text;
+      if ((f.link.relType || 'prerequisite') === val) opt.selected = true;
+      typeSelect.appendChild(opt);
+    });
+    typeSelect.onchange = () => {
+      f.link.relType = typeSelect.value;
+      if (typeSelect.value !== 'prerequisite') checkMapDismissed.delete(f.link.id);
+      autosave();
+      renderCheckMapPanel();
+    };
+    typeLabel.appendChild(typeSelect);
+    typeRow.appendChild(typeLabel);
+    row.appendChild(typeRow);
+
     const actions = document.createElement('div');
     actions.className = 'checkmap-actions';
     const explainBtn = document.createElement('button');
@@ -2433,10 +2491,17 @@ function endLinkDrag() {
   renderCanvas();
 }
 
-function addLink(srcId, tgtId) {
+// relType: '' (not specified - an ordinary Connect/drag doesn't ask what
+// kind of relationship this is), 'prerequisite', 'related', 'example', or
+// 'representation'. Explore's accept handlers below pass this explicitly,
+// since that's the one place Span already knows which question the
+// student asked (builds-on/leads-to vs. related) - see checkMyMap(),
+// which only treats a connection as an implied prerequisite claim when
+// this says so, instead of assuming every arrow means "prerequisite."
+function addLink(srcId, tgtId, relType = '') {
   if (isReadonly) return;
   if (srcId === tgtId || links.some(l => l.source === srcId && l.target === tgtId)) return;
-  links.push({id: linkIdCounter++, source: srcId, target: tgtId, note: ''});
+  links.push({id: linkIdCounter++, source: srcId, target: tgtId, note: '', relType});
   renderNotesSidebar();
   renderCanvas();
   autosave();
@@ -2591,7 +2656,12 @@ function addGhostSuggestion(suggestion, pos) {
   const newNode = nodes[nodes.length - 1];
   const sourceId = suggestion.source === anchor.label ? anchor.id : newNode.id;
   const targetId = suggestion.target === anchor.label ? anchor.id : newNode.id;
-  addLink(sourceId, targetId);
+  // builds_on/leads_to are both a direct-prerequisite claim (just asked
+  // from either end of the arrow); related is explicitly "useful but not
+  // necessarily prerequisite-based" per EXPLORE_QUESTIONS above - so only
+  // the first two should ever read as "this is a prerequisite" to checkMyMap.
+  const relType = ghostState.question === 'related' ? 'related' : 'prerequisite';
+  addLink(sourceId, targetId, relType);
   if (ghostState) ghostState.suggestions = ghostState.suggestions.filter(s => s.label !== suggestion.label);
   renderNotesSidebar();
   renderCanvas();
