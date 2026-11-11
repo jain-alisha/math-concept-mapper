@@ -206,14 +206,31 @@ async function setupActivityContext(params) {
     const activity = await window.SpanAuth.getActivity(activityId);
     currentActivityId = activity.id;
     currentActivityName = activity.name;
+    aiToolsDisabled = !!activity.ai_disabled;
     const banner = document.getElementById('activityBanner');
     if (banner) {
-      banner.textContent = `Working on: ${activity.name}`;
+      banner.textContent = aiToolsDisabled
+        ? `Working on: ${activity.name} · AI tools are off for this activity`
+        : `Working on: ${activity.name}`;
       banner.style.display = 'block';
     }
+    if (aiToolsDisabled) applyAiToolsGate();
   } catch (e) {
     console.error('Could not load activity:', e);
   }
+}
+
+// Hides Explore, AI Summary, and Check My Map's entry points for the
+// current activity - called once, from setupActivityContext, when the
+// teacher has turned AI tools off for it (see renderActivitiesCard in
+// dashboard.js for the toggle). The node toolbar's Explore button is
+// rebuilt elsewhere (renderNodeToolbar) and checks aiToolsDisabled itself,
+// so it stays gated even across re-renders.
+function applyAiToolsGate() {
+  const aiSummaryBtn = document.getElementById('aiSummaryBtn');
+  if (aiSummaryBtn) aiSummaryBtn.style.display = 'none';
+  const checkMapBtn = document.getElementById('checkMapBtn');
+  if (checkMapBtn) checkMapBtn.style.display = 'none';
 }
 
 // --- Read-only map viewing (Settings -> Classes -> a student's map) ---
@@ -1378,6 +1395,12 @@ let cloudSaveTimer = null;
 // copy" checkpoint of it, but never reassigned afterward.
 let currentActivityId = null;
 let currentActivityName = null;
+// Set alongside currentActivityId when the activity has ai_disabled=true
+// (teacher toggle on the dashboard) - gates Explore, AI Summary, and Check
+// My Map on this page for the duration of the activity. Not a security
+// boundary (nothing server-side stops a student editing the URL/JS), just
+// an honest default for "no AI help on this assignment."
+let aiToolsDisabled = false;
 
 function cloudReady() {
   return !!(window.SpanAuth && window.SpanAuth.isConfigured && cloudSession);
@@ -3099,7 +3122,8 @@ function updateNodeOverlays() {
       if (connectPending === node) {
         toolbar.innerHTML = `<span class="toolbar-hint">Click another node to connect…</span><button data-act="cancel-connect">Cancel</button>`;
       } else {
-        toolbar.innerHTML = `<button data-act="edit">Edit</button><span class="sep">&middot;</span><button data-act="connect">Connect</button><span class="sep">&middot;</span><button data-act="explore">&#10022; Explore</button>`;
+        toolbar.innerHTML = `<button data-act="edit">Edit</button><span class="sep">&middot;</span><button data-act="connect">Connect</button>` +
+          (aiToolsDisabled ? '' : `<span class="sep">&middot;</span><button data-act="explore">&#10022; Explore</button>`);
       }
       toolbar.onclick = e => {
         e.stopPropagation();

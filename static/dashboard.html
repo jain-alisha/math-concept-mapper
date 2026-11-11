@@ -225,6 +225,11 @@
     }
     .activity-delete-btn:hover:not(:disabled) { background: #fff0ee; border-color: #f5b8ab; }
     .activity-delete-btn:disabled { opacity: 0.5; cursor: default; }
+    .activity-ai-toggle-row {
+      display: flex; align-items: flex-start; gap: 0.5em; font-size: 0.85em; color: var(--text);
+      margin-bottom: 0.7em; cursor: pointer;
+    }
+    .activity-ai-toggle-row input { margin-top: 0.2em; }
     .activity-new-btn {
       background: none; border: 1px solid var(--border); color: var(--text); padding: 0.45em 0.9em;
       border-radius: 7px; font-family: inherit; font-size: 0.86em; font-weight: 600; cursor: pointer;
@@ -253,7 +258,7 @@
     /* ---------- Export PDF: print just the report, not the app chrome ---------- */
     @media print {
       #topbar, .class-picker, .sample-banner, #exportReportBtn, #anonymousModeBtn, .taught-save-btn, .insights-chevron,
-      .activity-select-row, .activity-new-btn, .activity-form { display: none !important; }
+      .activity-select-row, .activity-new-btn, .activity-form, .activity-ai-toggle-row { display: none !important; }
       body { background: none; }
       .dash-wrap { max-width: none; padding: 0; }
       .dash-card, .ai-summary-banner { break-inside: avoid; box-shadow: none; }

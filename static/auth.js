@@ -83,13 +83,13 @@
 
     role: roleOf,
 
-    // DEMO-ONLY, TEMPORARY: self-serve role promotion, no gate at all - see
-    // the loud comment above claim_teacher_role() in supabase-schema.sql
-    // and TODO.md's "Auth & roles" section. Returns the refreshed session
-    // (app_metadata changes only show up in a *new* JWT, so a plain
+    // Teacher sign-up: promotes the current user to 'teacher' only if
+    // `signupCode` matches a row in teacher_signup_codes (checked server-
+    // side in the RPC - see supabase-schema.sql). Returns the refreshed
+    // session (app_metadata changes only show up in a *new* JWT, so a plain
     // getSession() right after the RPC would still show the stale role).
-    async claimTeacherRole() {
-      const { error } = await client.rpc('claim_teacher_role');
+    async claimTeacherRole(signupCode) {
+      const { error } = await client.rpc('claim_teacher_role', { signup_code: signupCode });
       if (error) throw error;
       const { data, error: refreshError } = await client.auth.refreshSession();
       if (refreshError) throw refreshError;
@@ -276,7 +276,7 @@
     // a student's whole map history (see supabase-schema.sql). ---
 
     async getActivity(id) {
-      const { data, error } = await client.from('activities').select('id,class_id,name,concepts').eq('id', id).single();
+      const { data, error } = await client.from('activities').select('id,class_id,name,concepts,ai_disabled').eq('id', id).single();
       if (error) throw error;
       return data;
     },
@@ -284,21 +284,26 @@
     async listClassActivities(classId) {
       const { data, error } = await client
         .from('activities')
-        .select('id,name,concepts,created_at')
+        .select('id,name,concepts,created_at,ai_disabled')
         .eq('class_id', classId)
         .order('created_at', { ascending: false });
       if (error) throw error;
       return data;
     },
 
-    async createActivity(classId, name, concepts) {
+    async createActivity(classId, name, concepts, aiDisabled = false) {
       const { data, error } = await client
         .from('activities')
-        .insert({ class_id: classId, name, concepts })
+        .insert({ class_id: classId, name, concepts, ai_disabled: aiDisabled })
         .select()
         .single();
       if (error) throw error;
       return data;
+    },
+
+    async setActivityAiDisabled(id, disabled) {
+      const { error } = await client.from('activities').update({ ai_disabled: disabled }).eq('id', id);
+      if (error) throw error;
     },
 
     async deleteActivity(id) {

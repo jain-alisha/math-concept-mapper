@@ -288,19 +288,25 @@ function setupAuthAndClasses() {
     }
   };
 
-  // DEMO-ONLY, TEMPORARY: see the loud comment on claim_teacher_role() in
-  // supabase-schema.sql - self-serve, no gate, acceptable only because this
-  // deployment has no real student data at stake.
   document.getElementById('becomeTeacherBtn').onclick = async () => {
     const btn = document.getElementById('becomeTeacherBtn');
+    const codeInput = document.getElementById('teacherSignupCodeInput');
     const errEl = document.getElementById('becomeTeacherError');
     errEl.textContent = '';
+    const code = codeInput.value.trim();
+    if (!code) {
+      errEl.textContent = 'Enter your teacher signup code.';
+      return;
+    }
     btn.disabled = true;
     try {
-      const newSession = await window.SpanAuth.claimTeacherRole();
+      const newSession = await window.SpanAuth.claimTeacherRole(code);
+      codeInput.value = '';
       updateAuthUI(newSession);
     } catch (e) {
-      errEl.textContent = e.message || 'Could not update role.';
+      errEl.textContent = e.message && e.message.includes('Invalid signup code')
+        ? 'That signup code is not valid.'
+        : (e.message || 'Could not update role.');
     } finally {
       btn.disabled = false;
     }

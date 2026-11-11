@@ -574,8 +574,9 @@ function renderTaughtTopicsChecklist(container, cls, mapsWithData, curriculum, o
 function renderActivitiesCard(container, cls, curriculum, activityFns, onChange) {
   activityFns = activityFns || {
     list: (classId) => window.SpanAuth.listClassActivities(classId),
-    create: (classId, name, concepts) => window.SpanAuth.createActivity(classId, name, concepts),
+    create: (classId, name, concepts, aiDisabled) => window.SpanAuth.createActivity(classId, name, concepts, aiDisabled),
     del: (id) => window.SpanAuth.deleteActivity(id),
+    setAiDisabled: (id, disabled) => window.SpanAuth.setActivityAiDisabled(id, disabled),
   };
 
   container.innerHTML = '<h2>Activities</h2>';
@@ -595,6 +596,15 @@ function renderActivitiesCard(container, cls, curriculum, activityFns, onChange)
   selectRow.appendChild(deleteBtn);
   container.appendChild(selectRow);
 
+  const aiToggleRow = document.createElement('label');
+  aiToggleRow.className = 'activity-ai-toggle-row';
+  aiToggleRow.style.display = 'none';
+  const aiToggleCheckbox = document.createElement('input');
+  aiToggleCheckbox.type = 'checkbox';
+  aiToggleRow.appendChild(aiToggleCheckbox);
+  aiToggleRow.appendChild(document.createTextNode(' Disable AI tools (Explore, AI Summary, Check My Map) for students on this activity'));
+  container.appendChild(aiToggleRow);
+
   const newBtn = document.createElement('button');
   newBtn.className = 'activity-new-btn';
   newBtn.textContent = '+ New Activity';
@@ -612,6 +622,13 @@ function renderActivitiesCard(container, cls, curriculum, activityFns, onChange)
   const conceptsWrap = document.createElement('div');
   conceptsWrap.className = 'activity-concepts';
   form.appendChild(conceptsWrap);
+  const newAiDisabledLabel = document.createElement('label');
+  newAiDisabledLabel.className = 'activity-ai-toggle-row';
+  const newAiDisabledCheckbox = document.createElement('input');
+  newAiDisabledCheckbox.type = 'checkbox';
+  newAiDisabledLabel.appendChild(newAiDisabledCheckbox);
+  newAiDisabledLabel.appendChild(document.createTextNode(' Disable AI tools for students on this activity'));
+  form.appendChild(newAiDisabledLabel);
   const formActions = document.createElement('div');
   formActions.className = 'activity-form-actions';
   const createBtn = document.createElement('button');
@@ -637,6 +654,13 @@ function renderActivitiesCard(container, cls, curriculum, activityFns, onChange)
     });
   }
 
+  function syncAiToggleRow() {
+    const activity = activities.find(a => a.id === select.value);
+    if (!activity) { aiToggleRow.style.display = 'none'; return; }
+    aiToggleCheckbox.checked = !!activity.ai_disabled;
+    aiToggleRow.style.display = 'flex';
+  }
+
   async function load() {
     select.innerHTML = '<option value="">Loading…</option>';
     try {
@@ -646,6 +670,7 @@ function renderActivitiesCard(container, cls, curriculum, activityFns, onChange)
     }
     renderOptions();
     deleteBtn.disabled = !select.value;
+    syncAiToggleRow();
     onChange(select.value || null, activities);
   }
 
@@ -654,6 +679,7 @@ function renderActivitiesCard(container, cls, curriculum, activityFns, onChange)
     form.style.display = opening ? 'block' : 'none';
     if (opening) {
       nameInput.value = '';
+      newAiDisabledCheckbox.checked = false;
       checkboxes = renderConceptChecklist(conceptsWrap, curriculum, allUnitsFromCurriculum(curriculum), []);
     }
   };
@@ -666,12 +692,13 @@ function renderActivitiesCard(container, cls, curriculum, activityFns, onChange)
     if (!concepts.length) { alert('Pick at least one concept for this activity.'); return; }
     createBtn.disabled = true;
     try {
-      const created = await activityFns.create(cls.id, name, concepts);
+      const created = await activityFns.create(cls.id, name, concepts, newAiDisabledCheckbox.checked);
       activities = [created, ...activities];
       renderOptions();
       select.value = created.id;
       form.style.display = 'none';
       deleteBtn.disabled = false;
+      syncAiToggleRow();
       onChange(select.value, activities);
     } catch (e) {
       alert('Could not create activity: ' + (e.message || e));
@@ -682,7 +709,24 @@ function renderActivitiesCard(container, cls, curriculum, activityFns, onChange)
 
   select.onchange = () => {
     deleteBtn.disabled = !select.value;
+    syncAiToggleRow();
     onChange(select.value || null, activities);
+  };
+
+  aiToggleCheckbox.onchange = async () => {
+    const activity = activities.find(a => a.id === select.value);
+    if (!activity) return;
+    const disabled = aiToggleCheckbox.checked;
+    aiToggleCheckbox.disabled = true;
+    try {
+      await activityFns.setAiDisabled(activity.id, disabled);
+      activity.ai_disabled = disabled;
+    } catch (e) {
+      aiToggleCheckbox.checked = !disabled;
+      alert('Could not update AI setting: ' + (e.message || e));
+    } finally {
+      aiToggleCheckbox.disabled = false;
+    }
   };
 
   deleteBtn.onclick = async () => {
@@ -694,6 +738,7 @@ function renderActivitiesCard(container, cls, curriculum, activityFns, onChange)
       await activityFns.del(activity.id);
       activities = activities.filter(a => a.id !== activity.id);
       renderOptions();
+      syncAiToggleRow();
       onChange(null, activities);
     } catch (e) {
       alert('Could not delete activity: ' + (e.message || e));
@@ -1227,15 +1272,20 @@ function buildSampleActivityFns() {
       '6th Grade Math::Ratios & Proportional Relationships::Unit rate definition',
     ],
     created_at: new Date().toISOString(),
+    ai_disabled: false,
   }];
   return {
     list: async () => activities,
-    create: async (classId, name, concepts) => {
-      const created = { id: 'sample-activity-' + Date.now(), class_id: classId, name, concepts, created_at: new Date().toISOString() };
+    create: async (classId, name, concepts, aiDisabled) => {
+      const created = { id: 'sample-activity-' + Date.now(), class_id: classId, name, concepts, created_at: new Date().toISOString(), ai_disabled: !!aiDisabled };
       activities = [created, ...activities];
       return created;
     },
     del: async (id) => { activities = activities.filter(a => a.id !== id); },
+    setAiDisabled: async (id, disabled) => {
+      const a = activities.find(a => a.id === id);
+      if (a) a.ai_disabled = disabled;
+    },
   };
 }
 

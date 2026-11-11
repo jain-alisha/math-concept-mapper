@@ -271,29 +271,45 @@ alter table public.maps add column if not exists timeline_id uuid references pub
 -- ("update own maps"), so setting timeline_id needs no new maps policy.
 
 -- ============================================================
--- DEMO-ONLY, TEMPORARY: self-serve "become a teacher."
+-- Teacher sign-up: gated role promotion via a shared signup code.
 -- ============================================================
--- !! Intentionally ungated - ANY authenticated user can call this and
--- immediately become a teacher (gaining read access to every one of their
--- students' maps once they create/join a class). This is acceptable ONLY
--- because this deployment is a demo with no real student data at stake.
--- TODO before any real usage: replace with a real gate (an invite/signup
--- code checked inside this function, or move promotion to an admin-only
--- flow) - see TODO.md's "Auth & roles" section, which tracks this
--- explicitly so it doesn't get forgotten.
-create or replace function public.claim_teacher_role()
+-- Replaces the earlier ungated "become a teacher" demo button (see
+-- TODO.md's "Auth & roles" section for the history). A row in this table is
+-- a secret, shared/rotating code - distribute it to actual teachers (e.g.
+-- your school's staff) out of band. It is NOT single-use: the same code
+-- works for every teacher signing up until you rotate it (delete the row
+-- and insert a new code). No RLS SELECT policy at all, by design - nobody
+-- can browse or guess codes via the API; the only way to consume one is
+-- through claim_teacher_role() below, which checks it server-side.
+create table public.teacher_signup_codes (
+  code text primary key,
+  note text,
+  created_at timestamptz not null default now()
+);
+alter table public.teacher_signup_codes enable row level security;
+-- No policies at all -> authenticated users get zero direct access (insert,
+-- select, everything) to this table. Rotate codes from the Supabase SQL
+-- editor / dashboard (which runs as the table owner, bypassing RLS), e.g.:
+--   delete from public.teacher_signup_codes;
+--   insert into public.teacher_signup_codes (code, note) values ('FALL26-TEACH', 'Fall 2026 staff code');
+
+create or replace function public.claim_teacher_role(signup_code text)
 returns void
 language plpgsql security definer set search_path = public, pg_temp
 as $$
 begin
+  if not exists (select 1 from public.teacher_signup_codes where code = signup_code) then
+    raise exception 'Invalid signup code';
+  end if;
+
   update auth.users
   set raw_app_meta_data = raw_app_meta_data || '{"role":"teacher"}'::jsonb
   where id = auth.uid();
 end;
 $$;
 
-revoke execute on function public.claim_teacher_role() from public;
-grant execute on function public.claim_teacher_role() to authenticated;
+revoke execute on function public.claim_teacher_role(text) from public;
+grant execute on function public.claim_teacher_role(text) to authenticated;
 
 -- ============================================================
 -- Activities: a teacher-defined, named assignment with its own concept
@@ -308,9 +324,19 @@ create table public.activities (
   class_id uuid not null references public.classes(id) on delete cascade,
   name text not null,
   concepts jsonb not null default '[]'::jsonb,
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  -- Teacher toggle: when true, the Playground hides Explore/AI Summary/Check
+  -- My Map for any student working ?activity=<id> this (see applyAiToolsGate
+  -- in static/app.js). Not a security boundary, just an honest UI default
+  -- for "no AI help on this assignment" - covered by the same owner-scoped
+  -- update policy as the rest of the row.
+  ai_disabled boolean not null default false
 );
 create index on public.activities(class_id);
+-- Re-running this file against a database where `activities` already
+-- existed (from before ai_disabled was added) needs this explicitly - the
+-- `create table` above is a no-op in that case.
+alter table public.activities add column if not exists ai_disabled boolean not null default false;
 alter table public.activities enable row level security;
 
 create policy "teachers select own class activities" on public.activities

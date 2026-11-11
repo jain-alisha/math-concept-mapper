@@ -231,8 +231,11 @@
       <div id="studentClassList"></div>
 
       <div class="role-preview" style="margin-top:1.8em;">
-        <p class="role-preview-note">Want to try the teacher side? This is a demo, so role switching is self-serve for now — no approval needed.</p>
-        <button id="becomeTeacherBtn" class="role-preview-cta" style="border:none; cursor:pointer;" type="button">Become a teacher (demo) →</button>
+        <p class="role-preview-note">Are you a teacher? Enter the signup code your school gave you to switch to a teacher account.</p>
+        <div class="join-class-row">
+          <input type="text" id="teacherSignupCodeInput" placeholder="Teacher signup code" maxlength="40" />
+          <button id="becomeTeacherBtn" type="button">Become a teacher →</button>
+        </div>
         <p class="auth-error" id="becomeTeacherError"></p>
       </div>
     </div>

@@ -37,23 +37,18 @@ becomes a real problem):
   claim, not a hidden UI button) can create a class.
 ## Auth & roles
 
-- **⚠️ TEMPORARY, DEMO-ONLY — self-serve "Become a teacher" (added
-  2026-08-16).** `settings.html`'s student view has a "Become a teacher
-  (demo)" button calling a new `claim_teacher_role()` RPC
-  (`supabase-schema.sql`) that grants ANY authenticated user the teacher
-  role, no gate, no approval. This directly contradicts the hardening
-  decision made earlier in this project (role deliberately not client-
-  writable, only settable via a manual SQL promotion) - it's only
-  acceptable right now because this deployment is a demo with no real
-  student data at stake. **Before any real usage:** replace with a real
-  gate - either a shared/rotating signup code checked inside the RPC (like
-  `join_class_by_code`'s invite-code pattern), or move promotion behind an
-  admin-only flow, or remove the button entirely and go back to manual SQL
-  promotion. Don't let this linger once the app has real users.
+- **Done (2026-11-11):** teacher sign-up is now gated by a shared/rotating
+  signup code, replacing the earlier ungated "Become a teacher (demo)"
+  button. `settings.html`'s student view has a code input; `claim_teacher_role(signup_code)`
+  (`supabase-schema.sql`) only promotes the caller if the code matches a row
+  in `teacher_signup_codes` (no RLS SELECT policy on that table at all -
+  codes can only be checked server-side inside the function, never browsed
+  or guessed via the API). Rotate the code by deleting/inserting a row from
+  the Supabase SQL editor; distribute it to real teachers out of band
+  (school staff list, etc).
 - Previously: role (`student`/`teacher`) had no self-serve path at all -
   see `static/auth.js` and `README.md` for the original manual-SQL
-  promotion flow (still works, and is the only *safe* path until the
-  item above is resolved).
+  promotion flow (still works as a fallback for one-off promotions).
 
 ## Next ideas for the portal
 
