@@ -41,34 +41,32 @@
       transition: color 0.12s;
     }
     #topbar nav a.text-link:hover { color: var(--text); }
-    #topbar nav { display: flex; align-items: center; gap: 1.4em; }
+    #topbar nav { display: flex; align-items: center; gap: 0.2em; }
+    .tb-group { display: flex; align-items: center; gap: 0.2em; }
+    .tb-group:last-child { gap: 1.1em; }
+    .tb-divider { width: 1px; height: 22px; background: var(--border); margin: 0 0.9em; flex: none; }
+    /* Ghost-style shared look for secondary topbar actions - one visual
+       language instead of each button carrying its own border/box, which is
+       what made a row of 6+ of these read as cluttered. */
+    .tb-btn {
+      display: inline-flex; align-items: center; gap: 0.45em;
+      background: none; border: none; color: var(--text-secondary);
+      font-size: 0.88em; font-weight: 600; padding: 0.5em 0.7em; border-radius: 8px;
+      font-family: inherit; cursor: pointer; transition: background 0.12s, color 0.12s;
+      white-space: nowrap;
+    }
+    .tb-btn:hover { background: var(--bg); color: var(--text); }
+    .tb-btn:disabled { opacity: 0.6; cursor: default; }
+    .tb-btn.tb-danger { color: #c2503a; }
+    .tb-btn.tb-danger:hover { background: #fff0ee; color: #c2503a; }
     #shareBtn {
       display: inline-flex; align-items: center; gap: 0.5em;
       background: var(--brand); color: #fff; border: none; cursor: pointer;
       font-size: 0.9em; font-weight: 600; padding: 0.5em 1em; border-radius: 8px;
-      font-family: inherit; transition: background 0.12s, transform 0.1s;
+      font-family: inherit; transition: background 0.12s, transform 0.1s; margin-left: 0.3em;
     }
     #shareBtn:hover { background: #1568bd; transform: translateY(-1px); }
     #shareBtn .icon { width: 16px; height: 16px; }
-    #exportPdfBtn {
-      background: none; border: 1px solid var(--border); color: var(--text);
-      font-size: 0.9em; font-weight: 600; padding: 0.5em 1em; border-radius: 8px;
-      font-family: inherit; cursor: pointer; transition: background 0.12s;
-    }
-    #exportPdfBtn:hover { background: var(--bg); }
-    #exportPdfBtn:disabled { opacity: 0.6; cursor: default; }
-    #fitMapBtn {
-      background: none; border: 1px solid var(--border); color: var(--text);
-      font-size: 0.9em; font-weight: 600; padding: 0.5em 1em; border-radius: 8px;
-      font-family: inherit; cursor: pointer; transition: background 0.12s;
-    }
-    #fitMapBtn:hover { background: var(--bg); }
-    #clearMapBtn {
-      background: none; border: 1px solid var(--border); color: #c2503a;
-      font-size: 0.9em; font-weight: 600; padding: 0.5em 1em; border-radius: 8px;
-      font-family: inherit; cursor: pointer; transition: background 0.12s;
-    }
-    #clearMapBtn:hover { background: #fff0ee; border-color: #f5b8ab; }
     .my-maps-clear-row { margin: -0.1em 0 0.7em; }
     .my-maps-clear-row button {
       background: none; border: none; color: #c2503a; font-family: inherit;
@@ -77,20 +75,8 @@
     .my-maps-clear-row button:hover { text-decoration: underline; }
 
     /* --- Auth: sign in button, user menu, modal, My Maps panel --- */
-    #signInBtn {
-      background: none; border: 1px solid var(--border); color: var(--text);
-      font-size: 0.9em; font-weight: 600; padding: 0.5em 1em; border-radius: 8px;
-      font-family: inherit; cursor: pointer; transition: background 0.12s;
-    }
-    #signInBtn:hover { background: var(--bg); }
-    #userMenu { display: none; align-items: center; gap: 0.8em; }
-    #userLabel { font-size: 0.88em; color: var(--text-secondary); font-weight: 500; }
-    #myMapsBtn, #signOutBtn {
-      background: none; border: 1px solid var(--border); color: var(--text);
-      font-size: 0.88em; font-weight: 600; padding: 0.45em 0.85em; border-radius: 8px;
-      font-family: inherit; cursor: pointer; transition: background 0.12s;
-    }
-    #myMapsBtn:hover, #signOutBtn:hover { background: var(--bg); }
+    #userMenu { display: none; align-items: center; gap: 0.1em; }
+    #userLabel { font-size: 0.85em; color: var(--text-muted); font-weight: 500; margin: 0 0.5em; }
 
     .modal-overlay {
       display: none; position: fixed; inset: 0; background: rgba(23,26,35,0.4);
@@ -169,12 +155,6 @@
       max-width: 80px;
     }
 
-    #timelineBtn {
-      background: none; border: 1px solid var(--border); color: var(--text);
-      font-size: 0.88em; font-weight: 600; padding: 0.45em 0.85em; border-radius: 8px;
-      font-family: inherit; cursor: pointer; transition: background 0.12s;
-    }
-    #timelineBtn:hover { background: var(--bg); }
     #timelinePanel {
       display: none; position: absolute; top: 52px; right: 1.2em; width: 340px;
       background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
@@ -235,13 +215,6 @@
       color: #c2503a; font-size: 0.82em; font-weight: 600; padding: 0.5em 0.9em 0.5em 0.7em;
       border-radius: 9px; box-shadow: var(--shadow-sm);
     }
-    #aiSummaryBtn {
-      display: inline-flex; align-items: center; gap: 0.5em;
-      background: var(--surface); color: var(--text); border: 1px solid var(--border);
-      cursor: pointer; font-size: 0.9em; font-weight: 600; padding: 0.5em 0.9em;
-      border-radius: 8px; font-family: inherit; transition: background 0.12s, transform 0.1s;
-    }
-    #aiSummaryBtn:hover { background: var(--bg); transform: translateY(-1px); }
     #aiSummaryPanel {
       display: none; position: absolute; top: 44px; left: 0; width: 300px;
       background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
@@ -253,13 +226,6 @@
     }
     #aiSummaryPanel p { margin: 0; font-size: 0.92em; line-height: 1.5; color: var(--text-secondary); }
 
-    #checkMapBtn {
-      display: inline-flex; align-items: center; gap: 0.5em;
-      background: var(--surface); color: var(--text); border: 1px solid var(--border);
-      cursor: pointer; font-size: 0.9em; font-weight: 600; padding: 0.5em 0.9em;
-      border-radius: 8px; font-family: inherit; transition: background 0.12s, transform 0.1s;
-    }
-    #checkMapBtn:hover { background: var(--bg); transform: translateY(-1px); }
     #checkMapPanel {
       display: none; position: absolute; top: 44px; left: 0; width: 360px; max-height: 70vh; overflow-y: auto;
       background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
@@ -646,44 +612,50 @@
     Span
   </a>
   <nav>
-    <div id="aiSummaryWrap" style="position:relative;">
-      <button id="aiSummaryBtn" title="A quick AI-generated read on this map">
-        <span>AI Summary</span>
-      </button>
-      <div id="aiSummaryPanel">
-        <header>AI Summary</header>
-        <p id="aiSummaryText"></p>
+    <div class="tb-group">
+      <div id="aiSummaryWrap" style="position:relative;">
+        <button id="aiSummaryBtn" class="tb-btn" title="A quick AI-generated read on this map">
+          <span>AI Summary</span>
+        </button>
+        <div id="aiSummaryPanel">
+          <header>AI Summary</header>
+          <p id="aiSummaryText"></p>
+        </div>
       </div>
-    </div>
-    <div id="checkMapWrap" style="position:relative;">
-      <button id="checkMapBtn" title="Look for gaps, isolated concepts, and connections worth a second look">
-        <span>Check my map</span>
-      </button>
-      <div id="checkMapPanel">
-        <header>Map check</header>
-        <div id="checkMapBody"></div>
+      <div id="checkMapWrap" style="position:relative;">
+        <button id="checkMapBtn" class="tb-btn" title="Look for gaps, isolated concepts, and connections worth a second look">
+          <span>Check my map</span>
+        </button>
+        <div id="checkMapPanel">
+          <header>Map check</header>
+          <div id="checkMapBody"></div>
+        </div>
       </div>
+      <button id="fitMapBtn" class="tb-btn" title="Scroll to the top-left corner of your map">
+        <span>Fit to map</span>
+      </button>
     </div>
-    <button id="fitMapBtn" title="Scroll to the top-left corner of your map">
-      <span>Fit to map</span>
-    </button>
-    <button id="shareBtn" title="Copy a shareable link to this map">
-      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
-      <span class="share-label">Share</span>
-    </button>
-    <button id="exportPdfBtn" title="Export this map as a PDF, cropped to fit your concepts">
-      <span>Export PDF</span>
-    </button>
-    <button id="clearMapBtn" title="Remove every concept and connection from this map">
-      <span>Clear Map</span>
-    </button>
+    <span class="tb-divider"></span>
+    <div class="tb-group">
+      <button id="exportPdfBtn" class="tb-btn" title="Export this map as a PDF, cropped to fit your concepts">
+        <span>Export PDF</span>
+      </button>
+      <button id="clearMapBtn" class="tb-btn tb-danger" title="Remove every concept and connection from this map">
+        <span>Clear Map</span>
+      </button>
+      <button id="shareBtn" title="Copy a shareable link to this map">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+        <span class="share-label">Share</span>
+      </button>
+    </div>
+    <span class="tb-divider"></span>
     <div id="authArea">
-      <button id="signInBtn">Sign in</button>
+      <button id="signInBtn" class="tb-btn">Sign in</button>
       <div id="userMenu">
-        <button id="myMapsBtn">My Maps</button>
-        <button id="timelineBtn">Timeline</button>
+        <button id="myMapsBtn" class="tb-btn">My Maps</button>
+        <button id="timelineBtn" class="tb-btn">Timeline</button>
         <span id="userLabel"></span>
-        <button id="signOutBtn">Log out</button>
+        <button id="signOutBtn" class="tb-btn">Log out</button>
         <div id="myMapsPanel">
           <header>My Maps</header>
           <div class="my-maps-clear-row">
@@ -723,9 +695,12 @@
         </div>
       </div>
     </div>
-    <a href="dashboard" id="dashboardLink" class="text-link" style="display:none;">Dashboard</a>
-    <a href="settings" class="text-link">Settings</a>
-    <a href="index" class="text-link">Home</a>
+    <span class="tb-divider"></span>
+    <div class="tb-group">
+      <a href="dashboard" id="dashboardLink" class="text-link" style="display:none;">Dashboard</a>
+      <a href="settings" class="text-link">Settings</a>
+      <a href="index" class="text-link">Home</a>
+    </div>
   </nav>
 </div>
 
