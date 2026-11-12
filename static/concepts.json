@@ -1,4 +1,192 @@
   {
+    "3rd Grade Math": {
+      "Operations & Algebraic Thinking": [
+        "Multiplication as equal groups",
+        "Multiplication as an array",
+        "Division as equal sharing",
+        "Division as equal grouping",
+        "Relate multiplication and division (fact families)",
+        "Multiplication facts: 2s, 5s, and 10s",
+        "Multiplication facts: 3s and 4s",
+        "Multiplication facts: 6s and 7s",
+        "Multiplication facts: 8s and 9s",
+        "Fluently multiply within 100",
+        "Division facts within 100",
+        "Commutative property of multiplication",
+        "Associative property of multiplication",
+        "Distributive property (breaking apart factors)",
+        "Multiply a one-digit number by 10",
+        "Solve one-step multiplication word problems",
+        "Solve one-step division word problems",
+        "Two-step word problems with all four operations",
+        "Represent an unknown quantity with a letter",
+        "Identify a pattern in a number sequence",
+        "Explain a pattern using properties of operations"
+      ],
+      "Number & Operations in Base Ten": [
+        "Place value to 1,000",
+        "Read and write numbers to 1,000",
+        "Round to the nearest 10",
+        "Round to the nearest 100",
+        "Add within 1,000 (standard algorithm)",
+        "Subtract within 1,000 (standard algorithm)",
+        "Estimate sums and differences",
+        "Multiply a one-digit number by a multiple of 10"
+      ],
+      "Number & Operations—Fractions": [
+        "Partition shapes into equal parts",
+        "Understand a unit fraction (1/b)",
+        "Understand a fraction a/b as a parts",
+        "Represent a fraction on a number line",
+        "Recognize equivalent fractions using models",
+        "Compare fractions with the same numerator",
+        "Compare fractions with the same denominator",
+        "Compare fractions using benchmarks (0, 1/2, 1)",
+        "Express whole numbers as fractions",
+        "Locate whole numbers on a fraction number line"
+      ],
+      "Measurement & Data": [
+        "Tell time to the nearest minute",
+        "Solve elapsed time word problems",
+        "Measure and estimate liquid volume",
+        "Measure and estimate mass",
+        "Solve word problems with volume and mass",
+        "Create a scaled picture graph",
+        "Create a scaled bar graph",
+        "Solve problems using a scaled graph",
+        "Make a line plot with fractional measurements",
+        "Find the area of a shape by counting unit squares",
+        "Relate area to multiplication",
+        "Find the area of a rectangle using side lengths",
+        "Find the area of a rectilinear figure",
+        "Understand perimeter as a shape's boundary",
+        "Find the perimeter of a polygon",
+        "Compare area and perimeter of two shapes"
+      ],
+      "Geometry": [
+        "Classify shapes by shared attributes",
+        "Identify categories of quadrilaterals",
+        "Draw shapes with specified attributes",
+        "Partition a shape into equal areas",
+        "Express the area of each part as a unit fraction"
+      ]
+    },
+    "4th Grade Math": {
+      "Operations & Algebraic Thinking": [
+        "Interpret a multiplication equation as a comparison",
+        "Represent a comparison as a multiplication equation",
+        "Solve multiplicative comparison word problems",
+        "Multi-step word problems with the four operations",
+        "Interpret remainders in division word problems",
+        "Find all factor pairs for a number (1-100)",
+        "Determine if a number is prime or composite",
+        "Generate a number pattern from a given rule",
+        "Identify a feature of a pattern not stated in the rule"
+      ],
+      "Number & Operations in Base Ten": [
+        "Place value to 1,000,000",
+        "Compare multi-digit whole numbers",
+        "Round multi-digit whole numbers",
+        "Add multi-digit whole numbers",
+        "Subtract multi-digit whole numbers",
+        "Multiply a number by a one-digit number",
+        "Multiply two two-digit numbers",
+        "Divide with a one-digit divisor",
+        "Interpret remainders in long division",
+        "Estimate quotients"
+      ],
+      "Number & Operations—Fractions": [
+        "Recognize equivalent fractions using area models",
+        "Generate equivalent fractions",
+        "Compare fractions with unlike denominators",
+        "Decompose a fraction into a sum of unit fractions",
+        "Add fractions with the same denominator",
+        "Subtract fractions with the same denominator",
+        "Add mixed numbers with like denominators",
+        "Subtract mixed numbers with like denominators",
+        "Multiply a fraction by a whole number",
+        "Solve word problems involving fraction times whole number",
+        "Express a fraction with denominator 10 as denominator 100",
+        "Add fractions with denominators 10 and 100",
+        "Understand decimal notation for tenths and hundredths",
+        "Compare decimals to hundredths",
+        "Locate decimals on a number line"
+      ],
+      "Measurement & Data": [
+        "Convert units of measurement within a system",
+        "Solve word problems involving measurement conversion",
+        "Use the four operations in measurement word problems",
+        "Make a line plot with fraction measurements",
+        "Solve problems using a line plot",
+        "Understand an angle as a fraction of a circle",
+        "Measure an angle with a protractor",
+        "Sketch an angle of a given measure",
+        "Solve addition and subtraction angle problems"
+      ],
+      "Geometry": [
+        "Identify points, lines, line segments, and rays",
+        "Identify angles (right, acute, obtuse)",
+        "Identify parallel and perpendicular lines",
+        "Classify two-dimensional shapes by lines and angles",
+        "Identify lines of symmetry",
+        "Draw lines of symmetry"
+      ]
+    },
+    "5th Grade Math": {
+      "Operations & Algebraic Thinking": [
+        "Evaluate expressions with parentheses, brackets, and braces",
+        "Write a numerical expression from a verbal phrase",
+        "Interpret a numerical expression without evaluating it",
+        "Generate two numerical patterns from two given rules",
+        "Form ordered pairs from corresponding pattern terms",
+        "Graph ordered pairs from two related patterns"
+      ],
+      "Number & Operations in Base Ten": [
+        "Understand place value (powers of 10)",
+        "Read and write decimals to thousandths",
+        "Compare decimals to thousandths",
+        "Round decimals to a given place",
+        "Multiply multi-digit whole numbers fluently",
+        "Divide multi-digit whole numbers (two-digit divisors)",
+        "Estimate multi-digit products and quotients",
+        "Add and subtract decimals to hundredths",
+        "Multiply decimals to hundredths",
+        "Divide decimals to hundredths"
+      ],
+      "Number & Operations—Fractions": [
+        "Add fractions with unlike denominators",
+        "Subtract fractions with unlike denominators",
+        "Estimate sums and differences of fractions",
+        "Solve word problems with unlike-denominator fractions",
+        "Interpret a fraction as division of the numerator by the denominator",
+        "Solve word problems involving division resulting in fractions",
+        "Multiply a fraction by a fraction",
+        "Multiply a fraction by a mixed number",
+        "Find the area of a rectangle with fractional side lengths",
+        "Interpret multiplication as scaling (resizing)",
+        "Divide a unit fraction by a whole number",
+        "Divide a whole number by a unit fraction",
+        "Solve word problems involving fraction division"
+      ],
+      "Measurement & Data": [
+        "Convert among measurement units within a system",
+        "Solve multi-step problems with unit conversion",
+        "Make a line plot with fraction measurements",
+        "Solve problems using data from a line plot",
+        "Understand volume as a measurable attribute",
+        "Measure volume by counting unit cubes",
+        "Relate volume to multiplication and addition",
+        "Find the volume of a rectangular prism using a formula",
+        "Find the volume of composite solids"
+      ],
+      "Geometry": [
+        "Plot points on a coordinate plane (first quadrant)",
+        "Represent real-world problems on a coordinate plane",
+        "Classify two-dimensional shapes into categories",
+        "Understand attributes shared across categories of shapes",
+        "Classify shapes in a hierarchy based on properties"
+      ]
+    },
     "6th Grade Math": {
       "Ratios & Proportional Relationships": [
         "Ratio notation (a:b)",
@@ -323,7 +511,7 @@
         "Make predictions from data"
       ]
     },
-  "8th Grade Math": {
+    "8th Grade Math": {
       "The Number System": [
         "Identify rational and irrational numbers",
         "Define irrational numbers (√2, π)",
