@@ -1,0 +1,174 @@
+/* A shared shell keeps navigation, spacing, and focus treatment consistent. */
+:root { --ui-line: #dce2eb; --ui-soft: #f5f7fb; }
+[hidden] { display: none !important; }
+body { color: var(--text); }
+button, input, select, summary, a { -webkit-tap-highlight-color: transparent; }
+button, input, select { font-family: inherit; }
+input, select { min-width: 0; }
+:where(a, button, input, select, summary, [tabindex]):focus-visible {
+  outline: 3px solid var(--brand); outline-offset: 3px;
+}
+#topbar { height: 60px; padding: 0 24px; gap: 20px; z-index: 1600; }
+#topbar nav { gap: 6px; min-width: 0; }
+#topbar .brand { flex-shrink: 0; }
+#topbar nav a.text-link {
+  padding: 9px 12px; border-radius: 8px; font-size: 14px; white-space: nowrap;
+}
+#topbar nav a.text-link:hover, #topbar nav a[aria-current="page"] {
+  background: var(--ui-soft); color: var(--brand);
+}
+#topbar nav .ui-account { margin-left: 10px; }
+.ui-menu { position: relative; }
+.ui-menu > summary {
+  display: flex; align-items: center; gap: 8px; list-style: none; cursor: pointer;
+  border-radius: 8px; padding: 9px 12px; font-size: 14px; font-weight: 600;
+  color: var(--text-secondary); white-space: nowrap;
+}
+.ui-menu > summary::-webkit-details-marker { display: none; }
+.ui-menu > summary::after { content: '⌄'; font-size: 13px; margin-left: 3px; }
+.ui-menu[open] > summary, .ui-menu > summary:hover { background: var(--ui-soft); color: var(--text); }
+.ui-menu-items {
+  position: absolute; top: calc(100% + 8px); right: 0; z-index: 1700;
+  background: var(--surface); border: 1px solid var(--ui-line); border-radius: 12px;
+  box-shadow: 0 12px 36px #1a28451a; padding: 6px; min-width: 200px;
+}
+#topbar .ui-menu-items a, #topbar .ui-menu-items button, .ui-menu-items button {
+  display: block; width: 100%; background: transparent; border: none; text-align: left;
+  padding: 10px 12px; border-radius: 7px; color: var(--text); font-size: 14px;
+  text-decoration: none; font-weight: 500; cursor: pointer; margin: 0;
+}
+.ui-menu-items a:hover, .ui-menu-items button:hover { background: var(--ui-soft) !important; }
+.ui-menu-items #signOutBtn, .ui-menu-items #clearMapBtn { color: #b24636; }
+#userLabel { display: block; max-width: 170px; overflow: hidden; text-overflow: ellipsis; margin: 0; font-size: 13px; }
+#userMenu { gap: 0; }
+.ui-page-heading { margin-bottom: 28px; }
+.ui-eyebrow { text-transform: uppercase; font-size: 11px; letter-spacing: .12em; font-weight: 700; color: var(--brand); margin: 0 0 10px; }
+.ui-page-heading h1 { margin: 0 0 8px; font-size: 30px; letter-spacing: -.035em; }
+.ui-page-heading p:last-child { color: var(--text-secondary); margin: 0; font-size: 14px; line-height: 1.6; }
+.settings-wrap { max-width: 900px; padding-top: 42px; }
+.settings-panel { background: var(--surface); border: 1px solid var(--ui-line); padding: 28px; border-radius: 16px; }
+.settings-panel .role-preview { box-shadow: none; }
+.theme-card { min-height: 108px; box-shadow: none; }
+.theme-card .swatch-dot { width: 22px; height: 22px; }
+.theme-card .swatch-row { margin-bottom: 18px; }
+.theme-card.active::after { content: 'Selected'; display: block; font-size: 11px; color: var(--brand); margin-top: 6px; }
+.theme-card:not(.active)::after { content: 'Use theme'; display: block; font-size: 11px; color: var(--text-secondary); margin-top: 6px; }
+.ui-teacher-access { margin-top: 28px; border-top: 1px solid var(--border); padding-top: 18px; }
+.ui-teacher-access > summary { cursor: pointer; font-size: 14px; font-weight: 600; color: var(--text-secondary); margin-bottom: 12px; }
+.dash-wrap { max-width: 1180px; padding-top: 36px; }
+.dash-header h1 { font-size: 28px; letter-spacing: -.035em; }
+.dash-card { box-shadow: none; border-color: var(--ui-line); border-radius: 14px; padding: 24px; }
+.dash-card h2 { font-size: 17px; letter-spacing: -.015em; }
+.dash-meta, .hint, .settings-empty { line-height: 1.55; }
+.ui-tabs { display: flex; gap: 4px; margin: 24px 0; border-bottom: 1px solid var(--ui-line); }
+.ui-tabs > button { background: none; border: none; border-bottom: 2px solid transparent; padding: 12px 18px; color: var(--text-secondary); font-size: 14px; font-weight: 600; cursor: pointer; margin-bottom: -1px; }
+.ui-tabs > button[aria-selected="true"] { color: var(--brand); border-bottom-color: var(--brand); }
+.ui-tab-panel { min-width: 0; }
+.ui-roster-details { border: 1px solid var(--ui-line); background: var(--surface); border-radius: 12px; margin-top: 20px; padding: 18px 24px; }
+.ui-roster-details > summary { font-size: 14px; font-weight: 600; cursor: pointer; }
+.ui-roster-details > .dash-card { border: 0; padding: 20px 0 0; margin: 0; }
+.sample-banner { padding: 12px 16px; font-size: 13px; border-radius: 10px; }
+.map-card { box-shadow: none; border-color: var(--ui-line); }
+.map-card:hover { box-shadow: 0 4px 18px #1a284510; }
+
+/* Workspace: navigation above, map actions below. */
+.map-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 52px; padding: 7px 20px; border-bottom: 1px solid var(--ui-line); background: var(--surface); position: relative; z-index: 1500; }
+.map-toolbar-group { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.map-toolbar .tb-btn { font-size: 13px; padding: 8px 11px; }
+.map-toolbar .ui-menu > summary { font-size: 13px; padding: 8px 11px; }
+.map-toolbar .ui-menu-items { left: 0; right: auto; }
+#libraryActions { border-left: 1px solid var(--ui-line); padding-left: 10px; margin-left: 4px; }
+.map-toolbar #shareBtn { font-size: 13px; padding: 8px 14px; margin: 0; }
+#checkMapBtn { border: 1px solid var(--ui-line); }
+#container { height: calc(100dvh - 112px); }
+#sidebar { width: 300px; flex-shrink: 0; padding: 18px 16px; }
+.sidebar-heading { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+#sidebar .sidebar-heading h2 { font-size: 16px; margin: 0; cursor: default; }
+#collapseBtn { position: static; padding: 4px 8px; font-size: 17px; }
+.sidebar-search { margin: 0 0 14px; }
+.sidebar-search input { min-height: 40px; }
+.ui-custom-concept { padding: 12px 0 16px; margin-bottom: 8px; border-bottom: 1px solid var(--ui-line); }
+.ui-custom-concept > summary { font-size: 13px; color: var(--brand); font-weight: 600; cursor: pointer; }
+#sidebar .grade { border-bottom: 1px solid var(--border); padding: 4px 0; margin: 0; }
+#sidebar .grade h2 { font-size: 14px; margin: 0; padding: 10px 4px; }
+#sidebar .unit { font-size: 13px; line-height: 1.5; }
+#sidebar .unit > span { display: block; padding: 8px 0; cursor: pointer; color: var(--text); }
+#sidebar li { font-size: 13px; padding: 7px 8px; line-height: 1.4; }
+#sidebarInstructions { padding: 14px 0; border: 0; border-radius: 0; box-shadow: none; margin: 14px 0 0; font-size: 13px; border-top: 1px solid var(--ui-line); }
+#instructionsToggle { border: 0; background: transparent; padding: 0; font-size: 13px; font-weight: 600; color: var(--text-secondary); cursor: pointer; }
+#instructionsBody li { cursor: default; }
+#sidebar.collapsed { width: 52px; padding: 12px 8px; }
+#sidebar.collapsed > :not(.sidebar-heading), #sidebar.collapsed .sidebar-heading h2 { display: none; }
+#canvasArea { min-width: 0; }
+#myMapsPanel, #timelinePanel { position: fixed; top: 118px; right: 20px; width: min(420px, calc(100vw - 32px)); max-height: calc(100dvh - 138px); overflow-y: auto; padding: 20px; border-color: var(--ui-line); border-radius: 14px; }
+#checkMapPanel { position: fixed; top: 118px; left: auto; right: 20px; width: min(420px, calc(100vw - 32px)); max-height: calc(100dvh - 138px); padding: 20px; border-color: var(--ui-line); }
+#checkMapPanel .ui-review-intro { margin: 0 0 14px; font-size: 13px; line-height: 1.5; color: var(--text-secondary); }
+#checkMapPanel #aiSummaryWrap { margin-bottom: 18px; border-bottom: 1px solid var(--ui-line); padding-bottom: 14px; }
+#aiSummaryPanel { position: static; width: auto; padding: 12px; border: 0; box-shadow: none; background: var(--ui-soft); margin-top: 8px; }
+.ui-panel-heading { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.ui-panel-heading header { margin: 0 !important; }
+.ui-panel-close { background: none; border: 0; cursor: pointer; color: var(--text-secondary); font-size: 20px; width: 30px; height: 30px; border-radius: 6px; }
+.ui-panel-close:hover { background: var(--ui-soft); }
+.ui-work-link { display: inline-block; font-size: 12px; color: var(--brand); text-decoration: none; margin-top: 12px; }
+/* Keep marketing choices deliberate: two entry points, demos by audience. */
+.hero .cta-row { gap: 10px; }
+.hero .tagline { max-width: 480px; }
+.ui-start-note { margin-top: 16px; font-size: 13px; color: var(--text-secondary); }
+.ui-feature-row { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+.ui-feature-row > div { border-top: 1px solid var(--ui-line); padding: 24px 0; }
+.ui-feature-row h3 { font-size: 18px; margin: 0 0 8px; }
+.ui-feature-row p { font-size: 14px; line-height: 1.65; color: var(--text-secondary); margin: 0; }
+@media (max-width: 760px) {
+  #topbar { padding: 0 14px; gap: 8px; }
+  #topbar nav { gap: 0; }
+  #topbar nav a.text-link { padding: 9px 8px; font-size: 12px; }
+  #topbar nav .ui-account { margin-left: 0; }
+  #topbar .ui-menu > summary { padding: 8px; font-size: 12px; }
+  #topbar #signInBtn { white-space: nowrap; font-size: 12px; padding: 8px; }
+  #userLabel { max-width: 90px; font-size: 12px; }
+  .map-toolbar { padding: 7px 10px; gap: 4px; flex-wrap: wrap; }
+  .map-toolbar-group { gap: 2px; }
+  .map-toolbar .tb-btn { padding: 8px; font-size: 12px; }
+  #libraryActions { padding-left: 4px; }
+  #sidebar { width: 250px; }
+  .settings-wrap, .dash-wrap { padding: 28px 16px; }
+  .settings-panel, .dash-card { padding: 20px; }
+  .ui-tabs > button { padding: 12px; }
+  .dash-header h1 { font-size: 24px; }
+}
+@media (max-width: 540px) {
+  #container { flex-direction: column; height: calc(100dvh - 154px); }
+  .map-toolbar { min-height: 94px; }
+  .map-toolbar-group { justify-content: space-between; width: 100%; }
+  #sidebar { width: 100%; height: 32dvh; flex-shrink: 0; border-right: 0; border-bottom: 1px solid var(--ui-line); }
+  #sidebar.collapsed { width: 100%; height: 48px; }
+  #sidebar.collapsed .sidebar-heading h2 { display: block; }
+  #canvasArea { flex: 1; height: auto; }
+  #checkMapPanel, #myMapsPanel, #timelinePanel { top: 160px; right: 16px; max-height: calc(100dvh - 180px); }
+  #topbar .brand { font-size: 15px; gap: 5px; }
+  #topbar .brand .icon { width: 16px; }
+  #userLabel { max-width: 64px; }
+  .theme-swatches { grid-template-columns: repeat(2, 1fr); }
+  .join-class-row, .create-class-row, .activity-select-row { flex-wrap: wrap; }
+  .join-class-row input, .create-class-row input { flex-basis: 60%; }
+  .ui-feature-row { grid-template-columns: 1fr; gap: 0; }
+  .dash-header-actions { flex-wrap: wrap; }
+}
+@media print {
+  .ui-tabs { display: none; }
+  .ui-roster-details { display: block; border: 0; padding: 0; }
+  .ui-roster-details > summary { display: none; }
+  .ui-tab-panel[hidden] { display: block !important; }
+  .ui-tab-panel { break-before: auto; }
+}
+
+.ui-connection-notes { margin-top: 14px; font-size: 13px; }
+.ui-connection-notes > summary { cursor: pointer; color: var(--text-secondary); font-weight: 600; padding: 8px 0; }
+#sidebar > hr { display: none; }
+.sidebar-search { padding: 0 12px; border: 1px solid var(--ui-line); background: var(--ui-soft); }
+.sidebar-search input { width: 100%; font-size: 13px; }
+@media (max-width: 540px) {
+  body[data-page="index"] #topbar nav a[href^="#"] { display: none; }
+  body[data-page="index"] #topbar nav { gap: 10px; }
+}
+@media (min-width: 541px) { #sidebarInstructions { margin-top: 12px; } }

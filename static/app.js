@@ -544,6 +544,7 @@ async function playDemo() {
     // --- 5: activate the AI summary ---
     showDemoToast('Opening the AI summary…');
     const aiBtn = document.getElementById('aiSummaryBtn');
+    document.getElementById('checkMapBtn').click();
     const aiRect = aiBtn.getBoundingClientRect();
     await moveDemoCursor(aiRect.left + aiRect.width / 2, aiRect.top + aiRect.height / 2, 700);
     await pressDemoCursor();
@@ -1997,6 +1998,7 @@ function setupAuthUI() {
     if (session) {
       signInBtn.style.display = 'none';
       userMenu.style.display = 'flex';
+      document.getElementById('libraryActions').style.display = 'flex';
       if (anonNavLinks) anonNavLinks.style.display = 'none';
       const name = (session.user.user_metadata && session.user.user_metadata.display_name) || session.user.email;
       const role = window.SpanAuth.role(session);
@@ -2008,6 +2010,7 @@ function setupAuthUI() {
     } else {
       signInBtn.style.display = '';
       userMenu.style.display = 'none';
+      document.getElementById('libraryActions').style.display = 'none';
       if (anonNavLinks) anonNavLinks.style.display = 'flex';
       myMapsPanel.style.display = 'none';
       if (dashboardLink) dashboardLink.style.display = 'none';
@@ -2032,13 +2035,21 @@ function renderSidebar() {
     h.onclick = () => {
       unitDiv.style.display = unitDiv.style.display === 'none' ? '' : 'none';
       tgl.textContent = unitDiv.style.display === 'none' ? '►' : '▼';
+      h.setAttribute('aria-expanded', String(unitDiv.style.display !== 'none'));
     };
     const tgl = document.createElement('span');
-    tgl.textContent = '▼'; tgl.className = 'toggle';
+    tgl.textContent = '►'; tgl.className = 'toggle';
     h.appendChild(tgl);
     gradeDiv.appendChild(h);
 
     const unitDiv = document.createElement('div');
+    unitDiv.style.display = 'none';
+    h.tabIndex = 0;
+    h.setAttribute('role', 'button');
+    h.setAttribute('aria-expanded', 'false');
+    h.addEventListener('keydown', event => {
+      if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); h.click(); }
+    });
     for (const unit in conceptsData[grade]) {
       const unitLabel = document.createElement('div');
       unitLabel.className = 'unit';
@@ -2056,6 +2067,17 @@ function renderSidebar() {
         const li = document.createElement('li');
         li.textContent = topic;
         li.draggable = true;
+        li.tabIndex = 0;
+        li.setAttribute('role', 'button');
+        li.setAttribute('aria-label', 'Add ' + topic);
+        li.addEventListener('keydown', event => {
+          if (event.key !== 'Enter' && event.key !== ' ') return;
+          event.preventDefault();
+          if (isReadonly) return;
+          const pos = findOpenNodePosition(topic);
+          addNode(topic, pos.x, pos.y, {grade, unit});
+          revealNewNode(nodes[nodes.length - 1]);
+        });
         li.ondragstart = ev => {
           ev.dataTransfer.setData('text/plain', JSON.stringify({grade, unit, topic}));
         };
@@ -2081,7 +2103,10 @@ function setupSidebarEvents() {
   const collapseBtn = document.getElementById('collapseBtn');
   collapseBtn.onclick = () => {
     sidebar.classList.toggle('collapsed');
-    collapseBtn.textContent = sidebar.classList.contains('collapsed') ? '→' : '≡';
+    const collapsed = sidebar.classList.contains('collapsed');
+    collapseBtn.textContent = collapsed ? '→' : '≡';
+    collapseBtn.setAttribute('aria-expanded', String(!collapsed));
+    collapseBtn.setAttribute('aria-label', collapsed ? 'Expand concept library' : 'Collapse concept library');
   };
   setupInstructionsCollapse();
 }
@@ -2097,14 +2122,15 @@ function setInstructionsCollapsed(collapsed) {
   const caret = document.getElementById('instructionsCaret');
   if (!body) return;
   body.style.display = collapsed ? 'none' : '';
+  document.getElementById('instructionsToggle').setAttribute('aria-expanded', String(!collapsed));
   if (caret) caret.textContent = collapsed ? '▸' : '▾';
   try { localStorage.setItem(INSTRUCTIONS_COLLAPSED_KEY, collapsed ? '1' : '0'); } catch (e) { /* ignore */ }
 }
 function setupInstructionsCollapse() {
   const toggle = document.getElementById('instructionsToggle');
   if (!toggle) return;
-  let startedCollapsed = false;
-  try { startedCollapsed = localStorage.getItem(INSTRUCTIONS_COLLAPSED_KEY) === '1'; } catch (e) { /* ignore */ }
+  let startedCollapsed = true;
+  try { startedCollapsed = localStorage.getItem(INSTRUCTIONS_COLLAPSED_KEY) !== '0'; } catch (e) { /* ignore */ }
   setInstructionsCollapsed(startedCollapsed);
   toggle.onclick = () => {
     const body = document.getElementById('instructionsBody');
@@ -2153,6 +2179,7 @@ function filterSidebar(query) {
       if (q) {
         unitDiv.style.display = '';
         if (gradeToggle) gradeToggle.textContent = '▼';
+        h2.setAttribute('aria-expanded', 'true');
       }
     }
   });
@@ -2167,6 +2194,7 @@ function setupSearchEvents() {
   if (addBtn) addBtn.onclick = () => {
     const customInput = document.getElementById('customConceptInput');
     if (!customInput) return;
+    document.getElementById('customConceptDetails').open = true;
     customInput.value = input.value.trim();
     customInput.focus();
   };
@@ -3250,3 +3278,42 @@ document.addEventListener('click', e => {
 });
 
 // ========== END ==========
+
+document.addEventListener('DOMContentLoaded', () => {
+  const panels = {myMapsPanel: 'myMapsBtn', timelinePanel: 'timelineBtn', checkMapPanel: 'checkMapBtn', aiSummaryPanel: 'aiSummaryBtn'};
+  const close = id => {
+    if (id === 'checkMapPanel') closeCheckMapPanel();
+    else if (id === 'timelinePanel' && getComputedStyle(document.getElementById(id)).display !== 'none') {
+      document.getElementById('timelineBtn').click();
+    } else {
+      const panel = document.getElementById(id);
+      if (panel) panel.style.display = 'none';
+    }
+  };
+  for (const [id, buttonId] of Object.entries(panels)) {
+    const panel = document.getElementById(id), button = document.getElementById(buttonId);
+    if (!panel || !button) continue;
+    new MutationObserver(() => button.setAttribute('aria-expanded', String(getComputedStyle(panel).display !== 'none')))
+      .observe(panel, {attributes: true, attributeFilter: ['style']});
+  }
+  document.querySelectorAll('[data-close-panel]').forEach(button => {
+    button.onclick = () => { close(button.dataset.closePanel); document.getElementById(panels[button.dataset.closePanel]).focus(); };
+  });
+  document.querySelectorAll('[data-open-panel]').forEach(link => {
+    link.onclick = event => { event.preventDefault(); document.getElementById(link.dataset.openPanel).click(); };
+  });
+  document.addEventListener('click', event => {
+    for (const id of ['myMapsPanel', 'timelinePanel']) {
+      const panel = document.getElementById(id);
+      if (!panel.contains(event.target) && !event.target.closest('#myMapsBtn, #timelineBtn, [data-open-panel]')) close(id);
+    }
+  });
+  document.addEventListener('keydown', event => {
+    if (event.key !== 'Escape') return;
+    for (const id of Object.keys(panels)) {
+      if (getComputedStyle(document.getElementById(id)).display !== 'none') {
+        close(id); document.getElementById(panels[id]).focus();
+      }
+    }
+  });
+});

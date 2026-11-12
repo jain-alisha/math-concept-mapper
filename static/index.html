@@ -223,6 +223,8 @@
       #topbar nav a.text-link { display: none; }
     }
   </style>
+  <link rel="stylesheet" href="ui.css" />
+  <script src="ui.js" defer></script>
 </head>
 <body>
   <div id="topbar">
@@ -230,7 +232,8 @@
       <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="6" rx="1"/><rect x="2" y="16" width="6" height="6" rx="1"/><rect x="16" y="16" width="6" height="6" rx="1"/><path d="M12 8v4"/><path d="M5 16v-2a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v2"/></svg>
       Span
     </a>
-    <nav>
+    <nav aria-label="Main navigation">
+      <a href="#classrooms" class="text-link">For classrooms</a>
       <a href="#about" class="text-link" id="aboutLink">About</a>
       <a href="playground?auth=1" class="text-link">Sign in</a>
       <a href="playground" class="nav-cta">Open Playground</a>
@@ -248,9 +251,8 @@
         <div class="cta-row">
           <a class="btn btn-primary" href="playground">Try the Playground</a>
           <a class="btn btn-secondary" href="playground?sample=1">Explore a sample map</a>
-          <a class="btn btn-secondary" href="dashboard?sample=1">Explore a mock teacher dashboard</a>
-          <a class="btn btn-secondary" href="student?sample=1">Explore a mock student dashboard</a>
         </div>
+        <p class="ui-start-note">Free to use · Start mapping without an account</p>
       </div>
 
       <div class="hero-diagram-wrap">
@@ -375,7 +377,8 @@
     </div>
   </section>
 
-  <section>
+  <section id="classrooms">
+    <h2>For the way you learn and teach</h2>
     <div class="use-cases">
       <div class="use-case-card teacher">
         <span class="label">For Teachers</span>
@@ -413,36 +416,9 @@
   </section>
 
   <section>
-    <h2>Also available (beta)</h2>
-    <p class="support" style="margin-top:-0.5em;margin-bottom:1.5em;">These are live today, not planned — "beta" means we're still refining them based on feedback.</p>
-    <div class="features">
-
-      <div class="feature-card beta-card">
-        <h3>Map summary</h3>
-        <p>Get a quick nudge toward one concept worth connecting next, highlighted right on your map — plus a shoutout when you've added new connections since your last visit.</p>
-      </div>
-
-      <div class="feature-card beta-card">
-        <h3>Isolated concept highlighting</h3>
-        <p>Concepts that have been added but never connected are flagged so they are easier to spot.</p>
-      </div>
-
-      <div class="feature-card beta-card">
-        <h3>Classwide gap analysis</h3>
-        <p>Teachers can mark what they have already taught so classwide analysis reflects the actual course sequence.</p>
-      </div>
-
-      <div class="feature-card beta-card">
-        <h3>Sample teacher dashboard</h3>
-        <p>Explore a populated mock class with sample student maps before creating your own.</p>
-        <a class="beta-link" href="dashboard?sample=1">Preview it →</a>
-      </div>
-
-      <div class="feature-card beta-card">
-        <h3>Map timeline</h3>
-        <p>Save map snapshots to your dashboard, label them, and move between dates to see how a map changes over time.</p>
-      </div>
-
+    <div class="ui-feature-row">
+      <div><h3>Pause and make connections</h3><p>Review your map for isolated concepts and possible gaps. Explore related ideas from any concept, then decide which connections belong.</p></div>
+      <div><h3>Watch your thinking grow</h3><p>Save a copy at the start and end of a unit. Group those snapshots in a timeline to see how your connections and explanations develop.</p></div>
     </div>
   </section>
 
@@ -451,7 +427,7 @@
     <a class="btn btn-primary" href="playground">Open the Playground →</a>
   </div>
 
-  <footer class="site-footer">Span · demo site</footer>
+  <footer class="site-footer">Span · Make connections that matter</footer>
   <script>
     document.getElementById('aboutLink').addEventListener('click', (e) => {
       e.preventDefault();
