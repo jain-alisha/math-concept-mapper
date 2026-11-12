@@ -164,6 +164,8 @@
       padding: 0.6em 1.1em; border-radius: 8px; font-size: 0.9em; font-weight: 600;
     }
   </style>
+  <link rel="stylesheet" href="ui.css" />
+  <script src="ui.js" defer></script>
 </head>
 <body>
 <div id="topbar">
@@ -171,27 +173,32 @@
     <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="6" rx="1"/><rect x="2" y="16" width="6" height="6" rx="1"/><rect x="16" y="16" width="6" height="6" rx="1"/><path d="M12 8v4"/><path d="M5 16v-2a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v2"/></svg>
     Span
   </a>
-  <nav>
+  <nav aria-label="Main navigation">
+    <a href="playground" class="text-link" data-nav="playground">Playground</a>
+    <a href="student" class="text-link" data-nav="dashboard">Dashboard</a>
+    <a href="settings?tab=classes" class="text-link" data-nav="classes">Classes</a>
     <button id="signInBtn">Sign in</button>
-    <div id="userMenu">
-      <span id="userLabel"></span>
-      <button id="signOutBtn">Log out</button>
-    </div>
-    <a href="dashboard" class="text-link">Dashboard</a>
-    <a href="playground" class="text-link">Playground</a>
+    <div id="userMenu"><details class="ui-menu ui-account">
+        <summary aria-label="Account menu"><span id="userLabel"></span></summary>
+        <div class="ui-menu-items">
+          <a href="settings">Appearance</a>
+          <a href="settings?tab=classes">Manage classes</a>
+          <a href="index">About Span</a>
+          <button id="signOutBtn" type="button">Log out</button>
+        </div>
+      </details></div>
   </nav>
 </div>
 
 <div class="settings-wrap">
-  <h1>Settings</h1>
-  <nav class="settings-tabs">
-    <button class="settings-tab active" data-tab="appearance">Appearance</button>
-    <button class="settings-tab" data-tab="classes">Classes</button>
-  </nav>
-
+  <div class="ui-page-heading">
+    <p class="ui-eyebrow">Your workspace</p>
+    <h1 id="settingsHeading">Appearance</h1>
+    <p id="settingsDescription">Make your maps feel like yours.</p>
+  </div>
   <section id="tab-appearance" class="settings-panel active">
     <h2>Color theme</h2>
-    <p class="hint">Applies to node colors and the accent color throughout Span. Saved on this device, and to your account if you're signed in.</p>
+    <p class="hint">Choose the accent and concept colors for your maps. Your choice is saved on this device and synced when you sign in.</p>
     <div id="themeSwatches" class="theme-swatches"></div>
   </section>
 
@@ -230,14 +237,14 @@
       <h2 style="margin-top:1.8em;">Your classes</h2>
       <div id="studentClassList"></div>
 
-      <div class="role-preview" style="margin-top:1.8em;">
+      <details class="ui-teacher-access"><summary>Have a teacher signup code?</summary>
         <p class="role-preview-note">Are you a teacher? Enter the signup code your school gave you to switch to a teacher account.</p>
         <div class="join-class-row">
           <input type="text" id="teacherSignupCodeInput" placeholder="Teacher signup code" maxlength="40" />
           <button id="becomeTeacherBtn" type="button">Become a teacher →</button>
         </div>
         <p class="auth-error" id="becomeTeacherError"></p>
-      </div>
+      </details>
     </div>
   </section>
 </div>

@@ -10,15 +10,15 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function setupTabs() {
-  const tabs = document.querySelectorAll('.settings-tab[data-tab]');
-  tabs.forEach(tab => {
-    tab.onclick = () => {
-      tabs.forEach(t => t.classList.remove('active'));
-      document.querySelectorAll('.settings-panel').forEach(p => p.classList.remove('active'));
-      tab.classList.add('active');
-      document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
-    };
+  const classes = new URLSearchParams(location.search).get('tab') === 'classes';
+  document.querySelectorAll('.settings-panel').forEach(panel => {
+    panel.classList.toggle('active', panel.id === (classes ? 'tab-classes' : 'tab-appearance'));
   });
+  document.getElementById('settingsHeading').textContent = classes ? 'Classes' : 'Appearance';
+  document.getElementById('settingsDescription').textContent = classes
+    ? 'Join your class or manage the classes you teach.'
+    : 'Make your maps feel like yours.';
+  document.title = (classes ? 'Classes' : 'Appearance') + ' — Span';
 }
 
 function setupAppearance() {
@@ -34,6 +34,7 @@ function setupAppearance() {
       const card = document.createElement('button');
       card.className = 'theme-card' + (preset.key === activeKey ? ' active' : '');
       card.type = 'button';
+      card.setAttribute('aria-pressed', String(preset.key === activeKey));
       const row = document.createElement('div');
       row.className = 'swatch-row';
       const dot = document.createElement('div');

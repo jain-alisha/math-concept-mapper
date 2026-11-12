@@ -517,7 +517,7 @@ function renderTaughtTopicsChecklist(container, cls, mapsWithData, curriculum, o
 
   const hint = document.createElement('p');
   hint.className = 'hint';
-  hint.textContent = "Mark topics you've already covered - missing-prerequisite gaps below can then tell \"not taught yet\" apart from a real gap.";
+  hint.textContent = "Mark topics you've already covered - missing-prerequisite gaps in Insights can then tell \"not taught yet\" apart from a real gap.";
   container.appendChild(hint);
 
   const units = collectUnitsFromMaps(mapsWithData);
@@ -1010,34 +1010,45 @@ function setupExportReportButton(header, className, onToggleAnonymous) {
 // sample dashboard).
 function renderClassDashboard(wrap, cls, roster, maps, mapsWithData, curriculum, hrefFor, saveFn, header, className, activityFns) {
   wrap.innerHTML = '';
+  const [studentsPanel, insightsPanel, setupPanel] = window.SpanUI.tabs(wrap, ['Students', 'Insights', 'Class setup']);
 
   const activitiesCard = document.createElement('div');
   activitiesCard.className = 'dash-card';
-  wrap.appendChild(activitiesCard);
+  insightsPanel.appendChild(activitiesCard);
 
   const glanceCard = document.createElement('div');
   glanceCard.className = 'dash-card';
   glanceCard.innerHTML = '<h2>Class at a Glance</h2>';
   const glanceGrid = document.createElement('div');
   glanceCard.appendChild(glanceGrid);
-  wrap.appendChild(glanceCard);
+  studentsPanel.appendChild(glanceCard);
 
   const summaryEl = document.createElement('div');
-  wrap.appendChild(summaryEl);
+  insightsPanel.appendChild(summaryEl);
   const insightsGrid = document.createElement('div');
   insightsGrid.className = 'insights-grid';
-  wrap.appendChild(insightsGrid);
+  insightsPanel.appendChild(insightsGrid);
 
   const taughtCard = document.createElement('div');
   taughtCard.className = 'dash-card';
   taughtCard.innerHTML = '<h2>What have you taught?</h2>';
   const taughtBody = document.createElement('div');
   taughtCard.appendChild(taughtBody);
-  wrap.appendChild(taughtCard);
+  setupPanel.appendChild(taughtCard);
 
   const rosterCard = document.createElement('div');
   rosterCard.className = 'dash-card';
-  wrap.appendChild(rosterCard);
+  const rosterDetails = document.createElement('details');
+  rosterDetails.className = 'ui-roster-details';
+  const rosterSummary = document.createElement('summary');
+  rosterSummary.textContent = 'Roster and all saved maps';
+  rosterDetails.append(rosterSummary, rosterCard);
+  studentsPanel.appendChild(rosterDetails);
+  const manageLink = document.createElement('a');
+  manageLink.className = 'ui-work-link';
+  manageLink.href = 'settings?tab=classes';
+  manageLink.textContent = 'Manage your classes →';
+  setupPanel.appendChild(manageLink);
 
   let taughtSet = new Set(cls.taught_topics || []);
   let anonymous = false;
@@ -1305,7 +1316,7 @@ function renderSampleDashboard() {
 
   const banner = document.createElement('div');
   banner.className = 'sample-banner';
-  banner.innerHTML = 'Sample preview (no account needed). This is what a teacher sees for a real class. <a href="settings">Sign in for your own →</a>';
+  banner.innerHTML = 'Sample preview (no account needed). This is what a teacher sees for a real class. <a href="settings?tab=classes">Set up your own class →</a>';
   dashWrap.appendChild(banner);
 
   const header = document.createElement('div');
@@ -1520,7 +1531,7 @@ function setupDashboardAuth() {
       dashWrap.innerHTML = `
         <div class="dash-empty-state">
           <p>You don't have any classes yet.</p>
-          <p><a href="settings">Create one in Settings →</a></p>
+          <p><a href="settings?tab=classes">Create your first class →</a></p>
         </div>
       `;
       return;
@@ -1543,8 +1554,8 @@ function setupDashboardAuth() {
       } else {
         dashWrap.innerHTML = `
           <div class="dash-empty-state">
-            <p>The Teacher Dashboard is for teacher accounts.</p>
-            <p><a href="settings">Back to Settings →</a></p>
+            <p>This dashboard is for teachers.</p>
+            <p><a href="student">Open your student dashboard →</a></p>
           </div>
         `;
       }

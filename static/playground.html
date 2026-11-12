@@ -635,6 +635,8 @@
 
 
   </style>
+  <link rel="stylesheet" href="ui.css" />
+  <script src="ui.js" defer></script>
 </head>
 <body>
 <div id="topbar">
@@ -642,64 +644,57 @@
     <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="6" rx="1"/><rect x="2" y="16" width="6" height="6" rx="1"/><rect x="16" y="16" width="6" height="6" rx="1"/><path d="M12 8v4"/><path d="M5 16v-2a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v2"/></svg>
     Span
   </a>
-  <nav>
-    <div class="tb-group">
-      <div id="aiSummaryWrap" style="position:relative;">
-        <button id="aiSummaryBtn" class="tb-btn" title="A quick AI-generated read on this map">
-          <span>AI Summary</span>
-        </button>
-        <div id="aiSummaryPanel">
-          <header>AI Summary</header>
-          <p id="aiSummaryText"></p>
-        </div>
-      </div>
-      <div id="checkMapWrap" style="position:relative;">
-        <button id="checkMapBtn" class="tb-btn" title="Look for gaps, isolated concepts, and connections worth a second look">
-          <span>Check my map</span>
-        </button>
-        <div id="checkMapPanel">
-          <header>Map check</header>
-          <div id="checkMapBody"></div>
-        </div>
-      </div>
-      <button id="fitMapBtn" class="tb-btn" title="Scroll to the top-left corner of your map">
-        <span>Fit to map</span>
-      </button>
-    </div>
-    <div class="tb-group">
-      <button id="exportPdfBtn" class="tb-btn" title="Export this map as a PDF, cropped to fit your concepts">
-        <span>Export PDF</span>
-      </button>
-      <button id="clearMapBtn" class="tb-btn tb-danger" title="Remove every concept and connection from this map">
-        <span>Clear Map</span>
-      </button>
-      <button id="shareBtn" title="Copy a shareable link to this map">
-        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
-        <span class="share-label">Share</span>
-      </button>
-    </div>
+  <nav aria-label="Main navigation">
+    <a href="playground" class="text-link" data-nav="playground">Playground</a>
+    <a href="student" class="text-link" data-nav="dashboard">Dashboard</a>
+    <a href="settings?tab=classes" class="text-link" data-nav="classes">Classes</a>
     <div id="authArea">
       <button id="signInBtn" class="tb-btn">Sign in</button>
-      <div id="userMenu">
-        <button id="myMapsBtn" class="tb-btn">My Maps</button>
-        <button id="timelineBtn" class="tb-btn">Timeline</button>
-        <div class="user-dropdown-wrap">
-          <button type="button" class="user-dropdown-trigger">
-            <span id="userLabel"></span>
-            <svg class="icon chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-          </button>
-          <div class="user-dropdown-menu">
-            <a href="dashboard" id="dashboardLink" style="display:none;">Dashboard</a>
-            <a href="settings">Settings</a>
-            <a href="index">Home</a>
-            <button id="signOutBtn">Log out</button>
-          </div>
+      <div id="userMenu"><details class="ui-menu ui-account">
+        <summary aria-label="Account menu"><span id="userLabel"></span></summary>
+        <div class="ui-menu-items">
+          <a href="settings">Appearance</a>
+          <a href="settings?tab=classes">Manage classes</a>
+          <a href="index">About Span</a>
+          <button id="signOutBtn" type="button">Log out</button>
         </div>
+      </details></div>
+    </div>
+  </nav>
+</div>
+<div class="map-toolbar" role="toolbar" aria-label="Map tools">
+  <div class="map-toolbar-group">
+    <details class="ui-menu">
+      <summary>Map actions</summary>
+      <div class="ui-menu-items">
+        <button id="exportPdfBtn" type="button">Export PDF</button>
+        <button id="clearMapBtn" type="button">Clear map…</button>
+      </div>
+    </details>
+    <button id="fitMapBtn" class="tb-btn" type="button" title="Bring your concepts into view">Fit to map</button>
+    <div id="libraryActions" class="map-toolbar-group" style="display:none;">
+      <button id="myMapsBtn" class="tb-btn" type="button" aria-controls="myMapsPanel" aria-expanded="false">My Maps</button>
+      <button id="timelineBtn" class="tb-btn" type="button" aria-controls="timelinePanel" aria-expanded="false">Timeline</button>
+    </div>
+  </div>
+  <div class="map-toolbar-group">
+    <div id="checkMapWrap">
+      <button id="checkMapBtn" class="tb-btn" type="button" aria-controls="checkMapPanel" aria-expanded="false">Review map</button>
+      <div id="checkMapPanel">
+        <div class="ui-panel-heading"><header>Review your map</header><button type="button" class="ui-panel-close" data-close-panel="checkMapPanel" aria-label="Close map review">×</button></div>
+        <p class="ui-review-intro">Look for missing connections and ideas worth a second look.</p>
+        <div id="aiSummaryWrap">
+          <button id="aiSummaryBtn" class="tb-btn" type="button" aria-controls="aiSummaryPanel" aria-expanded="false">Quick summary</button>
+          <div id="aiSummaryPanel"><p id="aiSummaryText"></p></div>
+        </div>
+        <div id="checkMapBody"></div>
+      </div>
+    </div>
+    <button id="shareBtn" type="button" title="Copy a shareable link to this map">Share map</button>
+  </div>
+</div>
         <div id="myMapsPanel">
-          <header>My Maps</header>
-          <div class="my-maps-clear-row">
-            <button id="clearMapBtnInPanel">Clear current map</button>
-          </div>
+          <div class="ui-panel-heading"><header>My Maps</header><button type="button" class="ui-panel-close" data-close-panel="myMapsPanel" aria-label="Close saved maps">×</button></div>
           <div class="my-maps-save-row">
             <input type="text" id="mapTitleInput" placeholder="Map title..." maxlength="80" />
             <button id="saveMapBtn">Save</button>
@@ -707,10 +702,10 @@
           <div class="my-maps-checkpoint-row">
             <button id="saveCopyBtn" title="Save the current state as a new map, so your starting map stays exactly as it was">Save a copy</button>
           </div>
-          <ul id="myMapsList"></ul>
+          <ul id="myMapsList"></ul><a class="ui-work-link" href="#" data-open-panel="timelineBtn">View map timelines →</a>
         </div>
         <div id="timelinePanel">
-          <header>Map Timeline</header>
+          <div class="ui-panel-heading"><header>Map Timeline</header><button type="button" class="ui-panel-close" data-close-panel="timelinePanel" aria-label="Close timeline">×</button></div>
           <div id="timelineListView">
             <p class="hint">Group saved maps into a sequence, then scrub through how a map evolved over time.</p>
             <div class="my-maps-save-row">
@@ -732,14 +727,6 @@
             </div>
           </div>
         </div>
-      </div>
-    </div>
-    <div id="anonNavLinks" class="tb-group">
-      <a href="settings" class="text-link">Settings</a>
-      <a href="index" class="text-link">Home</a>
-    </div>
-  </nav>
-</div>
 
 <div id="authModal" class="modal-overlay">
   <div class="modal">
@@ -773,43 +760,42 @@
 <div id="cloudNotice"></div>
 <div id="container">
   <div id="sidebar">
-    <button id="collapseBtn" title="Collapse/Expand Sidebar">≡</button>
-    <div class="sidebar-section" id="sidebarInstructions">
-      <strong id="instructionsToggle" style="cursor:pointer;user-select:none;">How to use: <span id="instructionsCaret">▾</span></strong>
-      <div id="instructionsBody">
-      <ul style="padding-left:1.2em;">
-        <li>Drag a concept from the sidebar onto the map.</li>
-        <li><b>Custom node:</b> Enter any label below and add your own concept to the map.</li>
-        <li>Click a node for <b>Edit</b>, <b>Connect</b>, or <b>&#10022; Explore</b>.</li>
-        <li><b>Explore</b> asks what a concept builds on, leads to, or relates to, then shows suggestions as ghost nodes on the map - each one lets you Add, ask Why?, or dismiss it.</li>
-        <li>To create a link: use <b>Connect</b>, or <b>Shift+drag</b> from one node to another.</li>
-        <li>To add a note to a link: <b>Double-click</b> on the link line.</li>
-        <li>To move a node: <b>Drag</b> it on the map.</li>
-        <li><b>&#10022; Check my map</b> (top of the page) looks for isolated concepts, missing connections, and connections worth a second look, across your whole map.</li>
-        <li>Right-click a node or link to delete.</li>
-      </ul>
-      <button id="playDemoBtn">&#9654; Play demo</button>
-      </div>
-    </div>
-    <div class="sidebar-section">
-      <strong>Add your own concept:</strong>
-      <div class="custom-concept-row">
-        <input type="text" id="customConceptInput" placeholder="Enter concept name..." maxlength="50"/>
-        <button id="customConceptBtn">Add</button>
-      </div>
-    </div>
-    <h2>Math Concepts</h2>
+    <div class="sidebar-heading"><h2>Concepts</h2><button id="collapseBtn" type="button" title="Collapse/Expand Sidebar" aria-label="Collapse concept library" aria-expanded="true">≡</button></div>
     <div class="sidebar-search">
-      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-      <input type="search" id="conceptSearchInput" placeholder="Search concepts..." />
+      <input type="search" id="conceptSearchInput" placeholder="Search all grades…" aria-label="Search concepts" />
     </div>
+    <details class="ui-custom-concept" id="customConceptDetails">
+      <summary>Add your own concept</summary>
+      <div class="custom-concept-row">
+        <input type="text" id="customConceptInput" placeholder="Concept name" maxlength="50" aria-label="Custom concept name" />
+        <button id="customConceptBtn" type="button">Add</button>
+      </div>
+    </details>
     <div id="sidebarList"></div>
     <div class="no-results" id="noResults">
       No concepts match your search. The catalogue currently covers 3rd-8th grade math, so it may just not be in there yet.
       <button type="button" id="noResultsAddBtn" style="display:block;margin-top:0.5em;background:none;border:none;color:var(--brand);text-decoration:underline;cursor:pointer;padding:0;font-size:0.95em;font-family:inherit;">Add it as a custom concept →</button>
     </div>
     <hr style="margin:1em 0 0.5em 0; border:none; border-top:1.5px solid #e7e7e7;">
-    <div id="notesSidebar"></div>
+    <details class="ui-connection-notes"><summary>Connection notes</summary><div id="notesSidebar"></div></details>
+    <div class="sidebar-section" id="sidebarInstructions">
+      <button type="button" id="instructionsToggle" aria-expanded="false" aria-controls="instructionsBody">How to use Span <span id="instructionsCaret">▸</span></button>
+      <div id="instructionsBody">
+      <ul style="padding-left:1.2em;">
+        <li>Drag a concept onto the map, or select it and press Enter.</li>
+        <li><b>Custom node:</b> Enter any label below and add your own concept to the map.</li>
+        <li>Click a node for <b>Edit</b>, <b>Connect</b>, or <b>&#10022; Explore</b>.</li>
+        <li><b>Explore</b> asks what a concept builds on, leads to, or relates to, then shows suggestions as ghost nodes on the map - each one lets you Add, ask Why?, or dismiss it.</li>
+        <li>To create a link: use <b>Connect</b>, or <b>Shift+drag</b> from one node to another.</li>
+        <li>To add a note to a link: <b>Double-click</b> on the link line.</li>
+        <li>To move a node: <b>Drag</b> it on the map.</li>
+        <li><b>Review map</b> (top of the page) looks for isolated concepts, missing connections, and connections worth a second look, across your whole map.</li>
+        <li>Right-click a node or link to delete.</li>
+      </ul>
+      <button id="playDemoBtn">&#9654; Play demo</button>
+      </div>
+    </div>
+
   </div>
   <div id="canvasArea">
     <div id="readonlyBanner" style="display:none;"></div>

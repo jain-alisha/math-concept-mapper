@@ -344,7 +344,7 @@ function renderStudentDashboardBody(wrap, mapsWithData, classes, hrefFor, timeli
 
   const classesCard = document.createElement('div');
   classesCard.className = 'dash-card';
-  classesCard.innerHTML = '<h2>My classes</h2>';
+  classesCard.innerHTML = '<h2>My classes</h2><p class="hint"><a href="settings?tab=classes">Join or manage classes →</a></p>';
   const classesBody = document.createElement('div');
   classesCard.appendChild(classesBody);
   wrap.appendChild(classesCard);
@@ -500,7 +500,7 @@ function renderSampleStudentDashboard() {
 
   const banner = document.createElement('div');
   banner.className = 'sample-banner';
-  banner.innerHTML = 'Sample preview (no account needed). This is what a student sees for their own maps. <a href="settings">Sign in for your own →</a>';
+  banner.innerHTML = 'Sample preview (no account needed). This is what a student sees for their own maps. <a href="playground?auth=1">Sign in for your own →</a>';
   dashWrap.appendChild(banner);
 
   const header = document.createElement('div');
