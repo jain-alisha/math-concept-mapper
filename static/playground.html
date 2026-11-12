@@ -41,10 +41,12 @@
       transition: color 0.12s;
     }
     #topbar nav a.text-link:hover { color: var(--text); }
-    #topbar nav { display: flex; align-items: center; gap: 0.2em; }
+    /* Groups are separated by whitespace, not a divider line - a 1px line
+       in var(--border) read as near-invisible against the white topbar and
+       wasn't doing any visible grouping work. */
+    #topbar nav { display: flex; align-items: center; gap: 1.3em; }
     .tb-group { display: flex; align-items: center; gap: 0.2em; }
     .tb-group:last-child { gap: 1.1em; }
-    .tb-divider { width: 1px; height: 22px; background: var(--border); margin: 0 0.9em; flex: none; }
     /* Ghost-style shared look for secondary topbar actions - one visual
        language instead of each button carrying its own border/box, which is
        what made a row of 6+ of these read as cluttered. */
@@ -59,6 +61,35 @@
     .tb-btn:disabled { opacity: 0.6; cursor: default; }
     .tb-btn.tb-danger { color: #c2503a; }
     .tb-btn.tb-danger:hover { background: #fff0ee; color: #c2503a; }
+
+    /* Signed-in user menu: name + chevron opens a dropdown (hover or
+       click/focus) holding Dashboard/Settings/Home/Log out, instead of
+       spelling all four out across the topbar. */
+    .user-dropdown-wrap { position: relative; }
+    .user-dropdown-trigger {
+      display: inline-flex; align-items: center; gap: 0.35em;
+      background: none; border: none; color: var(--text-secondary);
+      font-size: 0.88em; font-weight: 600; padding: 0.5em 0.6em; border-radius: 8px;
+      font-family: inherit; cursor: pointer; transition: background 0.12s, color 0.12s;
+    }
+    .user-dropdown-trigger:hover, .user-dropdown-wrap:focus-within .user-dropdown-trigger { background: var(--bg); color: var(--text); }
+    .user-dropdown-trigger .chevron { width: 13px; height: 13px; transition: transform 0.12s; }
+    .user-dropdown-wrap:hover .chevron, .user-dropdown-wrap:focus-within .chevron { transform: rotate(180deg); }
+    .user-dropdown-menu {
+      display: none; position: absolute; top: 100%; right: 0; margin-top: 0.3em; min-width: 160px;
+      background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+      box-shadow: var(--shadow-lg); z-index: 1500; padding: 0.4em; flex-direction: column;
+    }
+    .user-dropdown-wrap:hover .user-dropdown-menu, .user-dropdown-wrap:focus-within .user-dropdown-menu { display: flex; }
+    .user-dropdown-menu a, .user-dropdown-menu button {
+      display: block; width: 100%; box-sizing: border-box; text-align: left;
+      background: none; border: none; color: var(--text); text-decoration: none;
+      font-size: 0.88em; font-weight: 600; font-family: inherit; padding: 0.5em 0.6em;
+      border-radius: 7px; cursor: pointer;
+    }
+    .user-dropdown-menu a:hover, .user-dropdown-menu button:hover { background: var(--bg); }
+    .user-dropdown-menu #signOutBtn { color: #c2503a; }
+    .user-dropdown-menu #signOutBtn:hover { background: #fff0ee; }
     #shareBtn {
       display: inline-flex; align-items: center; gap: 0.5em;
       background: var(--brand); color: #fff; border: none; cursor: pointer;
@@ -635,7 +666,6 @@
         <span>Fit to map</span>
       </button>
     </div>
-    <span class="tb-divider"></span>
     <div class="tb-group">
       <button id="exportPdfBtn" class="tb-btn" title="Export this map as a PDF, cropped to fit your concepts">
         <span>Export PDF</span>
@@ -648,14 +678,23 @@
         <span class="share-label">Share</span>
       </button>
     </div>
-    <span class="tb-divider"></span>
     <div id="authArea">
       <button id="signInBtn" class="tb-btn">Sign in</button>
       <div id="userMenu">
         <button id="myMapsBtn" class="tb-btn">My Maps</button>
         <button id="timelineBtn" class="tb-btn">Timeline</button>
-        <span id="userLabel"></span>
-        <button id="signOutBtn" class="tb-btn">Log out</button>
+        <div class="user-dropdown-wrap">
+          <button type="button" class="user-dropdown-trigger">
+            <span id="userLabel"></span>
+            <svg class="icon chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="user-dropdown-menu">
+            <a href="dashboard" id="dashboardLink" style="display:none;">Dashboard</a>
+            <a href="settings">Settings</a>
+            <a href="index">Home</a>
+            <button id="signOutBtn">Log out</button>
+          </div>
+        </div>
         <div id="myMapsPanel">
           <header>My Maps</header>
           <div class="my-maps-clear-row">
@@ -695,9 +734,7 @@
         </div>
       </div>
     </div>
-    <span class="tb-divider"></span>
-    <div class="tb-group">
-      <a href="dashboard" id="dashboardLink" class="text-link" style="display:none;">Dashboard</a>
+    <div id="anonNavLinks" class="tb-group">
       <a href="settings" class="text-link">Settings</a>
       <a href="index" class="text-link">Home</a>
     </div>

@@ -1990,9 +1990,14 @@ function setupAuthUI() {
   function updateAuthUI(session) {
     cloudSession = session;
     const dashboardLink = document.getElementById('dashboardLink');
+    // Settings/Home are also reachable from inside the signed-in user's
+    // dropdown - this standalone pair is only needed pre-login, when
+    // there's no username to anchor a dropdown to.
+    const anonNavLinks = document.getElementById('anonNavLinks');
     if (session) {
       signInBtn.style.display = 'none';
       userMenu.style.display = 'flex';
+      if (anonNavLinks) anonNavLinks.style.display = 'none';
       const name = (session.user.user_metadata && session.user.user_metadata.display_name) || session.user.email;
       const role = window.SpanAuth.role(session);
       userLabel.textContent = `${name} (${role})`;
@@ -2003,6 +2008,7 @@ function setupAuthUI() {
     } else {
       signInBtn.style.display = '';
       userMenu.style.display = 'none';
+      if (anonNavLinks) anonNavLinks.style.display = 'flex';
       myMapsPanel.style.display = 'none';
       if (dashboardLink) dashboardLink.style.display = 'none';
     }
