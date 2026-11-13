@@ -129,7 +129,10 @@
     // after the RPC would still show the stale role).
     async toggleRole() {
       const { error } = await client.rpc('toggle_role');
-      if (error) throw error;
+      if (error) {
+        if (error.code === 'PGRST202' || /toggle_role.*schema cache/i.test(error.message || '')) throw new Error('Role switching is not installed on this server yet. Ask the Span administrator to install the role-toggle migration. Your account and maps have not changed.');
+        throw error;
+      }
       const { data, error: refreshError } = await client.auth.refreshSession();
       if (refreshError) throw refreshError;
       return data.session;

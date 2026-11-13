@@ -388,7 +388,7 @@ function mostRecentMapByStudent(mapsWithData) {
   return byStudent;
 }
 
-function renderStudentMapCards(container, roster, mapsWithData, hrefFor) {
+function renderStudentMapCards(container, roster, mapsWithData, hrefFor, activityName) {
   container.innerHTML = '';
   const mostRecentByStudent = mostRecentMapByStudent(mapsWithData);
   const grid = document.createElement('div');
@@ -406,7 +406,7 @@ function renderStudentMapCards(container, roster, mapsWithData, hrefFor) {
       thumbWrap.appendChild(svg);
       renderMapThumbnail(svg, m.data);
     } else {
-      thumbWrap.textContent = 'No map yet';
+      thumbWrap.textContent = activityName ? 'No submission for this activity' : 'No map yet';
     }
     const body = document.createElement('div');
     body.className = 'map-card-body';
@@ -419,11 +419,24 @@ function renderStudentMapCards(container, roster, mapsWithData, hrefFor) {
       titleEl.className = 'map-card-title';
       titleEl.textContent = m.title + ' · Read-only';
       body.appendChild(titleEl);
+      const details = document.createElement('details');
+      const summary = document.createElement('summary'); summary.textContent = 'Concepts and explanations';
+      details.appendChild(summary);
+      const text = document.createElement('p');
+      const data = m.data || {};
+      const concepts = (data.n || []).map(n => n.l).join('; ');
+      const notes = (data.e || []).filter(e => e.no).map(e => e.no).join(' ');
+      text.textContent = concepts + (notes ? ' — ' + notes : '');
+      details.appendChild(text);
+      details.onclick = e => e.stopPropagation();
+      // Place the disclosure alongside the map link, avoiding nested controls.
+      card._details = details;
     }
     card.appendChild(thumbWrap);
     card.appendChild(body);
     const item = document.createElement('div');
     item.appendChild(card);
+    if (card._details) item.appendChild(card._details);
     grid.appendChild(item);
   });
   container.appendChild(grid);
@@ -442,6 +455,8 @@ function renderConceptChecklist(container, curriculum, units, checkedKeys) {
     if (!topics.length) return;
     const unitDiv = document.createElement('div');
     unitDiv.className = 'taught-unit';
+    unitDiv.dataset.grade = grade;
+    unitDiv.dataset.unit = unit;
     const title = document.createElement('div');
     title.className = 'taught-unit-title';
     title.textContent = `${unit} (${grade})`;
@@ -555,6 +570,7 @@ function renderActivitiesCard(container, cls, curriculum, activityFns, onChange)
   const selectRow = document.createElement('div');
   selectRow.className = 'activity-select-row';
   const select = document.createElement('select');
+  select.setAttribute('aria-label', 'Activity filter');
   selectRow.appendChild(select);
   const deleteBtn = document.createElement('button');
   deleteBtn.className = 'activity-delete-btn';
@@ -569,7 +585,7 @@ function renderActivitiesCard(container, cls, curriculum, activityFns, onChange)
   const aiToggleCheckbox = document.createElement('input');
   aiToggleCheckbox.type = 'checkbox';
   aiToggleRow.appendChild(aiToggleCheckbox);
-  aiToggleRow.appendChild(document.createTextNode(' Disable AI tools (Explore, AI Summary, Check My Map) for students on this activity'));
+  aiToggleRow.appendChild(document.createTextNode(' Disable Explore, Explain my map, and What could I improve? for students on this activity'));
   container.appendChild(aiToggleRow);
 
   const newBtn = document.createElement('button');
@@ -585,10 +601,43 @@ function renderActivitiesCard(container, cls, curriculum, activityFns, onChange)
   nameInput.className = 'activity-name-input';
   nameInput.placeholder = 'Activity name...';
   nameInput.maxLength = 80;
+  nameInput.setAttribute('aria-label', 'Activity name');
   form.appendChild(nameInput);
   const conceptsWrap = document.createElement('div');
   conceptsWrap.className = 'activity-concepts';
-  form.appendChild(conceptsWrap);
+  const search = document.createElement('input'); search.type = 'search';
+  search.placeholder = 'Search concepts…'; search.setAttribute('aria-label', 'Search activity concepts');
+  const gradeFilter = document.createElement('select'); gradeFilter.setAttribute('aria-label', 'Activity concept grade');
+  const unitFilter = document.createElement('select'); unitFilter.setAttribute('aria-label', 'Activity concept unit');
+  function fillOptions(select, values, allLabel) {
+    select.replaceChildren();
+    for (const value of ['', ...values]) { const option = document.createElement('option'); option.value = value; option.textContent = value || allLabel; select.appendChild(option); }
+  }
+  fillOptions(gradeFilter, Object.keys(curriculum), 'All grades');
+  function fillUnits() {
+    fillOptions(unitFilter, [...new Set(allUnitsFromCurriculum(curriculum).filter(u => !gradeFilter.value || u.grade === gradeFilter.value).map(u => u.unit))], 'All units');
+  }
+  fillUnits();
+  const selectionCount = document.createElement('p'); selectionCount.setAttribute('aria-live', 'polite');
+  function filterConcepts() {
+    const query = search.value.normalize('NFKC').toLowerCase().replace(/[‐‑‒–—−]/g, '-');
+    conceptsWrap.querySelectorAll('.taught-unit').forEach(group => {
+      let visible = 0;
+      const allowed = (!gradeFilter.value || group.dataset.grade === gradeFilter.value) && (!unitFilter.value || group.dataset.unit === unitFilter.value);
+      group.querySelectorAll('li').forEach(li => {
+        li.hidden = !allowed || !li.textContent.normalize('NFKC').toLowerCase().replace(/[‐‑‒–—−]/g, '-').includes(query);
+        if (!li.hidden) visible++;
+      });
+      group.hidden = !visible;
+    });
+    const selected = checkboxes.filter(cb => cb.checked);
+    selectionCount.textContent = `${selected.length} concept${selected.length === 1 ? '' : 's'} selected` + (selected.length ? ': ' + selected.map(cb => cb.parentElement.textContent).join('; ') : '');
+  }
+  search.oninput = filterConcepts;
+  gradeFilter.onchange = () => { fillUnits(); filterConcepts(); };
+  unitFilter.onchange = filterConcepts;
+  conceptsWrap.onchange = filterConcepts;
+  form.append(search, gradeFilter, unitFilter, selectionCount, conceptsWrap);
   const newAiDisabledLabel = document.createElement('label');
   newAiDisabledLabel.className = 'activity-ai-toggle-row';
   const newAiDisabledCheckbox = document.createElement('input');
@@ -647,7 +696,10 @@ function renderActivitiesCard(container, cls, curriculum, activityFns, onChange)
     if (opening) {
       nameInput.value = '';
       newAiDisabledCheckbox.checked = false;
+      search.value = ''; gradeFilter.value = ''; fillUnits();
       checkboxes = renderConceptChecklist(conceptsWrap, curriculum, allUnitsFromCurriculum(curriculum), []);
+      filterConcepts();
+      nameInput.focus();
     }
   };
   cancelBtn.onclick = () => { form.style.display = 'none'; };
@@ -981,6 +1033,9 @@ function setupExportReportButton(header, className, onToggleAnonymous) {
 // sample dashboard).
 function renderClassDashboard(wrap, cls, roster, maps, mapsWithData, curriculum, hrefFor, saveFn, header, className, activityFns) {
   wrap.innerHTML = '';
+  document.body.classList.remove('anonymous-projection');
+  const accountMenu = document.getElementById('userMenu');
+  if (accountMenu) accountMenu.hidden = false;
 
   const activitiesCard = document.createElement('div');
   activitiesCard.className = 'dash-card';
@@ -1019,7 +1074,7 @@ function renderClassDashboard(wrap, cls, roster, maps, mapsWithData, curriculum,
     return anonymous ? anonymizeRoster(roster) : roster;
   }
 
-  function renderRosterCard() {
+  function renderRosterCard(filteredMaps) {
     const r = currentRoster();
     rosterCard.innerHTML = '<h2>Roster</h2>';
     if (!r.length) {
@@ -1027,7 +1082,7 @@ function renderClassDashboard(wrap, cls, roster, maps, mapsWithData, curriculum,
       return;
     }
     const mapsByStudent = {};
-    maps.forEach(m => { (mapsByStudent[m.owner_id] = mapsByStudent[m.owner_id] || []).push(m); });
+    filteredMaps.forEach(m => { (mapsByStudent[m.owner_id] = mapsByStudent[m.owner_id] || []).push(m); });
     const ul = document.createElement('ul');
     ul.className = 'roster-list';
     r.forEach(student => {
@@ -1053,7 +1108,7 @@ function renderClassDashboard(wrap, cls, roster, maps, mapsWithData, curriculum,
         const none = document.createElement('div');
         none.className = 'settings-empty';
         none.style.paddingLeft = '1em';
-        none.textContent = 'No saved maps yet.';
+        none.textContent = selectedActivityId ? 'No submission for this activity.' : 'No saved maps yet.';
         li.appendChild(none);
       }
       ul.appendChild(li);
@@ -1068,20 +1123,24 @@ function renderClassDashboard(wrap, cls, roster, maps, mapsWithData, curriculum,
   // the whole class's curriculum coverage, not one activity.
   function rerender() {
     const r = currentRoster();
+    const activity = activities.find(a => a.id === selectedActivityId) || null;
+    const filteredMaps = filterMapsForActivity(mapsWithData, selectedActivityId);
     if (r.length) {
-      renderStudentMapCards(glanceGrid, r, mapsWithData, hrefFor);
+      renderStudentMapCards(glanceGrid, r, filteredMaps, hrefFor, activity?.name);
     } else {
       glanceGrid.innerHTML = '<p class="settings-empty">No students have joined yet.</p>';
     }
-    const activity = activities.find(a => a.id === selectedActivityId) || null;
-    const filteredMaps = filterMapsForActivity(mapsWithData, selectedActivityId);
     renderClassInsights(summaryEl, insightsGrid, r, filteredMaps, curriculum, taughtSet, hrefFor, activity);
-    renderRosterCard();
+    renderRosterCard(selectedActivityId ? filterMapsForActivity(maps, selectedActivityId) : maps);
   }
 
   if (header) {
     setupExportReportButton(header, className, (nowAnonymous) => {
       anonymous = nowAnonymous;
+      document.body.classList.toggle('anonymous-projection', anonymous);
+      const userMenu = document.getElementById('userMenu');
+      if (userMenu) userMenu.hidden = anonymous;
+      header.querySelectorAll('h1, .class-code').forEach(el => { el.hidden = anonymous; });
       rerender();
     });
   }

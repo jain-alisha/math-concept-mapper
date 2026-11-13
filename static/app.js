@@ -1069,7 +1069,51 @@ async function exportMapToPdf() {
     format: [wPt, hPt],
   });
   doc.addImage(imgData, 'JPEG', 0, 0, wPt, hPt);
+  appendMapNotesToPdf(doc);
   doc.save(`${mapExportFilename()}.pdf`);
+}
+
+function appendMapNotesToPdf(doc) {
+  const byId = new Map(nodes.map(n => [n.id, n]));
+  const explained = links.filter(l => l.note && l.note.trim() && byId.has(l.source) && byId.has(l.target));
+  if (!explained.length) return;
+  // Render with browser fonts so fractions, arrows and other Unicode survive
+  // jsPDF's standard-font limitations. Wrap every character, including long words.
+  const canvas = document.createElement('canvas');
+  canvas.width = 1190; canvas.height = 1684;
+  const ctx = canvas.getContext('2d');
+  const margin = 80, lineHeight = 30;
+  let y;
+  function startPage() {
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#1a2233'; ctx.font = 'bold 32px sans-serif';
+    ctx.fillText('Connection explanations', margin, 84);
+    ctx.font = '22px sans-serif'; y = 140;
+  }
+  function finishPage() {
+    doc.addPage([595, 842], 'portrait');
+    doc.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, 595, 842);
+  }
+  function line(text) {
+    if (y > canvas.height - margin) { finishPage(); startPage(); }
+    ctx.fillText(text, margin, y); y += lineHeight;
+  }
+  function write(text) {
+    for (const paragraph of text.split(/\r?\n/)) {
+      let buffer = '';
+      for (const character of paragraph) {
+        if (buffer && ctx.measureText(buffer + character).width > canvas.width - margin * 2) { line(buffer); buffer = ''; }
+        buffer += character;
+      }
+      line(buffer);
+    }
+  }
+  startPage();
+  explained.forEach((l, i) => {
+    write(`${i + 1}. ${byId.get(l.source).label} → ${byId.get(l.target).label}`);
+    write(l.note); y += lineHeight;
+  });
+  finishPage();
 }
 
 function setupExportPdfButton() {
@@ -1196,7 +1240,7 @@ function checkMyMap() {
     const direct = links.find(l => l.source === a.id && l.target === b.id);
     const reverse = links.find(l => l.source === b.id && l.target === a.id && l.relType === 'prerequisite');
     if (reverse && !checkMapDismissed.has(reverse.id)) questionable.push({ source:b, target:a, link:reverse, reason:edge.reason + ' For a prerequisite arrow, the foundation comes first.' });
-    if (!direct && !reverse && !links.some(l => l.source === b.id && l.target === a.id)) missingRelationship.push({ a, b, unit: edge.target.unit });
+    if (!direct && !reverse && !links.some(l => l.source === b.id && l.target === a.id)) missingRelationship.push({ a, b, unit: edge.target.unit, reason: edge.reason });
   }
 
   return { isolated, missingBridge, missingRelationship, questionable };
@@ -1239,7 +1283,7 @@ function renderCheckMapPanel() {
     const row = document.createElement('div');
     row.className = 'checkmap-row';
     const p = document.createElement('p');
-    p.innerHTML = `${f.source.label} and ${f.target.label} are connected, but <strong>${f.candidate}</strong> may be an important concept in between.`;
+    p.textContent = `${f.source.label} and ${f.target.label} are connected, but ${f.candidate} may be an important concept in between.`;
     row.appendChild(p);
     const actions = document.createElement('div');
     actions.className = 'checkmap-actions';
@@ -1269,7 +1313,7 @@ function renderCheckMapPanel() {
     const row = document.createElement('div');
     row.className = 'checkmap-row';
     const p = document.createElement('p');
-    p.innerHTML = `<strong>${n.label}</strong> has no incoming or outgoing connections.`;
+    p.textContent = `${n.label} has no incoming or outgoing connections.`;
     row.appendChild(p);
     const actions = document.createElement('div');
     actions.className = 'checkmap-actions';
@@ -1285,7 +1329,7 @@ function renderCheckMapPanel() {
     const row = document.createElement('div');
     row.className = 'checkmap-row';
     const p = document.createElement('p');
-    p.innerHTML = `<strong>${f.a.label}</strong> and <strong>${f.b.label}</strong> are next to each other in ${f.unit}, but aren't connected yet.`;
+    p.textContent = `${f.a.label} → ${f.b.label}: ${f.reason} These ideas are on your map but are not connected yet.`;
     row.appendChild(p);
     const actions = document.createElement('div');
     actions.className = 'checkmap-actions';
@@ -1294,7 +1338,7 @@ function renderCheckMapPanel() {
     showBtn.onclick = () => highlightCheckMapNodes([f.a.id, f.b.id]);
     const connectBtn = document.createElement('button');
     connectBtn.textContent = '+ Connect';
-    connectBtn.onclick = () => { addLink(f.a.id, f.b.id); renderCheckMapPanel(); };
+    connectBtn.onclick = () => { addLink(f.a.id, f.b.id, 'prerequisite'); renderCheckMapPanel(); };
     actions.appendChild(showBtn); actions.appendChild(connectBtn);
     row.appendChild(actions);
     return row;
@@ -2899,7 +2943,10 @@ function renderCanvas() {
   }
 
   const isolatedLegend = document.getElementById('isolatedLegend');
-  if (isolatedLegend) isolatedLegend.style.display = anyIsolated ? 'flex' : 'none';
+  if (isolatedLegend) {
+    isolatedLegend.textContent = isReadonly ? 'An isolated idea has no connections on this map.' : 'This idea isn’t connected yet — what does it relate to? Select it, then Connect.';
+    isolatedLegend.style.display = anyIsolated ? 'flex' : 'none';
+  }
   const aiAddedLegend = document.getElementById('aiAddedLegend');
   if (aiAddedLegend) aiAddedLegend.style.display = anyAiAdded ? 'flex' : 'none';
 
@@ -2913,7 +2960,11 @@ function renderCanvas() {
       // Previously pointer-events: none - the only documented way to edit
       // a note was double-clicking the thin link line itself. The pill is
       // the visible, readable target; it should be the clickable one too.
-      g.style.cursor = isReadonly ? 'default' : 'pointer';
+      g.style.cursor = 'pointer';
+      g.setAttribute('tabindex', '0');
+      g.setAttribute('role', 'button');
+      g.setAttribute('aria-label', (isReadonly ? 'Read explanation: ' : 'Edit explanation: ') + chip.link.note);
+      g.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); g.onclick(e); } };
 
       const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
       bg.setAttribute('x', chip.x - chip.w / 2);
@@ -2938,7 +2989,7 @@ function renderCanvas() {
       g.onclick = e => {
         e.stopPropagation();
         selectedLink = chip.link; selectedNode = null;
-        if (isReadonly) { renderCanvas(); return; }
+        if (isReadonly) { showAlertDialog(chip.link.note); return; }
         showNoteEditor(chip.link, (note) => {
           chip.link.note = note;
           renderNotesSidebar();
