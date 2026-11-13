@@ -53,3 +53,26 @@ test('direct editing route rejects another owner before loading their content',a
   const {dom,w,run}=load('app.js');w.SpanAuth={loadMapById:async()=>({owner_id:'other',data:{n:[],e:[]}}),getSession:async()=>({user:{id:'me'}})};
   await assert.rejects(()=>run("loadCloudMap('not-mine')"),/only edit maps you own/);dom.window.close();
 });
+
+test('assignment help gating updates instructions and keeps both notices outside the canvas',async()=>{
+  const html=fs.readFileSync('static/playground.html','utf8');
+  const dom=new JSDOM(html,{url:'https://spanmath.org/playground',runScripts:'outside-only'});
+  const w=dom.window;w.document.addEventListener=()=>{};
+  w.SpanDemo={activities:[{id:'demo-assignment',name:'Fractions',ai_disabled:true}]};
+  vm.runInContext(fs.readFileSync('static/app.js','utf8'),dom.getInternalVMContext());
+  await vm.runInContext("setupActivityContext(new URLSearchParams({demoActivity:'demo-assignment'}))",dom.getInternalVMContext());
+  vm.runInContext('showShareBanner(false)',dom.getInternalVMContext());
+  const d=w.document;
+  assert.equal(d.getElementById('activityBanner').hidden,false);
+  assert.equal(d.getElementById('readonlyBanner').hidden,false);
+  assert.match(d.getElementById('readonlyBanner').textContent,/this browser/);
+  assert.equal(d.getElementById('readonlyBanner').closest('#canvasArea'),null);
+  assert.equal(d.getElementById('activityBanner').parentElement,d.getElementById('readonlyBanner').parentElement);
+  assert.equal(d.getElementById('exploreOnboardingHint').hidden,true);
+  assert.equal(d.getElementById('activityOnboardingHint').hidden,false);
+  assert.equal(d.getElementById('helpDropdownWrap').style.display,'none');
+  vm.runInContext('aiToolsDisabled=false;applyAiToolsGate()',dom.getInternalVMContext());
+  assert.equal(d.getElementById('exploreOnboardingHint').hidden,false);
+  assert.equal(d.getElementById('activityOnboardingHint').hidden,true);
+  dom.window.close();
+});
