@@ -62,8 +62,7 @@ becomes a real problem):
 
 ## Next ideas for the portal
 
-- Teacher-initiated actions on a student's map (comments/feedback, not just
-  viewing).
+- Teacher feedback was cut; do not restore local-only feedback drafts.
 - Removing a student from a class / a student leaving a class (currently
   membership is permanent once joined — fine for a demo, not for a real term).
 - Class-level views beyond a flat roster (e.g. grouping by assignment).

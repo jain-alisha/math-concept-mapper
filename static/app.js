@@ -349,7 +349,7 @@ async function setupActivityContext(params) {
         : `Working on: ${activity.name}`;
       banner.style.display = 'block';
     }
-    if (aiToolsDisabled) applyAiToolsGate();
+    applyAiToolsGate();
   } catch (e) {
     console.error('Could not load activity:', e);
   }
@@ -365,9 +365,9 @@ function applyAiToolsGate() {
   // Both items live inside the "Help with my map" dropdown now - hide the
   // whole trigger rather than leaving it open onto an empty menu.
   const helpWrap = document.getElementById('helpDropdownWrap');
-  if (helpWrap) helpWrap.style.display = 'none';
+  if (helpWrap) helpWrap.style.display = aiToolsDisabled ? 'none' : '';
   const checkMapBtn = document.getElementById('checkMapBtn');
-  if (checkMapBtn) checkMapBtn.style.display = 'none';
+  if (checkMapBtn) checkMapBtn.style.display = aiToolsDisabled ? 'none' : '';
 }
 
 // --- Read-only map viewing (Settings -> Classes -> a student's map) ---
@@ -405,7 +405,7 @@ function applyReadonlyUI() {
   if (shareBtn) shareBtn.style.display = 'none';
   const clearMapBtn = document.getElementById('clearMapBtn');
   if (clearMapBtn) clearMapBtn.style.display = 'none';
-  for (const id of ['clearMapBtnInPanel','saveMapBtn','saveCopyBtn','undoBtn','redoBtn']) { const el=document.getElementById(id); if(el) el.style.display='none'; }
+  for (const id of ['clearMapBtnInPanel','saveMapBtn','saveCopyBtn','saveCheckpointBtn','undoBtn','redoBtn']) { const el=document.getElementById(id); if(el) el.style.display='none'; }
   const customConceptRow = document.querySelector('.custom-concept-row');
   if (customConceptRow) customConceptRow.style.display = 'none';
   const playDemoBtn = document.getElementById('playDemoBtn');
@@ -1473,6 +1473,13 @@ async function saveCurrentMapAsNew(title, activityId) {
 async function loadCloudMap(id) {
   clearTimeout(cloudSaveTimer);
   const row = await window.SpanAuth.loadMapById(id);
+  if (row.is_checkpoint) throw new Error('Open starting checkpoints in read-only view, or make a working copy.');
+  currentActivityId = row.activity_id || null;
+  currentActivityName = null; aiToolsDisabled = false;
+  const activityBanner = document.getElementById('activityBanner');
+  if (activityBanner) activityBanner.style.display = 'none';
+  if (currentActivityId) await setupActivityContext(new URLSearchParams({ activity: currentActivityId }));
+  else applyAiToolsGate();
   applyMapData(row.data);
   cloudMapId = row.id;
   cloudMapTitle = row.title;
@@ -1630,9 +1637,10 @@ function setupAuthUI() {
     for (const row of rows) {
       const li = document.createElement('li');
       const titleSpan = document.createElement('span');
-      titleSpan.textContent = row.title;
+      titleSpan.textContent = row.title + (row.is_checkpoint ? ' 🔒' : '');
       titleSpan.className = 'my-map-title';
       titleSpan.onclick = async () => {
+        if (row.is_checkpoint) { window.location.href = 'playground?view=' + encodeURIComponent(row.id) + '&readonly=1'; return; }
         await loadCloudMap(row.id);
         myMapsPanel.style.display = 'none';
         if (mapTitleInput) mapTitleInput.value = row.title;
@@ -1692,6 +1700,20 @@ function setupAuthUI() {
         li.remove();
       };
       li.appendChild(titleSpan);
+      if (row.is_checkpoint) {
+        const resume = document.createElement('button'); resume.textContent = 'Make working copy';
+        resume.onclick = async () => {
+          resume.disabled = true;
+          try {
+            const original = await window.SpanAuth.loadMapById(row.id);
+            const result = await window.SpanAuth.saveMap({ title: row.title.replace(/ — starting checkpoint$/, '') + ' — working copy', data: original.data, activityId: original.activity_id });
+            if (original.timeline_id) await window.SpanAuth.setMapTimeline(result.row.id, original.timeline_id);
+            await loadCloudMap(result.row.id); await refreshMapList(); updateMapTitle();
+          } catch(e) { await showAlertDialog('Could not make working copy: '+e.message); }
+          finally { resume.disabled = false; }
+        };
+        li.appendChild(resume);
+      }
       li.appendChild(tlSelect);
       li.appendChild(delBtn);
       myMapsList.appendChild(li);
@@ -1995,6 +2017,25 @@ function setupAuthUI() {
     }
   };
 
+  const checkpointBtn = document.getElementById('saveCheckpointBtn');
+  if (checkpointBtn) checkpointBtn.onclick = async () => {
+    if (isReadonly || checkpointBtn.disabled) return;
+    checkpointBtn.disabled = true; clearTimeout(cloudSaveTimer);
+    try {
+      const title = mapTitleInput.value.trim() || cloudMapTitle || 'Untitled map';
+      if (!cloudMapId) await saveCurrentMapAsNew(title, currentActivityId);
+      else {
+        const result = await window.SpanAuth.saveMap({ id: cloudMapId, title, data: serializeMap(), lastKnownUpdatedAt: cloudMapUpdatedAt });
+        if (result.conflict) throw new Error('Your map changed elsewhere. Reopen it before saving a checkpoint.');
+        cloudMapUpdatedAt = result.row.updated_at; cloudMapTitle = result.row.title;
+      }
+      await window.SpanAuth.saveStartingCheckpoint(cloudMapId);
+      await refreshMapList(); updateMapTitle(); setSaveStatus('saved');
+      showCloudNotice('Starting checkpoint protected. Keep editing this working map; both are together in Map Timeline.');
+    } catch(e) { await showAlertDialog('Could not save checkpoint: '+e.message); }
+    finally { checkpointBtn.disabled = false; }
+  };
+
   // A named copy becomes the editing target. Timeline assignment is explicit.
   async function refreshMapList() {
     const [maps, timelines] = await Promise.all([window.SpanAuth.listMyMaps(), window.SpanAuth.listMyTimelines().catch(() => [])]);
@@ -2051,6 +2092,8 @@ function setupAuthUI() {
     if (!session && new URLSearchParams(window.location.search).get('auth') === '1') openModal();
   });
   window.SpanAuth.onAuthStateChange(updateAuthUI);
+  // Playground initialization runs after catalogue loading, later than DOMContentLoaded.
+  window.SpanAccountForms?.setup();
 }
 
 // --- One grade/topic at a time, instead of the full catalogue accordion

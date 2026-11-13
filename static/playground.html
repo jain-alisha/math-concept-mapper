@@ -864,6 +864,7 @@
             <button id="saveMapBtn">Save</button>
           </div>
           <div class="my-maps-checkpoint-row">
+            <button id="saveCheckpointBtn" title="Save a protected starting version and keep editing your working map">Save starting checkpoint</button>
             <button id="saveCopyBtn" title="Save the current state as a new map, so your starting map stays exactly as it was">Save a copy</button>
           </div>
           <ul id="myMapsList"></ul>
@@ -913,22 +914,34 @@
       <button id="tabSignUp" class="auth-tab" type="button">Sign Up</button>
     </div>
     <form id="signInForm">
-      <input type="email" id="signInEmail" placeholder="Email" autocomplete="email" required />
+      <input type="text" id="signInEmail" aria-label="Username or email" placeholder="Username or email" autocomplete="username" autocapitalize="none" spellcheck="false" required />
       <input type="password" id="signInPassword" placeholder="Password" autocomplete="current-password" required />
       <button type="submit">Sign In</button>
       <button type="button" id="forgotPasswordLink" style="background:none;border:none;color:#2e90fa;text-decoration:underline;cursor:pointer;padding:0;font-size:0.85em;align-self:flex-start;">Forgot password?</button>
       <div class="auth-error" id="signInError"></div>
     </form>
     <form id="forgotPasswordForm" style="display:none;">
-      <input type="email" id="forgotEmail" placeholder="Email" autocomplete="email" required />
-      <button type="submit">Send reset link</button>
+      <label for="recoveryKind">Recover an account</label>
+      <select id="recoveryKind"><option value="student">Username + recovery key</option><option value="email">Email reset link</option></select>
+      <input id="recoveryUsername" aria-label="Username" placeholder="Username" autocomplete="username" autocapitalize="none" required />
+      <input id="recoveryKey" aria-label="Recovery key" placeholder="Recovery key from signup" autocomplete="off" required />
+      <input id="recoveryPassword" type="password" aria-label="New password" placeholder="New password (min 10 characters)" minlength="10" maxlength="128" autocomplete="new-password" required />
+      <input type="email" id="forgotEmail" aria-label="Email" placeholder="Email" autocomplete="email" hidden disabled />
+      <button type="submit">Reset password</button>
       <button type="button" id="forgotBackBtn" style="background:none;border:none;color:#5b6472;text-decoration:underline;cursor:pointer;padding:0;font-size:0.85em;align-self:flex-start;">Back to sign in</button>
       <div class="auth-error" id="forgotError"></div>
     </form>
     <form id="signUpForm" style="display:none;">
-      <input type="text" id="signUpName" placeholder="Display name" autocomplete="name" />
-      <input type="email" id="signUpEmail" placeholder="Email" autocomplete="email" required />
-      <input type="password" id="signUpPassword" placeholder="Password (min 6 characters)" autocomplete="new-password" minlength="6" required />
+      <label for="signUpKind">Create an account</label>
+      <select id="signUpKind"><option value="student">Student · no email needed</option><option value="email">Adult / 13+ email account</option></select>
+      <p id="studentAccountHint" class="hint">Choose a username, not your real name. Your account can join multiple classes. For children under 13, a parent or school must arrange authorization with Span first.</p>
+      <label for="signUpAgeBand" id="signUpAgeLabel">Age group</label>
+      <select id="signUpAgeBand" required><option value="">Choose…</option><option value="under13">Under 13</option><option value="13plus">13 or older</option></select>
+      <input id="signUpAuthorization" aria-label="Parent or school authorization code" placeholder="Parent or school authorization code" autocomplete="off" hidden disabled />
+      <input type="text" id="signUpUsername" aria-label="Username" placeholder="Username (4–24 characters)" autocomplete="username" autocapitalize="none" spellcheck="false" pattern="[A-Za-z][A-Za-z0-9_]{3,23}" minlength="4" maxlength="24" required />
+      <input type="text" id="signUpName" aria-label="Display name" placeholder="Display name" autocomplete="name" hidden disabled />
+      <input type="email" id="signUpEmail" aria-label="Email" placeholder="Email" autocomplete="email" hidden disabled />
+      <input type="password" id="signUpPassword" aria-label="Password" placeholder="Password (min 10 characters)" autocomplete="new-password" minlength="10" maxlength="128" required />
       <button type="submit">Sign Up</button>
       <div class="auth-error" id="signUpError"></div>
     </form>
@@ -1032,6 +1045,7 @@
 <script src="vendor/jspdf.umd.min.js"></script>
 <script src="auth.js"></script>
 <script src="app.js"></script>
+<script src="account-forms.js"></script>
 <script src="site-shell.js"></script>
 </body>
 </html>

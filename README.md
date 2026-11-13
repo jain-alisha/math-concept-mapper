@@ -156,3 +156,12 @@ added, just run the newer half of the file (from the "Rostering" section onward)
 
 - The AI recommendation mechanism is modular and distinct (for patenting).
 - Full end-to-end interaction between user actions, curriculum structure, and the suggestion engine.
+
+
+## Independent student accounts and current migrations
+
+See [the deployment and data-controls guide](docs/INDEPENDENT_STUDENT_ACCOUNTS.md)
+for username/password signup without a personal email, multiple-class membership,
+under-13 authorization codes, protected checkpoints, self-service deletion and
+daily expiry. New installations also need the three migrations in that guide
+after the base schema. Deploy the function/database before the new static UI.

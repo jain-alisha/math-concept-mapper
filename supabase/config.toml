@@ -1,0 +1,4 @@
+# Signup/recovery are intentionally pre-login. The function validates inputs,
+# enforces database-backed rate limits and uses its service key only server-side.
+[functions.student-accounts]
+verify_jwt = false

@@ -424,24 +424,6 @@ function renderStudentMapCards(container, roster, mapsWithData, hrefFor) {
     card.appendChild(body);
     const item = document.createElement('div');
     item.appendChild(card);
-    if (m) {
-      const details = document.createElement('details');
-      const summary = document.createElement('summary'); summary.textContent = 'Feedback draft';
-      details.appendChild(summary);
-      const label = document.createElement('label'); label.className = 'feedback-draft-label';
-      label.textContent = 'Notes for this student';
-      const input = document.createElement('textarea'); input.className = 'feedback-draft';
-      input.placeholder = 'Ask about a connection or suggest an example…'; label.appendChild(input);
-      const storageKey = 'span-feedback-draft:' + m.id;
-      try { input.value = localStorage.getItem(storageKey) || ''; } catch (_) {}
-      const note = document.createElement('p'); note.className = 'hint';
-      note.textContent = 'Saved on this device only. Copy this draft to share with the student.';
-      input.oninput = () => {
-        try { localStorage.setItem(storageKey, input.value); note.textContent = 'Saved on this device only. Copy this draft to share with the student.'; }
-        catch (_) { note.textContent = 'Device storage unavailable. Copy this draft before leaving.'; }
-      };
-      details.appendChild(label); details.appendChild(note); item.appendChild(details);
-    }
     grid.appendChild(item);
   });
   container.appendChild(grid);

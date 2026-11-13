@@ -32,8 +32,45 @@
     return (meta && meta.role) || 'student';
   }
 
+  function usernameEmail(value) {
+    const username = value.trim().toLowerCase();
+    if (!/^[a-z][a-z0-9_]{3,23}$/.test(username)) throw new Error('Enter your username or email.');
+    return username + '@students.span.invalid';
+  }
+  async function studentAccountRequest(body) {
+    const response = await fetch(SUPABASE_URL + '/functions/v1/student-accounts', {
+      method: 'POST', headers: { 'Content-Type': 'application/json', apikey: SUPABASE_ANON_KEY },
+      body: JSON.stringify(body),
+    });
+    let result;
+    try { result = await response.json(); } catch (_) { throw new Error('Student accounts are not available yet. Please try again later.'); }
+    if (!response.ok) throw new Error(result.error || 'Student accounts are not available yet. Please try again later.');
+    return result;
+  }
+
   window.SpanAuth = {
     isConfigured: true,
+    async signUpStudent(username, password, ageBand, authorizationCode) {
+      return studentAccountRequest({ action: 'signup', username, password, ageBand, authorizationCode });
+    },
+    async deleteAccount() {
+      const { data: { session } } = await client.auth.getSession();
+      if (!session) throw new Error('Sign in first.');
+      const response = await fetch(SUPABASE_URL + '/functions/v1/student-accounts', {
+        method: 'POST', headers: { 'Content-Type': 'application/json', apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + session.access_token },
+        body: JSON.stringify({ action: 'deleteAccount' }),
+      });
+      if (!response.ok) { const data = await response.json(); throw new Error(data.error || 'Could not delete account.'); }
+      await client.auth.signOut({ scope: 'local' }).catch(() => {});
+    },
+    async saveStartingCheckpoint(sourceId) {
+      const { data, error } = await client.rpc('save_starting_checkpoint', { source_id: sourceId });
+      if (error) throw error;
+      return data;
+    },
+    async recoverStudent(username, recoveryKey, password) {
+      return studentAccountRequest({ action: 'recover', username, recoveryKey, password });
+    },
     client,
 
     async signUp(email, password, displayName) {
@@ -45,7 +82,8 @@
       return data;
     },
 
-    async signIn(email, password) {
+    async signIn(identifier, password) {
+      const email = identifier.includes('@') ? identifier.trim() : usernameEmail(identifier);
       const { data, error } = await client.auth.signInWithPassword({ email, password });
       if (error) throw error;
       return data;
@@ -61,6 +99,7 @@
     // that link is opened, at which point updatePassword() below can be
     // called to actually set the new password.
     async resetPasswordForEmail(email) {
+      if (email.toLowerCase().endsWith('@students.span.invalid')) throw new Error('Use your username and recovery key instead.');
       const { error } = await client.auth.resetPasswordForEmail(email, {
         redirectTo: window.location.origin + '/settings',
       });
@@ -106,7 +145,7 @@
       if (!session) return [];
       const { data, error } = await client
         .from('maps')
-        .select('id,title,updated_at,created_at,timeline_id,activity_id')
+        .select('id,title,updated_at,created_at,timeline_id,activity_id,is_checkpoint')
         .eq('owner_id', session.user.id)
         .order('updated_at', { ascending: false });
       if (error) throw error;
@@ -208,10 +247,13 @@
       const roster = await this.listClassRoster(classId);
       const studentIds = roster.map(r => r.student_id);
       if (!studentIds.length) return [];
+      const activities = await this.listClassActivities(classId);
+      if (!activities.length) return [];
       const { data, error } = await client
         .from('maps')
         .select('id,title,updated_at,owner_id')
         .in('owner_id', studentIds)
+        .in('activity_id', activities.map(a => a.id))
         .order('updated_at', { ascending: false });
       if (error) throw error;
       return data;
@@ -249,9 +291,10 @@
     async listTimelineMaps(timelineId) {
       const { data, error } = await client
         .from('maps')
-        .select('id,title,data,created_at')
+        .select('id,title,data,created_at,is_checkpoint')
         .eq('timeline_id', timelineId)
-        .order('created_at', { ascending: true });
+        .order('created_at', { ascending: true })
+        .order('is_checkpoint', { ascending: false });
       if (error) throw error;
       return data;
     },
@@ -262,10 +305,13 @@
       const roster = await this.listClassRoster(classId);
       const studentIds = roster.map(r => r.student_id);
       if (!studentIds.length) return [];
+      const activities = await this.listClassActivities(classId);
+      if (!activities.length) return [];
       const { data, error } = await client
         .from('maps')
         .select('id,title,owner_id,data,updated_at,activity_id')
         .in('owner_id', studentIds)
+        .in('activity_id', activities.map(a => a.id))
         .order('updated_at', { ascending: false });
       if (error) throw error;
       return data;
