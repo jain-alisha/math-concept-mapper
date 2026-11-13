@@ -34,3 +34,14 @@ body:has(#editorToolbar) #container { height:auto; flex:1; min-height:0; }
 .modal { max-height:90vh; overflow-y:auto; }
 #accountDataControls input { max-width:100%; display:block; margin:.5rem 0; padding:.6rem; }
 #deleteAccountBtn { padding:.6rem .9rem; border:1px solid #a93232; border-radius:7px; color:#a93232; background:var(--surface,#fff); cursor:pointer; }
+
+/* Projection mode must override the shared auth shell's inline display. */
+body.anonymous-projection #userMenu,
+body.anonymous-projection .class-code,
+body.anonymous-projection .dash-header h1 { display: none !important; }
+.activity-form .activity-concepts { max-height: 320px; overflow: auto; }
+.activity-form input[type="search"], .activity-form select { max-width: 100%; margin: 4px 8px 8px 0; padding: 8px; }
+.activity-form [aria-live] { overflow-wrap: anywhere; }
+.map-cards-grid details { font-size: .85rem; padding: 8px; overflow-wrap: anywhere; }
+.map-cards-grid details p { white-space: pre-wrap; }
+#sidebarGradeSelect, #sidebarUnitSelect { min-width: 0; max-width: 100%; }
