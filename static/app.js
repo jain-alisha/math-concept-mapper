@@ -217,7 +217,8 @@ function measureTextWidthAtSize(label, fontSize) {
 // --------- Initialization ---------
 window.onload = async function() {
   conceptsData = await fetch('concepts.json').then(r => r.json());
-  renderSidebar();
+  initTopicPicker();
+  renderConceptList();
   resizeCanvas();
   window.addEventListener('resize', resizeCanvas);
   setupSidebarEvents();
@@ -2163,6 +2164,118 @@ function setupAuthUI() {
   window.SpanAuth.onAuthStateChange(updateAuthUI);
 }
 
+// --- One grade/topic at a time, instead of the full catalogue accordion
+// by default - see the redesign brief's "Concept library" section. The
+// full accordion (renderSidebar) still exists and is what search and
+// "Browse all topics" fall back to; renderConceptList() is the single
+// entry point that decides which one to show. ---
+const SIDEBAR_TOPIC_KEY = 'spanSidebarTopic';
+const SIDEBAR_BROWSE_ALL_KEY = 'spanSidebarBrowseAll';
+let sidebarGrade = null, sidebarUnit = null, sidebarBrowseAll = false, sidebarShowCount = 10;
+
+function initTopicPicker() {
+  const gradeSelect = document.getElementById('sidebarGradeSelect');
+  const unitSelect = document.getElementById('sidebarUnitSelect');
+  const browseAllCb = document.getElementById('browseAllTopicsCb');
+  if (!gradeSelect || !unitSelect) return;
+
+  let saved = null;
+  try { saved = JSON.parse(localStorage.getItem(SIDEBAR_TOPIC_KEY) || 'null'); } catch (e) { /* ignore */ }
+  try { sidebarBrowseAll = localStorage.getItem(SIDEBAR_BROWSE_ALL_KEY) === '1'; } catch (e) { /* ignore */ }
+
+  const grades = Object.keys(conceptsData);
+  gradeSelect.innerHTML = grades.map(g => `<option value="${g}">${g}</option>`).join('');
+  sidebarGrade = (saved && conceptsData[saved.grade]) ? saved.grade : grades[0];
+  gradeSelect.value = sidebarGrade;
+
+  function populateUnits(preferSaved) {
+    const units = Object.keys(conceptsData[sidebarGrade] || {});
+    unitSelect.innerHTML = units.map(u => `<option value="${u}">${u}</option>`).join('');
+    sidebarUnit = (preferSaved && saved && saved.grade === sidebarGrade && units.includes(saved.unit)) ? saved.unit : units[0];
+    unitSelect.value = sidebarUnit;
+  }
+  populateUnits(true);
+
+  function persist() {
+    try { localStorage.setItem(SIDEBAR_TOPIC_KEY, JSON.stringify({ grade: sidebarGrade, unit: sidebarUnit })); } catch (e) { /* ignore */ }
+  }
+
+  gradeSelect.onchange = () => {
+    sidebarGrade = gradeSelect.value;
+    populateUnits(false);
+    sidebarShowCount = 10;
+    persist();
+    renderConceptList();
+  };
+  unitSelect.onchange = () => {
+    sidebarUnit = unitSelect.value;
+    sidebarShowCount = 10;
+    persist();
+    renderConceptList();
+  };
+  if (browseAllCb) {
+    browseAllCb.checked = sidebarBrowseAll;
+    browseAllCb.onchange = () => {
+      sidebarBrowseAll = browseAllCb.checked;
+      try { localStorage.setItem(SIDEBAR_BROWSE_ALL_KEY, sidebarBrowseAll ? '1' : '0'); } catch (e) { /* ignore */ }
+      renderConceptList();
+    };
+  }
+}
+
+function makeDraggableTopicLi(grade, unit, topic) {
+  const li = document.createElement('li');
+  li.textContent = topic;
+  li.draggable = true;
+  li.ondragstart = ev => {
+    ev.dataTransfer.setData('text/plain', JSON.stringify({ grade, unit, topic }));
+  };
+  li.title = `${grade} › ${unit}`;
+  return li;
+}
+
+function renderFocusedTopics() {
+  const sidebarList = document.getElementById('sidebarList');
+  if (!sidebarList) return;
+  sidebarList.innerHTML = '';
+  const grade = sidebarGrade, unit = sidebarUnit;
+  const topics = (grade && unit && conceptsData[grade] && conceptsData[grade][unit]) || [];
+  const ul = document.createElement('ul');
+  ul.className = 'focused-topic-list';
+  const shown = topics.slice(0, sidebarShowCount);
+  for (const topic of shown) ul.appendChild(makeDraggableTopicLi(grade, unit, topic));
+  sidebarList.appendChild(ul);
+  if (topics.length > shown.length) {
+    const moreBtn = document.createElement('button');
+    moreBtn.type = 'button';
+    moreBtn.className = 'show-more-topics-btn';
+    moreBtn.textContent = `Show ${Math.min(10, topics.length - shown.length)} more`;
+    moreBtn.onclick = () => { sidebarShowCount += 10; renderFocusedTopics(); };
+    sidebarList.appendChild(moreBtn);
+  }
+  renderNotesSidebar();
+}
+
+// The single entry point for what's in #sidebarList: a search query or
+// "Browse all topics" both fall back to the full accordion (renderSidebar),
+// otherwise it's the focused one-grade/one-unit view.
+function renderConceptList() {
+  const searchInput = document.getElementById('conceptSearchInput');
+  const q = searchInput ? searchInput.value.trim() : '';
+  const topicPicker = document.getElementById('topicPicker');
+  const noResults = document.getElementById('noResults');
+  if (q || sidebarBrowseAll) {
+    if (topicPicker) topicPicker.style.display = q ? 'none' : 'block';
+    renderSidebar();
+    if (q) filterSidebar(q);
+    else if (noResults) noResults.style.display = 'none';
+  } else {
+    if (topicPicker) topicPicker.style.display = 'block';
+    if (noResults) noResults.style.display = 'none';
+    renderFocusedTopics();
+  }
+}
+
 function renderSidebar() {
   const sidebarList = document.getElementById('sidebarList');
   sidebarList.innerHTML = '';
@@ -2304,7 +2417,7 @@ function filterSidebar(query) {
 
 function setupSearchEvents() {
   const input = document.getElementById('conceptSearchInput');
-  input.addEventListener('input', () => filterSidebar(input.value));
+  input.addEventListener('input', () => renderConceptList());
   const addBtn = document.getElementById('noResultsAddBtn');
   if (addBtn) addBtn.onclick = () => {
     const customInput = document.getElementById('customConceptInput');

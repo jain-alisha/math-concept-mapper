@@ -468,6 +468,29 @@
       flex: 1; border: none; outline: none; font-size: 0.96em; background: transparent; color: var(--text);
     }
     .sidebar-search input::placeholder { color: var(--text-muted); }
+    /* One grade/topic at a time, remembered across visits, instead of
+       scrolling through every grade's full catalogue by default (see the
+       redesign brief's "Concept library" section) - "Browse all topics"
+       below opts back into the old full accordion for teachers/older
+       students who want to see everything at once. */
+    #topicPicker { margin: 0 0.1em 0.6em; }
+    .topic-picker-row { display: flex; align-items: center; gap: 0.3em; margin-bottom: 0.4em; }
+    .topic-picker-row select {
+      flex: 1; min-width: 0; padding: 0.4em 0.5em; border-radius: 7px; border: 1px solid var(--border);
+      font-size: 0.85em; font-family: inherit; background: var(--surface); color: var(--text);
+    }
+    .topic-picker-sep { color: var(--text-muted); flex: none; }
+    .browse-all-row {
+      display: flex; align-items: center; gap: 0.4em; font-size: 0.82em; color: var(--text-secondary);
+      cursor: pointer; user-select: none;
+    }
+    .focused-topic-list { list-style: none; margin: 0; padding: 0 !important; }
+    .show-more-topics-btn {
+      display: block; width: 100%; margin-top: 0.3em; background: none; border: none; color: var(--brand);
+      font-family: inherit; font-size: 0.86em; font-weight: 600; cursor: pointer; padding: 0.4em 0.55em;
+      text-align: left; border-radius: 7px;
+    }
+    .show-more-topics-btn:hover { background: var(--bg); }
     .no-results {
       padding: 0.6em 0.9em; color: var(--text); font-size: 0.95em; font-weight: 600; text-align: center;
       display: none;
@@ -906,6 +929,14 @@
     <div class="sidebar-search">
       <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
       <input type="search" id="conceptSearchInput" placeholder="Search concepts..." />
+    </div>
+    <div id="topicPicker">
+      <div class="topic-picker-row">
+        <select id="sidebarGradeSelect"></select>
+        <span class="topic-picker-sep">›</span>
+        <select id="sidebarUnitSelect"></select>
+      </div>
+      <label class="browse-all-row"><input type="checkbox" id="browseAllTopicsCb" /> Browse all topics</label>
     </div>
     <div id="sidebarList"></div>
     <div class="no-results" id="noResults">
