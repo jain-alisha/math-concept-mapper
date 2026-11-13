@@ -114,7 +114,7 @@ function computeStudentProgress(mapsData, roster) {
   });
   const avgConcepts = rows.reduce((s, r) => s + r.concepts, 0) / (rows.length || 1);
   rows.forEach(r => { r.belowAverage = avgConcepts > 0 && r.concepts < avgConcepts * 0.5; });
-  rows.sort((a, b) => a.concepts - b.concepts);
+  rows.sort((a, b) => a.concepts - b.concepts || a.links - b.links);
   return { rows, avgConcepts };
 }
 
@@ -236,6 +236,10 @@ function activityConceptLabels(activity) {
 // "Student N" labels (numbered by join order) so every existing render
 // function that already does `student.student_display_name || ...` shows
 // the anonymized name for free, with zero changes to those functions.
+function mapsForProjection(maps, anonymous) {
+  return anonymous ? maps.map(m => ({ ...m, title: 'Saved map' })) : maps;
+}
+
 function anonymizeRoster(roster) {
   return roster.map((r, i) => ({ ...r, student_display_name: `Student ${i + 1}`, student_email: '' }));
 }
@@ -279,7 +283,9 @@ function computeMissingPrereqs(mapsData, curriculum, taughtSet) {
       const targets = nodes.filter(n => matches(n, rule.target));
       if (!targets.length) continue;
       const sources = nodes.filter(n => matches(n, rule.source));
-      const connected = edges.some(e => sources.some(n => n.i === e.s) && targets.some(n => n.i === e.t) && (!e.rt || e.rt === 'prerequisite'));
+      // A normal student-drawn arrow is still a connection. Direction comes
+      // from the reviewed graph; its styling does not make it disappear.
+      const connected = edges.some(e => sources.some(n => n.i === e.s) && targets.some(n => n.i === e.t));
       if (connected) continue;
       const key = JSON.stringify([rule.source, rule.target]);
       if (!counts.has(key)) counts.set(key, { topic: rule.target.label, prereq: rule.source.label,
@@ -1124,14 +1130,14 @@ function renderClassDashboard(wrap, cls, roster, maps, mapsWithData, curriculum,
   function rerender() {
     const r = currentRoster();
     const activity = activities.find(a => a.id === selectedActivityId) || null;
-    const filteredMaps = filterMapsForActivity(mapsWithData, selectedActivityId);
+    const filteredMaps = mapsForProjection(filterMapsForActivity(mapsWithData, selectedActivityId), anonymous);
     if (r.length) {
       renderStudentMapCards(glanceGrid, r, filteredMaps, hrefFor, activity?.name);
     } else {
       glanceGrid.innerHTML = '<p class="settings-empty">No students have joined yet.</p>';
     }
     renderClassInsights(summaryEl, insightsGrid, r, filteredMaps, curriculum, taughtSet, hrefFor, activity);
-    renderRosterCard(selectedActivityId ? filterMapsForActivity(maps, selectedActivityId) : maps);
+    renderRosterCard(mapsForProjection(selectedActivityId ? filterMapsForActivity(maps, selectedActivityId) : maps, anonymous));
   }
 
   if (header) {
