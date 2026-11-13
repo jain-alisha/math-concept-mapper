@@ -46,3 +46,12 @@ test('reviewed concept relationships have valid identities and no collapsed self
     assert.notEqual(edge.source.conceptId,edge.target.conceptId);
   }
 });
+test('cloud timeline reads show current concepts without rewriting protected checkpoint data',async()=>{
+  const stored={id:'checkpoint',is_checkpoint:true,data:{n:[{i:1,l:'Ratio vocabulary',x:20,y:40,m:{grade:'6th Grade Math',unit:'Ratios & Proportional Relationships'}}],e:[]}};
+  const query={select(){return this;},eq(){return this;},order(){return this;},then(resolve){return Promise.resolve({data:[stored],error:null}).then(resolve);}};
+  const context=vm.createContext({window:{SpanConceptBank:bank,supabase:{createClient(){return {from(){return query;}};}}}});
+  vm.runInContext(fs.readFileSync('static/auth.js','utf8'),context);
+  const rows=await context.window.SpanAuth.listTimelineMaps('growth');
+  assert.equal(rows[0].data.n[0].l,'Ratio');assert.equal(rows[0].is_checkpoint,true);
+  assert.equal(stored.data.n[0].l,'Ratio vocabulary');assert.equal(rows[0].data.n[0].x,20);
+});

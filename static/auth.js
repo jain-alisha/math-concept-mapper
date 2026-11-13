@@ -1,12 +1,9 @@
 // Span auth + cloud map storage, backed by Supabase (see supabase-schema.sql
 // and README.md for setup). Loaded after static/vendor/supabase.js.
 //
-// Deliberately not a role picker at signup: role lives in
-// auth.users.app_metadata, which the client SDK cannot write, so a logged-in
-// user can never self-promote to "teacher" by editing their own row. Every
-// self-serve signup is a student; promote to teacher via the SQL in
-// supabase-schema.sql. Missing/absent app_metadata.role is treated as
-// 'student'.
+// Signup starts in student view. Roles live in auth.users.app_metadata;
+// this pilot also intentionally provides the toggle_role RPC in Settings.
+// Missing/absent app_metadata.role is treated as 'student'.
 
 (function () {
   // Fill these in after creating your Supabase project (Settings -> API).
@@ -296,7 +293,7 @@
         .order('created_at', { ascending: true })
         .order('is_checkpoint', { ascending: false });
       if (error) throw error;
-      return data;
+      return window.SpanConceptBank ? data.map(window.SpanConceptBank.row) : data;
     },
 
     // Same access pattern as listStudentMapsInClass, but also pulls the map
