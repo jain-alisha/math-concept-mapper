@@ -279,14 +279,17 @@
       background: #fff8e1; border: 1px solid #ecda9e; color: #8a6d1f; font-size: 0.88em;
       padding: 0.6em 1.1em; border-radius: 9px; box-shadow: var(--shadow-sm); z-index: 2500;
     }
+    #mapWorkspace { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+    #mapNotices { display: none; flex: none; padding: 10px 12px; gap: 8px; background: var(--bg); }
+    #mapNotices:has(> :not([hidden])) { display: flex; flex-direction: column; align-items: center; }
+    #mapNotices > div { box-sizing: border-box; max-width: 100%; width: min(100%, 720px); overflow-wrap: anywhere; line-height: 1.5; }
+    #mapNotices > [hidden] { display: none; }
     #readonlyBanner {
-      position: absolute; top: 12px; left: 50%; transform: translateX(-50%);
       background: var(--surface); border: 1px solid var(--border); color: var(--text-secondary);
       font-size: 0.88em; font-weight: 600; padding: 0.55em 1.1em; border-radius: 9px;
       box-shadow: var(--shadow-sm); z-index: 900;
     }
     #activityBanner {
-      position: absolute; top: 12px; left: 50%; transform: translateX(-50%);
       background: var(--blue-bg, #eaf2ff); border: 1px solid var(--blue-bd, #b9d4f8); color: var(--blue-tx, #1f4f91);
       font-size: 0.88em; font-weight: 600; padding: 0.55em 1.1em; border-radius: 9px;
       box-shadow: var(--shadow-sm); z-index: 900;
@@ -765,7 +768,7 @@
     @media (max-width: 500px) {
       #container { flex-direction: column;}
       #sidebar { width: 100vw; height: 32vh; border-bottom: 1.5px solid #ccd;}
-      #canvasArea { height: 60vh;}
+      #mapWorkspace { min-height: 240px; }
     }
 
 
@@ -968,7 +971,8 @@
           <div><strong>Explain why</strong><p>Click a connection to say how the ideas relate.</p></div>
         </div>
       </div>
-      <p class="onboarding-more">Once you've made a few connections, try <strong>Find related ideas</strong> on any concept — those are only suggestions, so it's always your call whether to add one.</p>
+      <p id="exploreOnboardingHint" class="onboarding-more">Once you've made a few connections, try <strong>Find related ideas</strong> on any concept — those are only suggestions, so it's always your call whether to add one.</p>
+      <p id="activityOnboardingHint" class="onboarding-more" hidden>Help tools are off for this activity. Use your own connections and explain your thinking.</p>
       <button id="playDemoBtn">&#9654; Play demo</button>
       </div>
     </div>
@@ -1001,13 +1005,17 @@
 
     <div id="notesSidebar"></div>
   </div>
+  <div id="mapWorkspace">
+    <div id="mapNotices" role="status" aria-live="polite">
+      <div id="activityBanner" hidden></div>
+      <div id="readonlyBanner" hidden></div>
+    </div>
   <div id="canvasArea">
-    <div id="readonlyBanner" style="display:none;"></div>
-    <div id="activityBanner" style="display:none;"></div>
     <div id="isolatedLegend">This idea isn't connected yet — what does it relate to? Select it, then Connect.</div>
     <div id="aiAddedLegend"><span class="ai-added-dot">&#10022;</span> = added from a suggestion, not typed in yourself</div>
     <div id="arrowLegend">A → B: A supports B. For other relationships, add a note explaining the arrow.</div>
     <svg id="mapCanvas"></svg>
+  </div>
   </div>
 </div>
 <div id="confirmDialogOverlay" class="modal-overlay">

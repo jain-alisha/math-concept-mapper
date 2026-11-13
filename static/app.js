@@ -353,7 +353,7 @@ async function setupActivityContext(params) {
       banner.textContent = aiToolsDisabled
         ? `Working on: ${activity.name} · AI tools are off for this activity`
         : `Working on: ${activity.name}`;
-      banner.style.display = 'block';
+      banner.hidden = false;
     }
     applyAiToolsGate();
   } catch (e) {
@@ -370,6 +370,10 @@ async function setupActivityContext(params) {
 function applyAiToolsGate() {
   // Both items live inside the "Help with my map" dropdown now - hide the
   // whole trigger rather than leaving it open onto an empty menu.
+  const exploreHint = document.getElementById('exploreOnboardingHint');
+  if (exploreHint) exploreHint.hidden = aiToolsDisabled;
+  const activityHint = document.getElementById('activityOnboardingHint');
+  if (activityHint) activityHint.hidden = !aiToolsDisabled;
   const helpWrap = document.getElementById('helpDropdownWrap');
   if (helpWrap) helpWrap.style.display = aiToolsDisabled ? 'none' : '';
   const checkMapBtn = document.getElementById('checkMapBtn');
@@ -405,7 +409,7 @@ function applyReadonlyUI() {
     banner.textContent = cloudMapTitle
       ? `Viewing "${cloudMapTitle}" (read-only)`
       : 'Viewing a shared map (read-only)';
-    banner.style.display = 'block';
+    banner.hidden = false;
   }
   const shareBtn = document.getElementById('shareBtn');
   if (shareBtn) shareBtn.style.display = 'none';
@@ -731,7 +735,7 @@ function showShareBanner(hasDraft) {
     ? 'Editing a copy of this shared map — your changes are saved in this browser only. '
       + '<button id="resetShareDraftBtn" style="margin-left:0.3em;background:none;border:none;color:var(--brand);text-decoration:underline;cursor:pointer;font-weight:600;font-family:inherit;font-size:1em;">Reset to original</button>'
     : 'Viewing a shared map — edits are saved as your own copy in this browser, not sent back to whoever shared it.';
-  el.style.display = 'block';
+  el.hidden = false;
   const resetBtn = document.getElementById('resetShareDraftBtn');
   if (resetBtn) resetBtn.onclick = async () => {
     if (!await showConfirmDialog('Discard your changes and go back to the originally shared map?', { danger: true, okLabel: 'Discard' })) return;
@@ -1459,7 +1463,7 @@ async function loadCloudMap(id) {
   currentActivityId = row.activity_id || null;
   currentActivityName = null; aiToolsDisabled = false;
   const activityBanner = document.getElementById('activityBanner');
-  if (activityBanner) activityBanner.style.display = 'none';
+  if (activityBanner) activityBanner.hidden = true;
   if (currentActivityId) await setupActivityContext(new URLSearchParams({ activity: currentActivityId }));
   else applyAiToolsGate();
   applyMapData(row.data);
@@ -3571,7 +3575,7 @@ function positionMapLegends() {
     el.style.maxWidth = Math.max(100, rect.width - 48) + 'px';
     if (id === 'aiAddedLegend') { el.style.right = Math.max(14, innerWidth-rect.right+14)+'px'; el.style.left='auto'; }
     else { el.style.left=(rect.left+14)+'px'; el.style.right='auto'; }
-    if (id === 'arrowLegend') el.style.top=(rect.top+(isReadonly ? 54 : 12))+'px';
+    if (id === 'arrowLegend') el.style.top=(rect.top+12)+'px';
     else el.style.bottom=Math.max(14,innerHeight-rect.bottom+14)+(id === 'aiAddedLegend' ? 60 : 0)+'px';
   }
 }
