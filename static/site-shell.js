@@ -90,7 +90,7 @@
     let footer = document.querySelector('footer.site-footer');
     if (!footer) { footer = document.createElement('footer'); document.body.appendChild(footer); }
     footer.classList.add('site-footer', 'span-site-footer');
-    footer.innerHTML = '<span>Span · CoCreate Courses nonprofit</span><a href="privacy">Privacy &amp; student data</a><a href="https://github.com/jain-alisha/math-concept-mapper/issues/new" target="_blank" rel="noopener">Contact the Span team</a>';
+    footer.innerHTML = '<span>Span</span><a href="privacy">Privacy &amp; student data</a><a href="https://github.com/jain-alisha/math-concept-mapper/issues/new" target="_blank" rel="noopener">Contact the Span team</a>';
     if (editor) footer.classList.add('span-editor-footer');
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', setup);
