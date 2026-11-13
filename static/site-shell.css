@@ -38,6 +38,7 @@ body:has(#editorToolbar) #container { height:auto; flex:1; min-height:0; }
 /* Projection mode must override the shared auth shell's inline display. */
 body.anonymous-projection #userMenu,
 body.anonymous-projection .class-code,
+body.anonymous-projection .class-picker,
 body.anonymous-projection .dash-header h1 { display: none !important; }
 .activity-form .activity-concepts { max-height: 320px; overflow: auto; }
 .activity-form input[type="search"], .activity-form select { max-width: 100%; margin: 4px 8px 8px 0; padding: 8px; }
