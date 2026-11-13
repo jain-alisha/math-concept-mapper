@@ -106,7 +106,7 @@ let shareDraftKey = null;
 // Set when loading the sample, so the title reflects the current map.
 let isSampleMode = false;
 
-const NODE_HEIGHT = 54, NODE_RADIUS = 17, NODE_MIN_WIDTH = 100, NODE_MAX_WIDTH = 420, NODE_HORIZ_PADDING = 22;
+const NODE_HEIGHT = 54, NODE_RADIUS = 27, NODE_MIN_WIDTH = 100, NODE_MAX_WIDTH = 420, NODE_HORIZ_PADDING = 22;
 const nodeWidthCache = new Map();
 const nodeTextWidthCache = new Map();
 
@@ -127,6 +127,8 @@ let activeNodeColors = (window.SpanTheme && window.SpanTheme.getNodeColors()) ||
 // (which is exactly what happened here), giving an unbalanced-looking map.
 const nodeColorAssignments = new Map();
 function nodeColorFor(node) {
+  const accent = node.meta && node.meta.presentationColor;
+  if (Number.isInteger(accent) && accent >= 0 && accent < activeNodeColors.length) return activeNodeColors[accent];
   const key = (node.meta && (node.meta.unit || node.meta.grade)) || node.label;
   if (!nodeColorAssignments.has(key)) {
     nodeColorAssignments.set(key, nodeColorAssignments.size % activeNodeColors.length);
@@ -1774,12 +1776,13 @@ function setupAuthUI() {
     if (!nodesArr.length) { svg.setAttribute('viewBox', '0 0 300 150'); return; }
 
     const localColors = new Map();
-    const palette = ['#eaf2ff', '#f1edff', '#eafbf1', '#fff8e8', '#fdeef8', '#e8f7f7'];
-    const strokes = ['#b9d4f8', '#cabdf7', '#a9e6c3', '#f0d896', '#f2b8e0', '#a8dede'];
+    const palette = ['#eaf2ff', '#f1edff', '#e8f7f7', '#eafbf1', '#fff8e8', '#fdeef8'];
+    const strokes = ['#b9d4f8', '#cabdf7', '#a8dede', '#a9e6c3', '#f0d896', '#f2b8e0'];
     function colorFor(n) {
       const key = (n.m && (n.m.unit || n.m.grade)) || n.l;
       if (!localColors.has(key)) localColors.set(key, localColors.size % palette.length);
-      const i = localColors.get(key);
+      const accent = n.m && n.m.presentationColor;
+      const i = Number.isInteger(accent) && accent >= 0 && accent < palette.length ? accent : localColors.get(key);
       return { fill: palette[i], stroke: strokes[i] };
     }
     const byId = new Map(nodesArr.map(n => [n.i, n]));

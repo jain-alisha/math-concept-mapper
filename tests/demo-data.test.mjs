@@ -33,3 +33,20 @@ test('editor map panels stay anchored with their toolbar buttons after navigatio
   for(const id of ['myMapsPanel','timelinePanel'])assert.equal(w.document.getElementById(id).parentElement.id,'editorToolbar');
   dom.window.close();
 });
+
+test('natural demo layouts keep nodes apart and anchors stable across growth stages',()=>{
+  for(const map of demo.maps){
+    const ns=map.data.n;
+    for(let i=0;i<ns.length;i++)for(let j=i+1;j<ns.length;j++){
+      const a=ns[i],b=ns[j],width=n=>Math.min(420,n.l.length*9+44);
+      const overlaps=a.x<b.x+width(b)+16 && a.x+width(a)+16>b.x && a.y<b.y+70 && a.y+70>b.y;
+      assert.equal(overlaps,false,map.id+': '+a.l+' / '+b.l);
+    }
+  }
+  for(const timeline of demo.timelines){
+    const final=timeline.frames.at(-1).data.n;
+    for(const frame of timeline.frames)for(const n of frame.data.n){
+      const end=final.find(x=>x.i===n.i);assert.equal(n.x,end.x);assert.equal(n.y,end.y);
+    }
+  }
+});

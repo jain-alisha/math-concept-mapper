@@ -53,8 +53,21 @@
   const names=['Maya Patel','Jordan Kim','Priya Shah','Sam Torres','Chen Liu','Amara Brooks','Leo Rivera','Zoe Bennett','Eli Morgan','Nora Hassan','Arjun Mehta','Sofia Reyes'];
   const roster=names.map((name,i)=>({student_id:'demo-student-'+i,student_display_name:name,student_email:null}));
   const classes=[{id:'sample-class',name:'Math Studio · Ratios & Rates',projectIds:['ratios','rates','percents']},{id:'sample-lab',name:'Math Lab · Connections',projectIds:['fractions','geometry','proportions']}];
+  // Authored, loose arrangements: each project has its own silhouette. Stable
+  // positions across growth frames make changes in reasoning easy to follow.
+  const arrangements = {
+    ratios: [[75,50],[520,105],[160,235],[650,310],[25,420],[490,530]],
+    rates: [[320,235],[25,50],[620,90],[590,350],[260,545],[30,410]],
+    percents: [[30,55],[360,245],[35,450],[690,65],[680,440],[460,600]],
+    fractions: [[45,65],[520,115],[170,265],[650,335],[20,450],[500,560]],
+    geometry: [[320,45],[680,200],[300,310],[30,470],[640,550]],
+    proportions: [[25,80],[650,370],[530,560],[500,90],[40,520],[190,270]],
+  };
   function dataFor(project, count, edgeCount, variant=0) {
-    const nodes=project.labels.slice(0,count).map((l,i)=>({i:i+1,l,x:30+(i%2)*550,y:70+Math.floor(i/2)*155,m:{grade:project.grade,unit:project.unit}}));
+    const nodes=project.labels.slice(0,count).map((l,i)=>{
+      const [x,y]=arrangements[project.id][i];
+      return {i:i+1,l,x:x+(variant ? ((variant+i)%3-1)*10 : 0),y:y+(variant ? ((variant*2+i)%3-1)*8 : 0),m:{grade:project.grade,unit:project.unit,presentationColor:i%6}};
+    });
     const edges=project.edges.filter(([s,t])=>s<count&&t<count).slice(0,edgeCount).map(([s,t,note],i)=>({i:i+1,s:s+1,t:t+1,no:variant&&i%4===3?'':note,rt:'related'}));
     return {n:nodes,e:edges};
   }
@@ -64,7 +77,7 @@
     if(index===11 && aIndex%3===2)return [];
     const p=projects.find(p=>'demo-activity-'+p.id===a.id);
     const edgeCount=[7,5,4,3,6,7,5,4,6,2,5,3][index];
-    return [{id:'demo-map-'+a.id+'-'+index,owner_id:student.student_id,activity_id:a.id,title:p.name+' · '+student.student_display_name.split(' ')[0],created_at:`2026-11-${String(5+aIndex).padStart(2,'0')}T15:00:00Z`,updated_at:`2026-11-${String(7+aIndex).padStart(2,'0')}T16:${String(index*4).padStart(2,'0')}:00Z`,data:dataFor(p,p.labels.length,edgeCount,index%3)}];
+    return [{id:'demo-map-'+a.id+'-'+index,owner_id:student.student_id,activity_id:a.id,title:p.name+' · '+student.student_display_name.split(' ')[0],created_at:`2026-11-${String(5+aIndex).padStart(2,'0')}T15:00:00Z`,updated_at:`2026-11-${String(7+aIndex).padStart(2,'0')}T16:${String(index*4).padStart(2,'0')}:00Z`,data:dataFor(p,p.labels.length,edgeCount,index)}];
   }));
   const timelines=projects.filter(p=>['ratios','fractions','proportions'].includes(p.id)).map(p=>({id:'demo-timeline-'+p.id,name:p.name,frames:[0,1,2,3].map((stage)=>({id:'demo-frame-'+p.id+'-'+stage,owner_id:roster[0].student_id,activity_id:'demo-activity-'+p.id,timeline_id:'demo-timeline-'+p.id,title:p.name+' · '+['Starting checkpoint','First connections','Stronger explanations','Connected ideas'][stage],is_checkpoint:stage===0,created_at:`2026-11-${String(2+stage*3).padStart(2,'0')}T16:00:00Z`,updated_at:`2026-11-${String(2+stage*3).padStart(2,'0')}T16:00:00Z`,data:dataFor(p,stage===0?3:p.labels.length,[1,3,5,7][stage])}))}));
   const studentMaps=projects.map(p=>timelines.find(t=>t.id==='demo-timeline-'+p.id)?.frames.at(-1)||maps.find(m=>m.owner_id===roster[0].student_id&&m.activity_id==='demo-activity-'+p.id));

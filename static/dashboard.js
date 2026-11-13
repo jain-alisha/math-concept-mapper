@@ -324,7 +324,7 @@ function collectUnitsFromMaps(mapsWithData) {
 // reading a text list. Deliberately self-contained (no shared text-measurer
 // or color-assignment state, unlike the playground's own canvas renderer).
 function renderMapThumbnail(svg, mapData) {
-  const NODE_H = 40, NODE_R = 12;
+  const NODE_H = 40, NODE_R = 20;
   svg.innerHTML = '';
   const originalNodes = (mapData && mapData.n) || [];
   // Compact arrangement keeps labels visible on wide maps. Only preview
@@ -336,7 +336,7 @@ function renderMapThumbnail(svg, mapData) {
   if (!nodesArr.length) { svg.setAttribute('viewBox', '0 0 300 100'); return; }
 
   // Keep compact labels readable against one opaque, consistent node color.
-  const NODE_FILL = '#eaf2ff', NODE_STROKE = '#89acd5';
+  const palette = [['#eaf2ff','#b9d4f8','#1f4f91'],['#f1edff','#cabdf7','#6b4fd8'],['#e8f7f7','#a8dede','#1f7a7a'],['#eafbf1','#a9e6c3','#1f8a4c'],['#fff8e8','#f0d896','#a6790a'],['#fdeef8','#f2b8e0','#b23d8f']];
   function widthFor(label) { return Math.max(50, Math.min(label.length * 6.5 + 16, 170)); }
 
   const byId = new Map(nodesArr.map(n => [n.i, n]));
@@ -346,7 +346,8 @@ function renderMapThumbnail(svg, mapData) {
     const x1 = src.x + widthFor(src.l) / 2, y1 = src.y + NODE_H / 2;
     const x2 = tgt.x + widthFor(tgt.l) / 2, y2 = tgt.y + NODE_H / 2;
     const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    path.setAttribute('d', `M${x1},${y1} L${x2},${y2}`);
+    const bend = Math.min(42, Math.hypot(x2-x1,y2-y1)*0.1);
+    path.setAttribute('d', `M${x1},${y1} Q${(x1+x2)/2+bend},${(y1+y2)/2-bend} ${x2},${y2}`);
     path.setAttribute('stroke', '#aab4c2');
     path.setAttribute('stroke-width', '2');
     path.setAttribute('fill', 'none');
@@ -361,8 +362,10 @@ function renderMapThumbnail(svg, mapData) {
     rect.setAttribute('width', w);
     rect.setAttribute('height', NODE_H);
     rect.setAttribute('rx', NODE_R);
-    rect.setAttribute('fill', NODE_FILL);
-    rect.setAttribute('stroke', NODE_STROKE);
+    const accent = n.m && n.m.presentationColor;
+    const color = palette[Number.isInteger(accent) && accent >= 0 && accent < palette.length ? accent : 0];
+    rect.setAttribute('fill', color[0]);
+    rect.setAttribute('stroke', color[1]);
     rect.setAttribute('fill-opacity', '1');
     g.appendChild(rect);
     const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
@@ -370,7 +373,7 @@ function renderMapThumbnail(svg, mapData) {
     label.setAttribute('x', w / 2); label.setAttribute('y', NODE_H / 2);
     label.setAttribute('text-anchor', 'middle'); label.setAttribute('dominant-baseline', 'middle');
     label.setAttribute('font-size', '13'); label.setAttribute('font-family', 'system-ui, sans-serif');
-    label.setAttribute('fill', '#173e70');
+    label.setAttribute('fill', color[2]);
     const title = document.createElementNS('http://www.w3.org/2000/svg', 'title'); title.textContent = n.l;
     g.appendChild(title); g.appendChild(label);
     svg.appendChild(g);
