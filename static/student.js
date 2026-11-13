@@ -219,9 +219,7 @@ function renderMyMapCards(container, maps, hrefFor) {
 // click-through still lands on a Playground session the teacher-side demo
 // would recognize if they were the same backing data).
 function listActivitiesFor(classId) {
-  if (classId === 'sample-class') {
-    return Promise.resolve([{ id: 'sample-activity-ratios', name: 'Ratios Checkpoint' }]);
-  }
+  if (classId.startsWith('sample-') && window.SpanDemo) return Promise.resolve(window.SpanDemo.activities.filter(a=>a.class_id===classId));
   return window.SpanAuth.listClassActivities(classId);
 }
 
@@ -275,7 +273,7 @@ function renderClassList(container, classes) {
         activities.forEach(a => {
           const aLi = document.createElement('li');
           const link = document.createElement('a');
-          link.href = `playground?activity=${a.id}`;
+          link.href = a.preview_data ? `playground?share=${encodeMapForShare(a.preview_data)}&demoActivity=${a.id}` : `playground?activity=${a.id}`;
           link.textContent = a.name;
           aLi.appendChild(link);
           activitiesUl.appendChild(aLi);
@@ -347,6 +345,7 @@ function renderStudentDashboardBody(wrap, mapsWithData, classes, hrefFor, timeli
 // dashboard card instead of a popover. The labeled frame renderer uses
 // one shared viewport across every snapshot.
 function renderTimelineViewer(container, timelineMaps) {
+  if(container.stopPlayback)container.stopPlayback();
   container.innerHTML = `
     <div id="timelineFrameWrap"><svg id="timelineFrame"></svg></div>
     <div id="timelineControls">
@@ -374,6 +373,7 @@ function renderTimelineViewer(container, timelineMaps) {
     if (playTimer) { clearInterval(playTimer); playTimer = null; }
     playBtn.innerHTML = '&#9654;';
   }
+  container.stopPlayback=stopPlayback;
   function showFrame(index) {
     const m = timelineMaps[index];
     if (!m) return;
@@ -406,83 +406,8 @@ function renderTimelineViewer(container, timelineMaps) {
 // ============================================================
 
 // Sample classes are unrelated to maps/timeline - just the one joined class.
-function buildSampleClasses() {
-  return [{ id: 'sample-class', name: 'Period 3 - Ratios & Proportions' }];
-}
-
-// A full unit's worth of real curriculum topics (all 20 in 6th grade
-// Ratios & Proportional Relationships), added in three rough threads -
-// ratios, then rates, then percents, bridged where the curriculum itself
-// bridges them (unit rate -> percent as a rate) - so scrubbing through the
-// timeline reads as an actual student's map filling in over three weeks,
-// not just a handful of boxes appearing.
-function buildSampleTimelineMaps() {
-  const G6 = '6th Grade Math', R_P = 'Ratios & Proportional Relationships';
-  const DAY = 86400000;
-  const meta = { grade: G6, unit: R_P };
-  const n = (i, l, x, y) => ({ i, l, x, y, m: meta });
-
-  const allNodes = [
-    n(1, 'Ratio notation (a:b)', 60, 100),
-    n(2, 'Ratio vocabulary', 380, 60),
-    n(3, 'Equivalent ratios – tables', 700, 110),
-    n(4, 'Equivalent ratios – tape diagrams', 700, 260),
-    n(5, 'Ratio word problems', 1020, 180),
-    n(6, 'Unit rate definition', 1020, 340),
-    n(7, 'Calculate unit rates with integers and decimals', 1340, 280),
-    n(8, 'Calculate unit rates with fractions', 1340, 420),
-    n(9, 'Speed as distance divided by time', 1660, 350),
-    n(10, 'Rate word problems', 1660, 500),
-    n(11, 'Scale diagrams', 1340, 560),
-    n(12, 'Percent as a rate', 1020, 500),
-    n(13, 'Percent of quantity', 700, 560),
-    n(14, 'Percent word problems', 380, 500),
-    n(15, 'Percent increase', 60, 560),
-    n(16, 'Percent decrease', 60, 700),
-    n(17, 'Percent problems: tax', 380, 700),
-    n(18, 'Percent problems: tip', 700, 700),
-    n(19, 'Percent problems: discount', 1020, 700),
-    n(20, 'Convert between ratios, fractions, and percents', 1340, 700),
-  ];
-  const allEdges = [
-    { i: 1, s: 1, t: 2, no: '' },
-    { i: 2, s: 2, t: 3, no: '' },
-    { i: 3, s: 3, t: 4, no: '' },
-    { i: 4, s: 4, t: 5, no: '' },
-    { i: 5, s: 5, t: 6, no: '' },
-    { i: 6, s: 6, t: 7, no: '' },
-    { i: 7, s: 6, t: 8, no: '' },
-    { i: 8, s: 7, t: 9, no: '' },
-    { i: 9, s: 8, t: 11, no: '' },
-    { i: 10, s: 9, t: 10, no: '' },
-    { i: 11, s: 6, t: 12, no: 'A percent is just a rate out of 100 - same idea as unit rate, different denominator.' },
-    { i: 12, s: 12, t: 13, no: '' },
-    { i: 13, s: 13, t: 14, no: '' },
-    { i: 14, s: 14, t: 15, no: '' },
-    { i: 15, s: 15, t: 16, no: '' },
-    { i: 16, s: 13, t: 17, no: '' },
-    { i: 17, s: 13, t: 18, no: '' },
-    { i: 18, s: 13, t: 19, no: '' },
-    { i: 19, s: 19, t: 20, no: '' },
-    { i: 20, s: 12, t: 20, no: '' },
-  ];
-
-  const snapshots = [
-    { daysAgo: 24, nodeCount: 3, edgeCount: 2 },
-    { daysAgo: 17, nodeCount: 8, edgeCount: 7 },
-    { daysAgo: 10, nodeCount: 13, edgeCount: 12 },
-    { daysAgo: 4, nodeCount: 18, edgeCount: 17 },
-    { daysAgo: 0, nodeCount: 20, edgeCount: 20 },
-  ];
-
-  return snapshots.map((s, idx) => ({
-    id: `sample-timeline-${idx}`,
-    timeline_id: 'sample-ratios-timeline',
-    title: 'Ratios Unit Map',
-    created_at: new Date(Date.now() - s.daysAgo * DAY).toISOString(),
-    data: { n: allNodes.slice(0, s.nodeCount), e: allEdges.slice(0, s.edgeCount) },
-  }));
-}
+function buildSampleClasses() { return window.SpanDemo.classes; }
+function buildSampleTimelineMaps() { return window.SpanDemo.timelines[0].frames; }
 
 // base64url-encodes map data the same way app.js's share-link mechanism
 // does, so "view this map" works even for fake, unsaved sample data.
@@ -500,7 +425,7 @@ function renderSampleStudentDashboard() {
 
   const banner = document.createElement('div');
   banner.className = 'sample-banner';
-  banner.innerHTML = 'Sample preview (no account needed). This is what a student sees for their own maps. <a href="settings">Sign in for your own →</a>';
+  banner.textContent = 'Demo student · All maps are fictional. Open a map to explore a separate local copy.';
   dashWrap.appendChild(banner);
 
   const header = document.createElement('div');
@@ -509,7 +434,7 @@ function renderSampleStudentDashboard() {
   dashWrap.appendChild(header);
   const meta = document.createElement('p');
   meta.className = 'dash-meta';
-  meta.textContent = 'Sample data';
+  meta.textContent = 'Maya Patel · 6 projects · 2 classes · Fictional demo portfolio';
   dashWrap.appendChild(meta);
 
   // "My maps" and "My Timeline" share one source: every timeline snapshot
@@ -518,7 +443,7 @@ function renderSampleStudentDashboard() {
   // the two sections stay in sync by construction instead of drifting out
   // of sync the way two independently-authored sample datasets would.
   const timelineMaps = buildSampleTimelineMaps();
-  const maps = [...timelineMaps].reverse().map(m => ({ ...m, updated_at: m.created_at }));
+  const maps = window.SpanDemo.studentMaps;
   const classes = buildSampleClasses();
 
   const body = document.createElement('div');
@@ -528,6 +453,14 @@ function renderSampleStudentDashboard() {
     (m) => `playground?share=${encodeMapForShare(m.data)}`,
     timelineMaps
   );
+  const viewer=body.querySelector('#timelineFrameWrap')?.parentElement;
+  if(viewer) {
+    const label=document.createElement('label');label.textContent='Choose a growth timeline ';
+    const select=document.createElement('select');select.setAttribute('aria-label','Growth timeline');
+    window.SpanDemo.timelines.forEach(t=>{const option=document.createElement('option');option.value=t.id;option.textContent=t.name;select.appendChild(option);});
+    label.appendChild(select);viewer.parentElement.insertBefore(label,viewer);
+    select.onchange=()=>renderTimelineViewer(viewer,window.SpanDemo.timelines.find(t=>t.id===select.value).frames);
+  }
 }
 
 // ============================================================

@@ -524,7 +524,7 @@ function renderTaughtTopicsChecklist(container, cls, mapsWithData, curriculum, o
   savedNote.style.display = 'none';
   // Sample dashboard has no backend to persist to, so "Saved!" would be a
   // false signal once the page reloads and the checkboxes reset - say so.
-  savedNote.textContent = cls.id === 'sample-class' ? 'Preview updated — demo changes reset on reload.' : 'Saved!';
+  savedNote.textContent = cls.id.startsWith('sample-') ? 'Preview updated — demo changes reset on reload.' : 'Saved!';
   saveRow.appendChild(saveBtn);
   saveRow.appendChild(savedNote);
   container.appendChild(saveRow);
@@ -1165,157 +1165,19 @@ function renderClassDashboard(wrap, cls, roster, maps, mapsWithData, curriculum,
 // starting student, and a moved-ahead student working in a different grade.
 // ============================================================
 
-function buildSampleClassData() {
-  const G6 = '6th Grade Math', G7 = '7th Grade Math', R_P = 'Ratios & Proportional Relationships';
-  const meta6 = { grade: G6, unit: R_P };
-  const meta7 = { grade: G7, unit: R_P };
-  let nid = 1;
-  // x/y matter here - these maps get opened directly in the playground (via
-  // ?share=), not just summarized/thumbnailed, so every node needs a real
-  // position or they'd all stack on top of each other at the origin.
-  // Spacing is generous (~400px between chain steps) since some of these
-  // labels are long and get clamped up to 350px wide by the real
-  // playground's node width logic.
-  const node = (l, x, y, meta) => ({ i: nid++, l, x, y, m: meta || meta6 });
-
-  // Maya: fully connected 6-topic chain in exact curriculum order, two
-  // notes - the "strong, ahead" student. No prereq gaps at all.
-  const mayaNodes = [
-    node('Ratio notation (a:b)', 60, 140),
-    node('Ratio vocabulary', 500, 70),
-    node('Equivalent ratios – tables', 940, 180),
-    node('Equivalent ratios – tape diagrams', 1380, 90),
-    node('Ratio word problems', 1820, 200),
-    node('Unit rate definition', 2260, 110),
-  ];
-  const mayaMap = {
-    id: 'sample-maya', title: 'Ratios Unit Map', owner_id: 'sample-maya-id', activity_id: 'sample-activity-ratios',
-    data: {
-      n: mayaNodes,
-      e: [
-        { i: 1, s: mayaNodes[0].i, t: mayaNodes[1].i, no: 'Notation is just how we WRITE a ratio (a:b) - vocabulary is the words for talking about it.' },
-        { i: 2, s: mayaNodes[1].i, t: mayaNodes[2].i, no: '' },
-        { i: 3, s: mayaNodes[2].i, t: mayaNodes[3].i, no: 'Tables and tape diagrams show the same ratio two different ways.' },
-        { i: 4, s: mayaNodes[3].i, t: mayaNodes[4].i, no: '' },
-        { i: 5, s: mayaNodes[4].i, t: mayaNodes[5].i, no: '' },
-      ],
-    },
-  };
-
-  // Jordan: one correctly-linked pair (with a note), one prereq present but
-  // never linked, two prereqs missing entirely - the "mixed progress"
-  // student.
-  const jordanNodes = [
-    node('Unit rate definition', 60, 100),
-    node('Calculate unit rates with integers and decimals', 500, 220),
-    node('Percent of quantity', 100, 420),
-    node('Percent word problems', 500, 460),
-    node('Rate word problems', 900, 340),
-  ];
-  const jordanMap = {
-    id: 'sample-jordan', title: 'Ratios + Percents', owner_id: 'sample-jordan-id', activity_id: 'sample-activity-ratios',
-    data: {
-      n: jordanNodes,
-      e: [
-        { i: 1, s: jordanNodes[0].i, t: jordanNodes[1].i, no: 'Divide total by the number of units to get the rate for ONE.' },
-      ],
-    },
-  };
-
-  // Priya: prereq missing entirely, two isolated nodes - the "needs
-  // support" student.
-  const priyaNodes = [
-    node('Ratio word problems', 80, 150),
-    node('Ratio notation (a:b)', 500, 280),
-  ];
-  const priyaMap = {
-    id: 'sample-priya', title: 'Word Problems Practice', owner_id: 'sample-priya-id', activity_id: 'sample-activity-ratios',
-    data: { n: priyaNodes, e: [] },
-  };
-
-  // Sam: prereq present but unlinked, both isolated - "just getting
-  // started."
-  const samNodes = [
-    node('Ratio notation (a:b)', 100, 120),
-    node('Ratio vocabulary', 500, 220),
-  ];
-  const samMap = {
-    id: 'sample-sam', title: 'Getting Started', owner_id: 'sample-sam-id', activity_id: 'sample-activity-ratios',
-    data: { n: samNodes, e: [] },
-  };
-
-  // Chen: 7th-grade work (curriculum coverage variety), one linked pair
-  // with a note, one prereq present but unlinked, plus his own chain-start
-  // node is itself missing a (6th/7th-boundary) prereq - the "moved ahead"
-  // student.
-  const chenNodes = [
-    node('Identify proportional relationships in tables', 80, 140, meta7),
-    node('Identify proportional relationships in graphs', 500, 60, meta7),
-    node('Identify proportional relationships in equations', 920, 190, meta7),
-  ];
-  const chenMap = {
-    id: 'sample-chen', title: 'Proportional Relationships', owner_id: 'sample-chen-id',
-    data: {
-      n: chenNodes,
-      e: [
-        { i: 1, s: chenNodes[0].i, t: chenNodes[1].i, no: 'Graphs show the same relationship visually - same idea, different picture.' },
-      ],
-    },
-  };
-
-  const roster = [
-    { student_id: 'sample-maya-id', student_display_name: 'Maya P.', student_email: 'maya@example.com' },
-    { student_id: 'sample-jordan-id', student_display_name: 'Jordan K.', student_email: 'jordan@example.com' },
-    { student_id: 'sample-priya-id', student_display_name: 'Priya S.', student_email: 'priya@example.com' },
-    { student_id: 'sample-sam-id', student_display_name: 'Sam T.', student_email: 'sam@example.com' },
-    { student_id: 'sample-chen-id', student_display_name: 'Chen L.', student_email: 'chen@example.com' },
-  ];
-  const maps = [mayaMap, jordanMap, priyaMap, samMap, chenMap];
-  // Marks two topics taught (one per grade, grade-qualified keys - see
-  // computeMissingPrereqs), so the classwide-gaps demo shows all three
-  // states at once: "you taught this" (real gap), "(not yet taught)"
-  // (expected gap), and correctly-linked (no flag at all).
-  const taughtTopics = [
-    G6 + '::' + R_P + '::Percent as a rate',
-    G7 + '::' + R_P + '::Unit rates in different units',
-  ];
-  return { roster, maps, taughtTopics };
+function buildSampleClassData(classId='sample-class') {
+  return window.SpanDemo.getClass(classId);
 }
-
-// In-memory activityFns for the sample dashboard (no account, nothing to
-// persist) - same role as buildSampleClassData's fake saveFn. Seeded with
-// one activity already selected-able so "Classwide connection counts"
-// has something to show without extra clicks; its concepts match exactly
-// the labels buildSampleClassData's maps use (Maya/Jordan/Priya/Sam's
-// activity_id above), not a real curriculum lookup.
-function buildSampleActivityFns() {
-  let activities = [{
-    id: 'sample-activity-ratios',
-    class_id: 'sample-class',
-    name: 'Ratios Checkpoint',
-    concepts: [
-      '6th Grade Math::Ratios & Proportional Relationships::Ratio notation (a:b)',
-      '6th Grade Math::Ratios & Proportional Relationships::Ratio vocabulary',
-      '6th Grade Math::Ratios & Proportional Relationships::Equivalent ratios – tables',
-      '6th Grade Math::Ratios & Proportional Relationships::Equivalent ratios – tape diagrams',
-      '6th Grade Math::Ratios & Proportional Relationships::Ratio word problems',
-      '6th Grade Math::Ratios & Proportional Relationships::Unit rate definition',
-    ],
-    created_at: new Date().toISOString(),
-    ai_disabled: false,
-  }];
+function buildSampleActivityFns(classId='sample-class') {
+  let activities=structuredClone(window.SpanDemo.activities.filter(a=>a.class_id===classId));
   return {
-    list: async () => activities,
-    create: async (classId, name, concepts, aiDisabled) => {
-      const created = { id: 'sample-activity-' + Date.now(), class_id: classId, name, concepts, created_at: new Date().toISOString(), ai_disabled: !!aiDisabled };
-      activities = [created, ...activities];
-      return created;
+    list:async()=>activities,
+    create:async(id,name,concepts,aiDisabled)=>{
+      const created={id:'demo-custom-'+Date.now(),class_id:id,name,concepts,ai_disabled:!!aiDisabled};
+      activities=[created,...activities]; return created;
     },
-    del: async (id) => { activities = activities.filter(a => a.id !== id); },
-    setAiDisabled: async (id, disabled) => {
-      const a = activities.find(a => a.id === id);
-      if (a) a.ai_disabled = disabled;
-    },
+    del:async id=>{activities=activities.filter(a=>a.id!==id);},
+    setAiDisabled:async(id,disabled)=>{const a=activities.find(a=>a.id===id);if(a)a.ai_disabled=disabled;},
   };
 }
 
@@ -1330,37 +1192,24 @@ function encodeMapForShare(data) {
 }
 
 function renderSampleDashboard() {
-  const dashWrap = document.getElementById('dashWrap');
-  dashWrap.innerHTML = '';
-
-  const banner = document.createElement('div');
-  banner.className = 'sample-banner';
-  banner.innerHTML = 'Sample preview (no account needed). This is what a teacher sees for a real class. <a href="settings">Sign in for your own →</a>';
+  const dashWrap=document.getElementById('dashWrap'); dashWrap.replaceChildren();
+  const banner=document.createElement('div'); banner.className='sample-banner';
+  banner.textContent='Demo classroom · All names, maps and submissions are fictional. Changes reset on reload.';
   dashWrap.appendChild(banner);
-
-  const header = document.createElement('div');
-  header.className = 'dash-header';
-  header.innerHTML = `
-    <h1>Period 3 - Ratios &amp; Proportions</h1>
-    <span class="class-code">DEMO-DATA</span>
-  `;
-  dashWrap.appendChild(header);
-  const meta = document.createElement('p');
-  meta.className = 'dash-meta';
-  meta.textContent = 'Sample data';
-  dashWrap.appendChild(meta);
-
-  const { roster, maps, taughtTopics } = buildSampleClassData();
-  const sampleClass = { id: 'sample-class', taught_topics: taughtTopics };
-  const body = document.createElement('div');
-  dashWrap.appendChild(body);
-
-  renderClassDashboard(
-    body, sampleClass, roster, maps, maps, curriculumData,
-    (m) => `playground?share=${encodeMapForShare(m.data)}&readonly=1`,
-    async () => {}, // fake save: no account, nothing to persist
-    header, 'Period 3 - Ratios & Proportions', buildSampleActivityFns()
-  );
+  const picker=document.createElement('div'); picker.className='class-picker';
+  dashWrap.appendChild(picker);
+  const section=document.createElement('div');dashWrap.appendChild(section);
+  function showClass(classId) {
+    const cls=buildSampleClassData(classId);section.replaceChildren();
+    picker.querySelectorAll('button').forEach(b=>{b.classList.toggle('active',b.dataset.id===classId);b.setAttribute('aria-pressed',String(b.dataset.id===classId));});
+    const header=document.createElement('div');header.className='dash-header';
+    const title=document.createElement('h1');title.textContent=cls.name;header.appendChild(title);section.appendChild(header);
+    const meta=document.createElement('p');meta.className='dash-meta';meta.textContent=`${cls.roster.length} students · 3 activities · ${cls.maps.length} saved maps`;section.appendChild(meta);
+    const body=document.createElement('div');section.appendChild(body);
+    renderClassDashboard(body,{id:cls.id,taught_topics:cls.taughtTopics},cls.roster,cls.maps,cls.maps,curriculumData,m=>`playground?share=${encodeMapForShare(m.data)}&readonly=1`,async()=>{},header,cls.name,buildSampleActivityFns(classId));
+  }
+  window.SpanDemo.classes.forEach(cls=>{const b=document.createElement('button');b.dataset.id=cls.id;b.textContent=cls.name;b.onclick=()=>showClass(cls.id);picker.appendChild(b);});
+  showClass('sample-class');
 }
 
 // ============================================================
