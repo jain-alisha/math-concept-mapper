@@ -514,9 +514,9 @@ async function playDemo() {
   const baseY = (nodes.length ? Math.max(...nodes.map(n => n.y)) : 40) + 140;
   const DROP_A = { x: 260, y: baseY };
   const DROP_B = { x: 560, y: baseY + 20 };
-  const UNIT = { grade: '7th Grade Math', unit: 'Ratios & Proportional Relationships' };
-  const LABEL_A = 'Percent word problems';
-  const LABEL_B = 'Convert fractions, decimals & percents';
+  const UNIT = { grade: '4th Grade Math', unit: 'Number & Operations—Fractions' };
+  const LABEL_A = 'Mixed numbers';
+  const LABEL_B = 'Add mixed numbers with like denominators';
   const SIDEBAR_ORIGIN = { left: 90, top: 160 };
 
   try {
