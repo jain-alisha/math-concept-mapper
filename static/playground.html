@@ -270,11 +270,31 @@
       box-shadow: var(--shadow-sm); z-index: 900;
     }
     #isolatedLegend {
-      display: none; position: absolute; bottom: 14px; left: 14px; z-index: 900;
+      display: none; position: absolute; bottom: 14px; left: 14px; z-index: 900; max-width: 320px;
       align-items: center; gap: 0.6em; background: var(--surface); border: 1px solid #f5b8ab;
       color: #c2503a; font-size: 0.82em; font-weight: 600; padding: 0.5em 0.9em 0.5em 0.7em;
-      border-radius: 9px; box-shadow: var(--shadow-sm);
+      border-radius: 9px; box-shadow: var(--shadow-sm); line-height: 1.4;
     }
+    /* "Help with my map": Explain my map (AI Summary) and What could I
+       improve? (Check my map) used to be two separate top-level pill
+       buttons - consolidated into one menu per the redesign brief's "AI
+       clarity" section, since both operate on the whole map (unlike
+       per-node Explore/"Find related ideas", which stays where it is). */
+    .help-dropdown-wrap { position: relative; }
+    .help-dropdown-menu {
+      display: none; position: absolute; top: 100%; left: 0; margin-top: 0.4em; width: 280px;
+      background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+      box-shadow: var(--shadow-lg); z-index: 1500; padding: 0.4em; flex-direction: column; gap: 0.1em;
+    }
+    .help-dropdown-menu.open { display: flex; }
+    .help-dropdown-item {
+      display: block; width: 100%; box-sizing: border-box; text-align: left;
+      background: none; border: none; color: var(--text); font-family: inherit;
+      padding: 0.6em 0.7em; border-radius: 8px; cursor: pointer;
+    }
+    .help-dropdown-item:hover { background: var(--bg); }
+    .help-dropdown-item strong { display: block; font-size: 0.92em; font-weight: 700; margin-bottom: 0.15em; }
+    .help-dropdown-item span { display: block; font-size: 0.82em; color: var(--text-secondary); font-weight: 400; }
     #aiSummaryPanel {
       display: none; position: absolute; top: 44px; left: 0; width: 300px;
       background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
@@ -362,6 +382,16 @@
       color: var(--text-secondary);
     }
     .sidebar-section strong { color: var(--brand); font-weight: 700;}
+    .onboarding-steps { display: flex; flex-direction: column; gap: 0.6em; margin: 0.5em 0; }
+    .onboarding-step { display: flex; align-items: flex-start; gap: 0.6em; }
+    .onboarding-step-num {
+      flex: none; width: 20px; height: 20px; border-radius: 50%; background: var(--brand); color: #fff;
+      font-size: 0.75em; font-weight: 700; display: flex; align-items: center; justify-content: center;
+      margin-top: 0.1em;
+    }
+    .onboarding-step strong { display: block; font-size: 0.95em; color: var(--text); font-weight: 700; }
+    .onboarding-step p { margin: 0.15em 0 0; font-size: 0.86em; color: var(--text-secondary); line-height: 1.4; }
+    .onboarding-more { font-size: 0.84em; color: var(--text-secondary); line-height: 1.5; margin: 0.6em 0 0; }
     #playDemoBtn {
       display: none; margin-top: 0.8em; width: 100%;
       padding: 0.5em 0.8em; border-radius: 7px; border: none;
@@ -439,9 +469,10 @@
     }
     .sidebar-search input::placeholder { color: var(--text-muted); }
     .no-results {
-      padding: 0.6em 0.9em; color: var(--text-muted); font-size: 0.92em; text-align: center;
+      padding: 0.6em 0.9em; color: var(--text); font-size: 0.95em; font-weight: 600; text-align: center;
       display: none;
     }
+    .no-results-detail { display: block; margin-top: 0.3em; color: var(--text-muted); font-size: 0.86em; font-weight: 400; }
 
     #canvasArea {
       flex: 1; position: relative; overflow: auto;
@@ -699,34 +730,43 @@
       <button id="redoBtn" class="tb-btn tb-icon-btn" title="Redo" disabled>
         <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 14 5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/></svg>
       </button>
-      <div id="aiSummaryWrap" style="position:relative;">
-        <button id="aiSummaryBtn" class="tb-btn" title="A quick AI-generated read on this map">
-          <span>AI Summary</span>
-        </button>
-        <div id="aiSummaryPanel">
-          <header>AI Summary</header>
-          <p id="aiSummaryText"></p>
-        </div>
-      </div>
-      <div id="checkMapWrap" style="position:relative;">
-        <button id="checkMapBtn" class="tb-btn" title="Look for gaps, isolated concepts, and connections worth a second look">
-          <span>Check my map</span>
-        </button>
-        <div id="checkMapPanel">
-          <header>Map check</header>
-          <div id="checkMapBody"></div>
-        </div>
-      </div>
       <button id="fitMapBtn" class="tb-btn" title="Scroll to the top-left corner of your map">
         <span>Fit to map</span>
       </button>
+      <div class="help-dropdown-wrap" id="helpDropdownWrap">
+        <button id="helpMenuBtn" class="tb-btn" type="button">
+          <span>&#10022; Help with my map</span>
+        </button>
+        <div class="help-dropdown-menu" id="helpDropdownMenu">
+          <div id="aiSummaryWrap" style="position:relative;">
+            <button id="aiSummaryBtn" class="help-dropdown-item" title="A quick AI-generated read on this map">
+              <strong>Explain my map</strong>
+              <span>Summarize the connections you've made.</span>
+            </button>
+            <div id="aiSummaryPanel">
+              <header>Explain my map</header>
+              <p id="aiSummaryText"></p>
+            </div>
+          </div>
+          <div id="checkMapWrap" style="position:relative;">
+            <button id="checkMapBtn" class="help-dropdown-item" title="Look for gaps, isolated concepts, and connections worth a second look">
+              <strong>What could I improve?</strong>
+              <span>Find ideas to revisit or strengthen.</span>
+            </button>
+            <div id="checkMapPanel">
+              <header>What could I improve?</header>
+              <div id="checkMapBody"></div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
     <div class="tb-group">
       <button id="exportPdfBtn" class="tb-btn" title="Export this map as a PDF, cropped to fit your concepts">
         <span>Export PDF</span>
       </button>
       <button id="clearMapBtn" class="tb-btn tb-danger" title="Remove every concept and connection from this map">
-        <span>Clear Map</span>
+        <span>Clear this map</span>
       </button>
       <button id="shareBtn" title="Copy a shareable link to this map">
         <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
@@ -737,7 +777,7 @@
       <button id="signInBtn" class="tb-btn">Sign in</button>
       <div id="userMenu">
         <button id="myMapsBtn" class="tb-btn">My Maps</button>
-        <button id="timelineBtn" class="tb-btn">Timeline</button>
+        <button id="timelineBtn" class="tb-btn">My Progress</button>
         <div class="user-dropdown-wrap">
           <button type="button" class="user-dropdown-trigger">
             <span id="userLabel"></span>
@@ -837,22 +877,26 @@
     <div class="sidebar-section" id="sidebarInstructions">
       <strong id="instructionsToggle" style="cursor:pointer;user-select:none;">How to use: <span id="instructionsCaret">▾</span></strong>
       <div id="instructionsBody">
-      <ul style="padding-left:1.2em;">
-        <li>Drag a concept from the sidebar onto the map.</li>
-        <li><b>Custom node:</b> Enter any label below and add your own concept to the map.</li>
-        <li>Click a node for <b>Edit</b>, <b>Connect</b>, or <b>&#10022; Explore</b>.</li>
-        <li><b>Explore</b> asks what a concept builds on, leads to, or relates to, then shows suggestions as ghost nodes on the map - each one lets you Add, ask Why?, or dismiss it.</li>
-        <li>To create a link: use <b>Connect</b>, or <b>Shift+drag</b> from one node to another.</li>
-        <li>To add a note to a link: <b>Double-click</b> on the link line.</li>
-        <li>To move a node: <b>Drag</b> it on the map.</li>
-        <li><b>&#10022; Check my map</b> (top of the page) looks for isolated concepts, missing connections, and connections worth a second look, across your whole map.</li>
-        <li>Right-click a node or link to delete.</li>
-      </ul>
+      <div class="onboarding-steps">
+        <div class="onboarding-step">
+          <div class="onboarding-step-num">1</div>
+          <div><strong>Add an idea</strong><p>Drag a concept from the list below, or write your own.</p></div>
+        </div>
+        <div class="onboarding-step">
+          <div class="onboarding-step-num">2</div>
+          <div><strong>Connect ideas</strong><p>Click a concept, choose Connect, then click another to link them.</p></div>
+        </div>
+        <div class="onboarding-step">
+          <div class="onboarding-step-num">3</div>
+          <div><strong>Explain why</strong><p>Click a connection to say how the ideas relate.</p></div>
+        </div>
+      </div>
+      <p class="onboarding-more">Once you've made a few connections, try <strong>Find related ideas</strong> on any concept — those are only suggestions, so it's always your call whether to add one.</p>
       <button id="playDemoBtn">&#9654; Play demo</button>
       </div>
     </div>
     <div class="sidebar-section">
-      <strong>Add your own concept:</strong>
+      <strong>My own idea:</strong>
       <div class="custom-concept-row">
         <input type="text" id="customConceptInput" placeholder="Enter concept name..." maxlength="50"/>
         <button id="customConceptBtn">Add</button>
@@ -865,8 +909,9 @@
     </div>
     <div id="sidebarList"></div>
     <div class="no-results" id="noResults">
-      No concepts match your search. The catalogue currently covers 3rd-8th grade math, so it may just not be in there yet.
-      <button type="button" id="noResultsAddBtn" style="display:block;margin-top:0.5em;background:none;border:none;color:var(--brand);text-decoration:underline;cursor:pointer;padding:0;font-size:0.95em;font-family:inherit;">Add it as a custom concept →</button>
+      Couldn't find that idea.
+      <span class="no-results-detail">The catalogue currently covers 3rd-8th grade math, so it may just not be in there yet.</span>
+      <button type="button" id="noResultsAddBtn" style="display:block;margin-top:0.5em;background:none;border:none;color:var(--brand);text-decoration:underline;cursor:pointer;padding:0;font-size:0.95em;font-family:inherit;">Add it yourself →</button>
     </div>
     <hr style="margin:1em 0 0.5em 0; border:none; border-top:1.5px solid #e7e7e7;">
     <div id="notesSidebar"></div>
@@ -874,7 +919,7 @@
   <div id="canvasArea">
     <div id="readonlyBanner" style="display:none;"></div>
     <div id="activityBanner" style="display:none;"></div>
-    <div id="isolatedLegend">Dashed nodes aren't connected to anything yet</div>
+    <div id="isolatedLegend">This idea isn't connected yet — what does it relate to? Select it, then Connect.</div>
     <svg id="mapCanvas"></svg>
   </div>
 </div>

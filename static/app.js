@@ -226,6 +226,7 @@ window.onload = async function() {
   setupExportPdfButton();
   setupClearMapButton();
   setupFitMapButton();
+  setupHelpDropdown();
   setupAiSummaryButton();
   setupCheckMapButton();
   setupAuthUI();
@@ -284,8 +285,10 @@ async function setupActivityContext(params) {
 // rebuilt elsewhere (renderNodeToolbar) and checks aiToolsDisabled itself,
 // so it stays gated even across re-renders.
 function applyAiToolsGate() {
-  const aiSummaryBtn = document.getElementById('aiSummaryBtn');
-  if (aiSummaryBtn) aiSummaryBtn.style.display = 'none';
+  // Both items live inside the "Help with my map" dropdown now - hide the
+  // whole trigger rather than leaving it open onto an empty menu.
+  const helpWrap = document.getElementById('helpDropdownWrap');
+  if (helpWrap) helpWrap.style.display = 'none';
   const checkMapBtn = document.getElementById('checkMapBtn');
   if (checkMapBtn) checkMapBtn.style.display = 'none';
 }
@@ -1144,6 +1147,29 @@ function computeMapSummary(nodesArr, linksArr) {
   ]);
   return { text, highlightIds: thinIsolatedIds.length ? thinIsolatedIds : thin.ids };
 }
+// Explain my map / What could I improve? live inside one "Help with my
+// map" dropdown now - this only owns the outer menu's open/close; each
+// item's own click handler (setupAiSummaryButton/setupCheckMapButton)
+// still owns its own panel exactly as before.
+function setupHelpDropdown() {
+  const wrap = document.getElementById('helpDropdownWrap');
+  const trigger = document.getElementById('helpMenuBtn');
+  const menu = document.getElementById('helpDropdownMenu');
+  if (!wrap || !trigger || !menu) return;
+  trigger.onclick = (e) => {
+    e.stopPropagation();
+    menu.classList.toggle('open');
+  };
+  // Capture phase: an item click's own handler calls stopPropagation()
+  // during the bubble phase, which would otherwise stop this listener
+  // (attached on the ancestor menu) from ever seeing the click.
+  menu.addEventListener('click', () => menu.classList.remove('open'), true);
+  document.addEventListener('click', (e) => {
+    if (wrap.contains(e.target)) return;
+    menu.classList.remove('open');
+  });
+}
+
 function setupAiSummaryButton() {
   const btn = document.getElementById('aiSummaryBtn');
   const panel = document.getElementById('aiSummaryPanel');
