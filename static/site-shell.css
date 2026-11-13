@@ -26,3 +26,11 @@ body:has(#editorToolbar) #container { height:auto; flex:1; min-height:0; }
   #editorToolbar {gap:.2rem .7rem; padding:.4rem .6rem;}
   #editorToolbar #openMapTitle {max-width:100%; width:100%;}
 }
+
+.modal select, .modal input { box-sizing:border-box; max-width:100%; }
+.modal select { padding:.6em; border:1px solid var(--border,#c8d4e4); border-radius:7px; background:var(--surface,#fff); color:var(--text,#172b4d); font:inherit; }
+.modal [hidden] { display:none !important; }
+.modal .hint { font-size:.85rem; line-height:1.5; margin:.2em 0; }
+.modal { max-height:90vh; overflow-y:auto; }
+#accountDataControls input { max-width:100%; display:block; margin:.5rem 0; padding:.6rem; }
+#deleteAccountBtn { padding:.6rem .9rem; border:1px solid #a93232; border-radius:7px; color:#a93232; background:var(--surface,#fff); cursor:pointer; }
