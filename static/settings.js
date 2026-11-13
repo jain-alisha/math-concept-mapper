@@ -288,27 +288,8 @@ function setupAuthAndClasses() {
     }
   };
 
-  // DEMO-ONLY, TEMPORARY: see the loud comment on toggle_role() in
-  // supabase-schema.sql - self-serve, no gate, acceptable only because this
-  // deployment has no real student data at stake.
-  document.getElementById('toggleRoleBtn').onclick = async () => {
-    const btn = document.getElementById('toggleRoleBtn');
-    const errEl = document.getElementById('toggleRoleError');
-    errEl.textContent = '';
-    btn.disabled = true;
-    try {
-      const newSession = await window.SpanAuth.toggleRole();
-      updateAuthUI(newSession);
-    } catch (e) {
-      errEl.textContent = e.message || 'Could not update role.';
-    } finally {
-      btn.disabled = false;
-    }
-  };
-
   // --- Session-driven view switching ---
   const roleToggleRow = document.getElementById('roleToggleRow');
-  const toggleRoleBtn = document.getElementById('toggleRoleBtn');
   function updateAuthUI(session) {
     if (session) {
       signInBtn.style.display = 'none';
@@ -318,8 +299,7 @@ function setupAuthAndClasses() {
       userLabel.textContent = `${name} (${role})`;
 
       classesSignedOut.style.display = 'none';
-      roleToggleRow.style.display = 'block';
-      toggleRoleBtn.textContent = role === 'teacher' ? 'Switch to student view →' : 'Switch to teacher view →';
+      roleToggleRow.style.display = role === 'teacher' ? 'none' : 'block';
       if (role === 'teacher') {
         classesTeacherView.style.display = '';
         classesStudentView.style.display = 'none';
@@ -368,7 +348,10 @@ function setupAuthAndClasses() {
     }
   };
 
-  window.SpanAuth.getSession().then(updateAuthUI);
+  window.SpanAuth.getSession().then(session => {
+    updateAuthUI(session);
+    if (!session && new URLSearchParams(location.search).get('auth') === '1') openModal();
+  });
   window.SpanAuth.onAuthStateChange((session, event) => {
     updateAuthUI(session);
     if (event === 'PASSWORD_RECOVERY') showNewPasswordPrompt();

@@ -118,7 +118,7 @@
     .ai-summary-banner p { margin: 0; font-size: 0.98em; color: var(--text); line-height: 1.5; }
 
     .map-cards-grid {
-      display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 0.9em;
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 250px), 1fr)); gap: 0.9em;
     }
     .map-card {
       display: block; text-decoration: none; color: inherit; border: 1px solid var(--border);
@@ -126,7 +126,7 @@
       cursor: pointer;
     }
     .map-card:hover { box-shadow: var(--shadow-sm); transform: translateY(-1px); }
-    .map-card-thumb { width: 100%; height: 110px; background: #f7fafd; border-bottom: 1px solid var(--border); display: block; }
+    .map-card-thumb { width: 100%; height: 150px; background: #f7fafd; border-bottom: 1px solid var(--border); display: block; }
     .map-card-body { padding: 0.55em 0.7em; }
     .map-card-title { font-weight: 700; font-size: 0.85em; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .map-card-meta { font-size: 0.78em; color: var(--text-muted); margin-top: 0.1em; }
@@ -165,7 +165,19 @@
 
     .dash-empty-state { text-align: center; padding: 4em 1.5em; color: var(--text-secondary); }
     .dash-empty-state a { color: var(--brand); font-weight: 600; text-decoration: none; }
+
+    .insights-grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); align-items: start; gap: 1.1em; }
+    .insights-grid > .dash-card { min-width: 0; margin-bottom: 0; }
+    .insights-row { flex-wrap: wrap; justify-content: flex-start; }
+    .insights-row > span:first-child { min-width: 0; overflow-wrap: anywhere; }
+    .insights-badge { white-space: normal; max-width: 100%; box-sizing: border-box; }
+    .provenance-card .insights-row { display: block; }
+    .provenance-card .insights-row > span:first-child { display: block; margin-bottom: 0.35em; }
+    #anonymousModeBtn[aria-pressed="true"] { background: var(--brand); color: #fff; border-color: var(--brand); }
+    .feedback-draft { width: 100%; box-sizing: border-box; min-height: 70px; padding: 0.65em; font: inherit; border: 1px solid var(--border); border-radius: 8px; }
+    .feedback-draft-label { display: block; font-weight: 600; margin: 0.6em 0 0.35em; font-size: 0.85em; }
   </style>
+<link rel="stylesheet" href="site-shell.css">
 </head>
 <body>
 <div id="topbar">
@@ -221,5 +233,6 @@
 <script src="vendor/supabase.js"></script>
 <script src="auth.js"></script>
 <script src="student.js"></script>
+<script src="site-shell.js"></script>
 </body>
 </html>

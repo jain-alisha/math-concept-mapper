@@ -1,0 +1,28 @@
+/* Shared visual language; editor controls remain in its task toolbar. */
+#topbar.span-topbar { background: var(--surface, #fff); color: var(--text, #172b4d); border-bottom: 1px solid var(--border, #dce4ed); min-height: 64px; box-sizing: border-box; }
+#topbar.span-topbar .brand { font-size: 1.2rem; font-weight: 750; text-decoration: none; color: var(--text, #172b4d); display:flex; align-items:center; gap: .55rem; }
+#topbar.span-topbar .brand .icon { width:24px; height:24px; }
+#topbar.span-topbar .span-nav-link { text-decoration:none; font-size:.88rem; font-weight:600; color:var(--text-secondary, #4a5e78); }
+#topbar.span-topbar .span-nav-link:hover, #topbar.span-topbar .span-nav-link[aria-current=page] { color:var(--brand, #3675bc); }
+#topbar.span-topbar:not(.span-editor-header) nav { display:flex; align-items:center; gap:1.1rem; flex-wrap:wrap; }
+#topbar.span-topbar:not(.span-editor-header) #userMenu { align-items:center; gap:.7rem; }
+#topbar.span-topbar:not(.span-editor-header) #signInBtn, #topbar.span-topbar:not(.span-editor-header) #signOutBtn { border:1px solid var(--border, #dce4ed); background:var(--surface, white); color:var(--text, #172b4d); border-radius:8px; padding:.5rem .8rem; cursor:pointer; font:inherit; font-size:.85rem; }
+.span-site-footer { display:flex; justify-content:center; align-items:center; flex-wrap:wrap; gap:.75rem 1.4rem; padding:1rem 1.4rem; font-size:.78rem; color:var(--text-secondary, #4a5e78); border-top:1px solid var(--border, #dce4ed); background:var(--surface, white); }
+.span-site-footer a { color:inherit; }
+.span-editor-footer { display:none; } /* Privacy/contact are also available in the account menu. */
+@media(max-width:600px) { #topbar.span-topbar:not(.span-editor-header) { flex-wrap:wrap; gap:.65rem; padding:.75rem 1rem; } #topbar.span-topbar:not(.span-editor-header) nav { gap:.75rem; } #userLabel { max-width:170px; overflow:hidden; text-overflow:ellipsis; } }
+@media print { .span-site-footer { display:none; } }
+
+.span-global-nav { display:flex; align-items:center; gap:1.1rem; }
+#editorToolbar { display:flex; align-items:center; flex-wrap:wrap; gap:.5rem 1.1rem; padding:.5rem 1.2rem; background:var(--surface); border-bottom:1px solid var(--border); }
+#editorToolbar #openMapTitle { margin-right:auto; }
+body:has(#editorToolbar) { display:flex; flex-direction:column; overflow:hidden; }
+body:has(#editorToolbar) #topbar { flex:none; height:auto; min-height:64px; }
+body:has(#editorToolbar) #container { height:auto; flex:1; min-height:0; }
+#editorToolbar #shareBtn { padding:.45rem .8rem; }
+@media(max-width:700px) {
+  .span-global-nav {gap:.65rem;}
+  #topbar.span-editor-header {flex-wrap:wrap; padding:.65rem 1rem; gap:.6rem;}
+  #editorToolbar {gap:.2rem .7rem; padding:.4rem .6rem;}
+  #editorToolbar #openMapTitle {max-width:100%; width:100%;}
+}

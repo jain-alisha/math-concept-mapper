@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Privacy & student data · Span</title>
+<script src="theme.js"></script><link rel="stylesheet" href="site-shell.css">
+<style>
+body{margin:0;background:var(--bg,#f7f9fc);color:var(--text,#172b4d);font-family:system-ui,sans-serif;line-height:1.65}#topbar{display:flex;justify-content:space-between;align-items:center;padding:1rem 2rem}#topbar nav{display:flex;gap:1rem}main{max-width:780px;margin:2.5rem auto;padding:0 1.4rem 3rem}h1{font-size:2.3rem;line-height:1.15}h2{margin-top:2rem;font-size:1.25rem}a{color:var(--brand,#3675bc)}.notice{padding:1rem 1.2rem;background:var(--surface,#fff);border:1px solid var(--border,#dce4ed);border-radius:12px}#userMenu{display:none}
+</style>
+</head>
+<body>
+<div id="topbar"><a href="index" class="brand">Span</a><nav><a href="settings?auth=1" id="signInBtn">Sign in</a></nav></div>
+<main>
+<h1>Privacy & student data</h1>
+<p>Span is a concept-mapping project of CoCreate Courses, a nonprofit. Updated November 12, 2026.</p>
+<p class="notice">You can build a map without an account. Use concept labels and explanations, rather than names or other identifying information, in student maps.</p>
+<h2>What Span stores</h2>
+<ul>
+<li><strong>Without an account:</strong> map drafts and preferences are saved in this browser’s local storage. People using the same browser profile may be able to see them. Clear Span’s site data in your browser settings to remove local drafts and preferences.</li>
+<li><strong>With an account:</strong> Supabase handles sign-in, including your email address, credentials, and optional display name. Cloud maps include titles, concepts, arrows, notes, dates, and activity or timeline assignments. Class records include membership, invite codes, and roster names and email addresses.</li>
+<li><strong>Explore:</strong> asking for related ideas sends concept labels and curriculum metadata to Span’s recommendation service. When an external AI provider is configured, the selected concept and candidate curriculum topics are sent to that provider. Do not enter personal information in concept labels. Prerequisite and next-step suggestions use the bundled curriculum graph in your browser. Maps do not need Explore to be created or saved.</li>
+</ul>
+<h2>Who can see a map</h2>
+<p>Signed-in users can access their own cloud maps. Teachers assigned to a class can view maps saved by students who joined that class. Teacher status is assigned by a Span administrator. Class invite codes should be shared only with intended participants.</p>
+<p>A share link contains a map snapshot in its URL. Anyone who receives that link can read the snapshot and forward it. Removing a saved map does not recall links or exported PDFs already shared.</p>
+<h2>Use, retention, and deletion</h2>
+<p>Span uses map and class information to provide mapping, cloud saving, class views, and learning activities. This application does not include advertising or sell student information. Hosting, authentication, and any configured AI services process requests to run these features.</p>
+<p>Cloud maps remain until deleted; the current application does not schedule automatic expiry. You can delete individual cloud maps from My Maps. Account and class-record deletion require help from the Span team. Provider logs and backups may have separate retention settings; obtain a written retention and deletion agreement before a school pilot involving identifiable student data.</p>
+<h2>Children and school use</h2>
+<p>For children under 13, do not create an account or enter personal information until appropriate verified parent or school authorization has been arranged with Span. COPPA places obligations on operators collecting children’s personal information; a school’s authority to consent is limited to the educational context. See the <a href="https://www.ftc.gov/business-guidance/resources/complying-coppa-frequently-asked-questions" target="_blank" rel="noopener">FTC’s COPPA guidance for schools</a>.</p>
+<p>Schools must review and approve tools that handle education records. A school relying on FERPA’s school-official exception must retain the required control over the use and maintenance of those records, including limits on reuse and disclosure. See the <a href="https://studentprivacy.ed.gov/faq/i-want-use-online-tool-or-application-part-my-course-however-i-am-worried-it-violation-ferpa" target="_blank" rel="noopener">U.S. Department of Education guidance</a>. This notice is not a school data-processing agreement or a claim of FERPA/COPPA certification.</p>
+<h2>Contact, access, and corrections</h2>
+<p><a href="https://github.com/jain-alisha/math-concept-mapper/issues/new" target="_blank" rel="noopener">Contact the Span team through the project’s support page</a> for privacy questions, teacher-access verification, or to arrange a private deletion or correction request. The support page is public: do not post student names, email addresses, map contents, passwords, or other private information. Request a private follow-up channel before sharing account details.</p>
+</main>
+<script src="vendor/supabase.js"></script><script src="auth.js"></script><script src="site-shell.js"></script>
+</body>
+</html>

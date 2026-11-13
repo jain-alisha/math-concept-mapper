@@ -83,18 +83,8 @@
 
     role: roleOf,
 
-    // DEMO-ONLY, TEMPORARY: flips the current user's role between student
-    // and teacher, no gate - see the loud comment on toggle_role() in
-    // supabase-schema.sql. Returns the refreshed session (app_metadata
-    // changes only show up in a *new* JWT, so a plain getSession() right
-    // after the RPC would still show the stale role).
-    async toggleRole() {
-      const { error } = await client.rpc('toggle_role');
-      if (error) throw error;
-      const { data, error: refreshError } = await client.auth.refreshSession();
-      if (refreshError) throw refreshError;
-      return data.session;
-    },
+    // Teacher status is assigned by an administrator in app_metadata.
+    // Never expose a client-callable role escalation RPC.
 
     // listMyMaps()'s contract is "maps I own" - it needs an explicit filter
     // now that a second RLS policy (teachers viewing their students' maps)

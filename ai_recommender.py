@@ -14,6 +14,31 @@ CORS(app)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 with open(os.path.join(BASE_DIR, 'static', 'concepts.json'), encoding='utf-8') as f:
     curriculum = json.load(f)
+with open(os.path.join(BASE_DIR, 'static', 'prerequisites.json'), encoding='utf-8') as f:
+    prerequisite_graph = json.load(f)
+
+ALIASES = prerequisite_graph.get('aliases', {})
+
+def canonical_label(label):
+    return ALIASES.get(label, label)
+
+def graph_edges_for(label, meta, question):
+    """Only authored direct edges can establish dependency direction."""
+    original_label = label
+    label = canonical_label(label)
+    anchor_side = 'target' if question == 'builds_on' else 'source'
+    for edge in prerequisite_graph['edges']:
+        anchor = edge[anchor_side]
+        if canonical_label(anchor['label']) != label:
+            continue
+        # Historical aliases may have moved grades. Canonical catalog
+        # labels still require their grade/unit when the caller supplies it.
+        if original_label == label:
+            if meta.get('grade') and meta['grade'] != anchor['grade']:
+                continue
+            if meta.get('unit') and meta['unit'] != anchor['unit']:
+                continue
+        yield edge
 
 # --- Build fast lookup: topic -> {grade, unit}
 concept_lookup = {}
@@ -86,14 +111,14 @@ def semantic_similarity(selected_label, candidates, topk=5):
 # --- Relationship-shaped suggestions for the three Explore questions ---
 # The product's thesis is about edges, not just nodes - a suggestion is
 # always (source concept, relationship type, target concept, reason), never
-# a bare "add this topic." Curriculum topic order within a unit is the
-# source of truth for prerequisite/successor direction; "related" pulls
+# a bare "add this topic." Curriculum topic order within a unit
+# is NOT prerequisite evidence. Authored graph edges determine direction; related pulls
 # same-unit topics that are neither, ranked by word-overlap to the anchor.
 REASON_TEMPLATES = {
     'builds_on': [
-        "{b} is what {a} builds on directly - it lays the groundwork.",
-        "Getting {b} solid first is usually what makes {a} click.",
-        "{a} assumes {b} as a starting point.",
+        "{a} is what {b} builds on directly - it lays the groundwork.",
+        "Getting {a} solid first is usually what makes {b} click.",
+        "{b} assumes {a} as a starting point.",
     ],
     'leads_to': [
         "{a} feeds directly into {b} - a natural next step.",
@@ -125,45 +150,43 @@ RELATIONSHIP_LABEL = {
 }
 
 def relationship_suggestions(selected_label, selected_meta, used_labels, question, topk=3):
-    grade, unit = resolved_meta(selected_label, selected_meta)
-    candidates = []
-    if grade and unit and selected_label in curriculum.get(grade, {}).get(unit, []):
-        topics = curriculum[grade][unit]
-        idx = topics.index(selected_label)
-        if question == 'builds_on':
-            candidates = [t for t in reversed(topics[:idx]) if t not in used_labels]
-        elif question == 'leads_to':
-            candidates = [t for t in topics[idx + 1:] if t not in used_labels]
-        elif question == 'related':
-            near = set()
-            if idx > 0: near.add(topics[idx - 1])
-            if idx < len(topics) - 1: near.add(topics[idx + 1])
-            candidates = [t for t in topics if t != selected_label and t not in near and t not in used_labels]
+    used = {canonical_label(label) for label in used_labels}
+    if question in ('builds_on', 'leads_to'):
+        # Curriculum list order and word overlap are not evidence of a
+        # prerequisite. Return fewer results when the authored graph ends.
+        results = []
+        seen = set()
+        suggestion_side = 'source' if question == 'builds_on' else 'target'
+        for edge in graph_edges_for(selected_label, selected_meta, question):
+            endpoint = edge[suggestion_side]
+            label = endpoint['label']
+            if label in used or label in seen:
+                continue
+            seen.add(label)
+            source = label if question == 'builds_on' else selected_label
+            target = selected_label if question == 'builds_on' else label
+            results.append({
+                'label': label,
+                'meta': {'grade': endpoint['grade'], 'unit': endpoint['unit']},
+                'source': source, 'target': target,
+                'relationship': RELATIONSHIP_LABEL[question],
+                'reason': edge['reason'],
+            })
+            if len(results) >= topk:
+                break
+        return results
 
-    ranked = semantic_similarity(selected_label, candidates, topk=topk) if candidates else []
-    if len(ranked) < topk:
-        pool = [t for t in curriculum_topics if t not in used_labels and t != selected_label]
-        seen = set(r['label'] for r in ranked)
-        pool = [t for t in pool if t not in seen]
-        ranked += semantic_similarity(selected_label, pool, topk=topk - len(ranked))
-
-    relationship = RELATIONSHIP_LABEL[question]
-    results = []
-    for r in ranked[:topk]:
-        if question == 'builds_on':
-            source, target = r['label'], selected_label
-        else:
-            # 'leads_to' and 'related' both read as selected -> suggestion
-            source, target = selected_label, r['label']
-        results.append({
-            'label': r['label'],
-            'meta': r['meta'],
-            'source': source,
-            'target': target,
-            'relationship': relationship,
-            'reason': build_reason(source, target, question),
-        })
-    return results
+    canonical = canonical_label(selected_label)
+    grade, unit = resolved_meta(canonical, selected_meta)
+    candidates = curriculum.get(grade, {}).get(unit, [])
+    candidates = [t for t in candidates if t not in used and t != canonical]
+    ranked = semantic_similarity(canonical, candidates, topk=topk)
+    return [{
+        'label': r['label'], 'meta': {'grade': grade, 'unit': unit},
+        'source': selected_label, 'target': r['label'],
+        'relationship': 'related',
+        'reason': build_reason(selected_label, r['label'], 'related'),
+    } for r in ranked]
 
 # --- Optional: real-LLM recommendations ---
 # Off by default (falls back to the heuristic above) unless at least one
@@ -240,6 +263,8 @@ def llm_relationship_suggestions(selected_label, grade, unit, used_labels, quest
     all - the caller distinguishes None (fall back entirely) from a short
     list (top up with the heuristic) so a flaky API call degrades
     gracefully instead of breaking Explore."""
+    if question != 'related':
+        return None
     configured = [p for p in LLM_PROVIDERS if p['api_key']]
     if not configured:
         return None

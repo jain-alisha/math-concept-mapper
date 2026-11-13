@@ -21,11 +21,16 @@ document.addEventListener('DOMContentLoaded', () => {
 function renderMapThumbnail(svg, mapData) {
   const NODE_H = 40, NODE_R = 12;
   svg.innerHTML = '';
-  const nodesArr = (mapData && mapData.n) || [];
+  const originalNodes = (mapData && mapData.n) || [];
+  // Compact arrangement keeps labels visible on wide maps. Only preview
+  // coordinates change; the saved map retains its authored positions.
+  const wide = originalNodes.length && Math.max(...originalNodes.map(n=>n.x)) - Math.min(...originalNodes.map(n=>n.x)) > 800;
+  const nodesArr = wide ? originalNodes.map((n,i)=>({...n,x:(i%2)*200,y:Math.floor(i/2)*70})) : originalNodes;
+  svg.setAttribute('aria-label', wide ? 'Connection preview arranged to fit; open map for original layout' : 'Map connection preview');
   const edgesArr = (mapData && mapData.e) || [];
   if (!nodesArr.length) { svg.setAttribute('viewBox', '0 0 300 100'); return; }
 
-  const NODE_FILL = '#1976d2', NODE_STROKE = '#14588f';
+  const NODE_FILL = '#eaf2ff', NODE_STROKE = '#89acd5';
   function widthFor(label) { return Math.max(50, Math.min(label.length * 6.5 + 16, 170)); }
 
   const byId = new Map(nodesArr.map(n => [n.i, n]));
@@ -52,8 +57,16 @@ function renderMapThumbnail(svg, mapData) {
     rect.setAttribute('rx', NODE_R);
     rect.setAttribute('fill', NODE_FILL);
     rect.setAttribute('stroke', NODE_STROKE);
-    rect.setAttribute('fill-opacity', '0.85');
+    rect.setAttribute('fill-opacity', '1');
     g.appendChild(rect);
+    const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    label.textContent = n.l.length > 23 ? n.l.slice(0, 22) + '…' : n.l;
+    label.setAttribute('x', w / 2); label.setAttribute('y', NODE_H / 2);
+    label.setAttribute('text-anchor', 'middle'); label.setAttribute('dominant-baseline', 'middle');
+    label.setAttribute('font-size', '13'); label.setAttribute('font-family', 'system-ui, sans-serif');
+    label.setAttribute('fill', '#173e70');
+    const title = document.createElementNS('http://www.w3.org/2000/svg', 'title'); title.textContent = n.l;
+    g.appendChild(title); g.appendChild(label);
     svg.appendChild(g);
     minX = Math.min(minX, n.x); minY = Math.min(minY, n.y);
     maxX = Math.max(maxX, n.x + w); maxY = Math.max(maxY, n.y + NODE_H);
@@ -63,12 +76,11 @@ function renderMapThumbnail(svg, mapData) {
 }
 
 // Full-size frame renderer for the Timeline viewer - unlike
-// renderMapThumbnail (deliberately unlabeled: too small to read text at
-// thumbnail-card size), this fills most of a dash-card and is meant to be
+// renderMapThumbnail (compact labels for a quick preview), this fills most of a dash-card and is meant to be
 // scrubbed/watched frame by frame, so labels are the whole point. Mirrors
 // app.js's own renderTimelineFrame in the playground, minus the
 // getNodeWidth/NODE_HEIGHT globals that only exist there.
-function renderTimelineFrame(svg, mapData) {
+function renderTimelineFrame(svg, mapData, bounds) {
   const NODE_H = 46, NODE_R = 16;
   svg.innerHTML = '';
   const nodesArr = (mapData && mapData.n) || [];
@@ -107,7 +119,8 @@ function renderTimelineFrame(svg, mapData) {
     text.setAttribute('y', NODE_H / 2);
     text.setAttribute('text-anchor', 'middle');
     text.setAttribute('dominant-baseline', 'middle');
-    text.setAttribute('font-size', '0.92em');
+    text.setAttribute('font-size', '14');
+    if (n.l.length > 27) { text.setAttribute('textLength', String(w - 20)); text.setAttribute('lengthAdjust', 'spacingAndGlyphs'); }
     text.setAttribute('font-weight', '600');
     text.setAttribute('fill', '#1f4f91');
     text.setAttribute('font-family', "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif");
@@ -118,7 +131,7 @@ function renderTimelineFrame(svg, mapData) {
     maxX = Math.max(maxX, n.x + w); maxY = Math.max(maxY, n.y + NODE_H);
   }
   const framePad = 28;
-  svg.setAttribute('viewBox', `${minX - framePad} ${minY - framePad} ${maxX - minX + framePad * 2} ${maxY - minY + framePad * 2}`);
+  svg.setAttribute('viewBox', bounds ? bounds.join(' ') : `${minX - framePad} ${minY - framePad} ${maxX - minX + framePad * 2} ${maxY - minY + framePad * 2}`);
 }
 
 // A one-line, first-person read across all of a student's own maps - same
@@ -128,61 +141,38 @@ function renderTimelineFrame(svg, mapData) {
 // across a class). Deliberately doesn't manufacture a gap when there isn't
 // a real one.
 function computeStudentSummary(mapsData) {
-  if (!mapsData.length) return "No saved maps yet — build one in the Playground to see a summary here.";
-  // Maps saved into a timeline as repeated "save as new" snapshots share a
-  // title and represent one evolving map, not several distinct ones - sum
-  // every row as-is and a well-used timeline inflates the totals (a map
-  // saved 5 times over would count its own concepts up to 5x). Keep only
-  // the most recently updated row per title so each conceptual map counts
-  // once, at its current state.
-  const latestByTitle = new Map();
+  if (!mapsData.length) return 'No saved maps yet — build one in the Playground to see a summary here.';
+  // Timeline checkpoints belong to one evolving map; unrelated maps with
+  // the same title remain separate.
+  const latest = new Map();
   for (const m of mapsData) {
-    const existing = latestByTitle.get(m.title);
-    if (!existing || new Date(m.updated_at) > new Date(existing.updated_at)) {
-      latestByTitle.set(m.title, m);
+    const key = m.timeline_id || m.id || m;
+    const previous = latest.get(key);
+    if (!previous || new Date(m.updated_at || 0) > new Date(previous.updated_at || 0)) latest.set(key, m);
+  }
+  const maps = [...latest.values()];
+  const labels = new Set();
+  const isolated = new Set();
+  let connectionCount = 0, notedCount = 0;
+  for (const m of maps) {
+    const nodes = (m.data && m.data.n) || [];
+    const byId = new Map(nodes.map(n => [n.i, n]));
+    const connected = new Set();
+    for (const edge of (m.data && m.data.e) || []) {
+      if (!byId.has(edge.s) || !byId.has(edge.t)) continue;
+      connected.add(edge.s); connected.add(edge.t); connectionCount++;
+      if ((edge.no || '').trim()) notedCount++;
+    }
+    for (const node of nodes) {
+      labels.add(node.l);
+      if (!connected.has(node.i)) isolated.add(node.l);
     }
   }
-  mapsData = [...latestByTitle.values()];
-
-  // Keyed by grade+unit, not unit alone - curriculum unit names repeat
-  // across grades, and a unit-only key would silently conflate two
-  // different grades' connectedness into one misleading number (same fix
-  // as dashboard.js's computeClassSummary).
-  const byUnit = new Map();
-  for (const m of mapsData) {
-    const nodesArr = (m.data && m.data.n) || [];
-    const edgesArr = (m.data && m.data.e) || [];
-    const degree = new Map();
-    for (const n of nodesArr) degree.set(n.i, 0);
-    for (const e of edgesArr) {
-      degree.set(e.s, (degree.get(e.s) || 0) + 1);
-      degree.set(e.t, (degree.get(e.t) || 0) + 1);
-    }
-    for (const n of nodesArr) {
-      const meta = n.m || {};
-      if (!meta.grade || !meta.unit) continue;
-      const key = meta.grade + '|' + meta.unit;
-      if (!byUnit.has(key)) byUnit.set(key, { grade: meta.grade, unit: meta.unit, total: 0, connected: 0 });
-      const rec = byUnit.get(key);
-      rec.total++;
-      if ((degree.get(n.i) || 0) > 0) rec.connected++;
-    }
-  }
-  if (!byUnit.size) {
-    return "Your maps aren't tagged to curriculum units yet — drag topics in from the sidebar to get a summary here.";
-  }
-  const units = [...byUnit.values()]
-    .map(r => ({ ...r, label: `${r.unit} (${r.grade})`, ratio: r.connected / r.total }))
-    .sort((a, b) => b.ratio - a.ratio || b.total - a.total);
-  const strong = units[0], thin = units[units.length - 1];
-  if (units.length === 1) {
-    return `You're building out ${strong.label} — ${strong.connected} of ${strong.total} concept${strong.total === 1 ? '' : 's'} connected so far.`;
-  }
-  const gap = strong.ratio - thin.ratio;
-  if (gap < 0.15 && thin.ratio >= 0.5) {
-    return `Your maps are holding together well across ${strong.label} and ${thin.label} — keep going.`;
-  }
-  return `How does ${thin.label} connect to ${strong.label}? Worth a look next time you're in the Playground.`;
+  if (!labels.size) return 'Your saved maps are empty so far. Add a concept to get started.';
+  const topics = [...labels].slice(0, 3).map(label => `“${label}”`).join(', ');
+  const next = isolated.size ? `Try connecting “${[...isolated][0]}” and explain your reasoning in an arrow note.`
+    : notedCount < connectionCount ? 'Add arrow notes to explain why your concepts connect.' : 'Your connections have notes — revisit one and add an example.';
+  return `${labels.size} distinct concept${labels.size === 1 ? '' : 's'} and ${connectionCount} connection${connectionCount === 1 ? '' : 's'}, including ${topics}. ${next}`;
 }
 
 function renderMyMapCards(container, maps, hrefFor) {
@@ -197,7 +187,7 @@ function renderMyMapCards(container, maps, hrefFor) {
     const card = document.createElement('a');
     card.className = 'map-card';
     card.href = hrefFor(m);
-    card.target = '_blank';
+    card.title = 'Open map';
     const thumbWrap = document.createElement('div');
     thumbWrap.className = 'map-card-thumb';
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -354,8 +344,8 @@ function renderStudentDashboardBody(wrap, mapsWithData, classes, hrefFor, timeli
 // Slider + play button that scrubs through an ordered list of map
 // snapshots, same interaction as the playground's own Timeline panel
 // (app.js's showTimelineFrame/timelinePlayBtn) but rendered inline in a
-// dashboard card instead of a popover, and reusing renderMapThumbnail as
-// the per-frame renderer instead of a separate one.
+// dashboard card instead of a popover. The labeled frame renderer uses
+// one shared viewport across every snapshot.
 function renderTimelineViewer(container, timelineMaps) {
   container.innerHTML = `
     <div id="timelineFrameWrap"><svg id="timelineFrame"></svg></div>
@@ -370,6 +360,15 @@ function renderTimelineViewer(container, timelineMaps) {
   const playBtn = container.querySelector('#timelinePlayBtn');
   const label = container.querySelector('#timelineLabel');
   let playTimer = null;
+  // Hold one viewport across all snapshots so growth doesn't look like zooming.
+  const allNodes = timelineMaps.flatMap(m => (m.data && m.data.n) || []);
+  const timelineBounds = allNodes.length ? [
+    Math.min(...allNodes.map(n => n.x)) - 28,
+    Math.min(...allNodes.map(n => n.y)) - 28,
+    Math.max(...allNodes.map(n => n.x + Math.max(70, Math.min(n.l.length * 8 + 36, 260)))),
+    Math.max(...allNodes.map(n => n.y + 46)),
+  ] : null;
+  if (timelineBounds) { timelineBounds[2] -= timelineBounds[0] - 28; timelineBounds[3] -= timelineBounds[1] - 28; }
 
   function stopPlayback() {
     if (playTimer) { clearInterval(playTimer); playTimer = null; }
@@ -378,7 +377,7 @@ function renderTimelineViewer(container, timelineMaps) {
   function showFrame(index) {
     const m = timelineMaps[index];
     if (!m) return;
-    renderMapThumbnail(svg, m.data);
+    renderTimelineFrame(svg, m.data, timelineBounds);
     label.textContent = `${m.title} — ${new Date(m.created_at).toLocaleDateString()}`;
   }
 
@@ -478,6 +477,7 @@ function buildSampleTimelineMaps() {
 
   return snapshots.map((s, idx) => ({
     id: `sample-timeline-${idx}`,
+    timeline_id: 'sample-ratios-timeline',
     title: 'Ratios Unit Map',
     created_at: new Date(Date.now() - s.daysAgo * DAY).toISOString(),
     data: { n: allNodes.slice(0, s.nodeCount), e: allEdges.slice(0, s.edgeCount) },

@@ -769,7 +769,14 @@
     }
 
 
+
+    #openMapTitle { max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:650; font-size:.9rem; }
+    #aiSummaryPanel,#checkMapPanel { max-width:calc(100vw - 40px); box-sizing:border-box; }
+    #arrowLegend { z-index:850; padding:7px 12px; border-radius:8px; background:var(--surface); border:1px solid var(--border); color:var(--text-secondary); font-size:.77rem; pointer-events:none; }
+    #aiAddedLegend .ai-added-dot {font-size:1.5rem;}
+    @media(max-width:900px) { #openMapTitle {max-width:110px;} }
   </style>
+<link rel="stylesheet" href="site-shell.css">
 </head>
 <body>
 <div id="topbar">
@@ -777,6 +784,7 @@
     <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="6" rx="1"/><rect x="2" y="16" width="6" height="6" rx="1"/><rect x="16" y="16" width="6" height="6" rx="1"/><path d="M12 8v4"/><path d="M5 16v-2a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v2"/></svg>
     Span
   </a>
+  <span id="openMapTitle" aria-live="polite">Untitled map</span>
   <span id="saveStatusBadge" style="display:none;"></span>
   <nav>
     <div class="tb-group">
@@ -787,7 +795,7 @@
         <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 14 5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/></svg>
       </button>
       <button id="fitMapBtn" class="tb-btn" title="Scroll to the top-left corner of your map">
-        <span>Fit to map</span>
+        <span>Find map start</span>
       </button>
       <div class="help-dropdown-wrap" id="helpDropdownWrap">
         <button id="helpMenuBtn" class="tb-btn" type="button">
@@ -795,7 +803,7 @@
         </button>
         <div class="help-dropdown-menu" id="helpDropdownMenu">
           <div id="aiSummaryWrap" style="position:relative;">
-            <button id="aiSummaryBtn" class="help-dropdown-item" title="A quick AI-generated read on this map">
+            <button id="aiSummaryBtn" class="help-dropdown-item" title="A summary of your concepts, links, and notes">
               <strong>Explain my map</strong>
               <span>Summarize the connections you've made.</span>
             </button>
@@ -833,7 +841,7 @@
       <button id="signInBtn" class="tb-btn">Sign in</button>
       <div id="userMenu">
         <button id="myMapsBtn" class="tb-btn">My Maps</button>
-        <button id="timelineBtn" class="tb-btn">My Progress</button>
+        <button id="timelineBtn" class="tb-btn">Map Timeline</button>
         <div class="user-dropdown-wrap">
           <button type="button" class="user-dropdown-trigger">
             <span id="userLabel"></span>
@@ -849,7 +857,7 @@
         <div id="myMapsPanel">
           <header>My Maps</header>
           <div class="my-maps-clear-row">
-            <button id="clearMapBtnInPanel">Clear current map</button>
+            <button id="clearMapBtnInPanel">Clear this map</button>
           </div>
           <div class="my-maps-save-row">
             <input type="text" id="mapTitleInput" placeholder="Map title..." maxlength="80" />
@@ -977,7 +985,7 @@
       <span class="no-results-detail">The catalogue currently covers 3rd-8th grade math, so it may just not be in there yet.</span>
       <button type="button" id="noResultsAddBtn" style="display:block;margin-top:0.5em;background:none;border:none;color:var(--brand);text-decoration:underline;cursor:pointer;padding:0;font-size:0.95em;font-family:inherit;">Add it yourself →</button>
     </div>
-    <hr style="margin:1em 0 0.5em 0; border:none; border-top:1.5px solid #e7e7e7;">
+
     <div id="notesSidebar"></div>
   </div>
   <div id="canvasArea">
@@ -985,6 +993,7 @@
     <div id="activityBanner" style="display:none;"></div>
     <div id="isolatedLegend">This idea isn't connected yet — what does it relate to? Select it, then Connect.</div>
     <div id="aiAddedLegend"><span class="ai-added-dot">&#10022;</span> = added from a suggestion, not typed in yourself</div>
+    <div id="arrowLegend">A → B: A supports B. For other relationships, add a note explaining the arrow.</div>
     <svg id="mapCanvas"></svg>
   </div>
 </div>
@@ -1023,5 +1032,6 @@
 <script src="vendor/jspdf.umd.min.js"></script>
 <script src="auth.js"></script>
 <script src="app.js"></script>
+<script src="site-shell.js"></script>
 </body>
 </html>

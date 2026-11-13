@@ -5,9 +5,17 @@
 // real class data and the no-login sample preview (?sample=1).
 
 let curriculumData = null;
+let prerequisiteData = { aliases: {}, edges: [] };
+let prerequisiteDataAvailable = false;
 
 document.addEventListener('DOMContentLoaded', async () => {
-  try { curriculumData = await fetch('concepts.json').then(r => r.json()); } catch (e) { curriculumData = {}; }
+  const loaded = await Promise.allSettled([
+    fetch('concepts.json').then(r => { if (!r.ok) throw new Error(); return r.json(); }),
+    fetch('prerequisites.json').then(r => { if (!r.ok) throw new Error(); return r.json(); }),
+  ]);
+  curriculumData = loaded[0].status === 'fulfilled' ? loaded[0].value : {};
+  prerequisiteDataAvailable = loaded[1].status === 'fulfilled';
+  prerequisiteData = loaded[1].status === 'fulfilled' ? loaded[1].value : { aliases: {}, edges: [] };
 
   if (new URLSearchParams(window.location.search).get('sample') === '1') {
     renderSampleDashboard();
@@ -237,48 +245,12 @@ function anonymizeRoster(roster) {
 // up across every student's maps instead of one map at a time.
 function computeClassSummary(mapsData) {
   if (!mapsData.length) return 'No student maps yet — a class summary will appear once students save maps.';
-  // Keyed by grade+unit, not unit alone - curriculum unit names repeat
-  // across grades ("Ratios & Proportional Relationships" exists in both
-  // 6th and 7th grade), and a unit-only key would silently conflate two
-  // different grades' connectedness into one misleading number.
-  const byUnit = new Map();
-  for (const m of mapsData) {
-    const nodesArr = (m.data && m.data.n) || [];
-    const edgesArr = (m.data && m.data.e) || [];
-    const degree = new Map();
-    for (const n of nodesArr) degree.set(n.i, 0);
-    for (const e of edgesArr) {
-      degree.set(e.s, (degree.get(e.s) || 0) + 1);
-      degree.set(e.t, (degree.get(e.t) || 0) + 1);
-    }
-    for (const n of nodesArr) {
-      const meta = n.m || {};
-      if (!meta.grade || !meta.unit) continue;
-      const key = meta.grade + '|' + meta.unit;
-      if (!byUnit.has(key)) byUnit.set(key, { grade: meta.grade, unit: meta.unit, total: 0, connected: 0 });
-      const rec = byUnit.get(key);
-      rec.total++;
-      if ((degree.get(n.i) || 0) > 0) rec.connected++;
-    }
-  }
-  if (!byUnit.size) {
-    return `${mapsData.length} map${mapsData.length === 1 ? '' : 's'} saved so far, none tagged to a curriculum unit yet.`;
-  }
-  const units = [...byUnit.values()]
-    .map(r => ({ ...r, label: `${r.unit} (${r.grade})`, ratio: r.connected / r.total }))
-    .sort((a, b) => b.ratio - a.ratio || b.total - a.total);
-  const strong = units[0], thin = units[units.length - 1];
-  // Deliberately describes map structure (how many concepts got
-  // connected to something), not understanding - a longer or
-  // more-connected map isn't automatically a better one, and this number
-  // says nothing about whether a connection's reasoning is correct,
-  // specific, or original. See each student's link notes for that.
-  if (units.length === 1) {
-    return `${strong.connected} of ${strong.total} concept-instances in ${strong.label} are connected to something, across all students' maps.`;
-  }
-  const mostPhrase = strong.ratio >= 0.6 ? 'Most connected as a class on' : 'Most active as a class in';
-  const leastPhrase = thin.ratio < 0.5 ? 'least connected on' : 'least active in';
-  return `${mostPhrase} ${strong.label}, ${leastPhrase} ${thin.label}. (This reflects map connectivity, not correctness — check link notes for that.)`;
+  const coverage = computeGradeUnitCoverage(mapsData);
+  if (!coverage.length) return `${mapsData.length} saved maps. Add curriculum concepts to see coverage by grade and unit.`;
+  const leading = coverage[0];
+  const students = new Set(mapsData.map(m => m.owner_id)).size;
+  const connections = mapsData.reduce((sum, m) => sum + ((m.data && m.data.e) || []).length, 0);
+  return `${students} student${students === 1 ? '' : 's'} have saved maps with ${connections} connection${connections === 1 ? '' : 's'}. Most students are working in ${leading.unit} (${leading.grade}): ${leading.students} student${leading.students === 1 ? '' : 's'}, as shown in Curriculum coverage.`;
 }
 
 // taughtSet (optional): a Set of "grade::unit::prereq" strings the teacher
@@ -294,47 +266,30 @@ function computeClassSummary(mapsData) {
 // can sort/filter on it. When omitted (or empty), every item is
 // `taught: null` and nothing is filtered.
 function computeMissingPrereqs(mapsData, curriculum, taughtSet) {
-  // Nested Map (topic -> prereq -> {studentIds, unit, grade}), not a
-  // delimited string key that gets split back apart later - topic/prereq
-  // labels can themselves contain spaces ("Ratio word problems"), which
-  // would silently mangle a naive `${topic} ${prereq}`.split(' ') round-trip.
+  const aliases = prerequisiteData.aliases || {};
+  const canonical = label => aliases[label] || label;
+  const matches = (node, endpoint) => canonical(node.l) === endpoint.label &&
+    (aliases[node.l] || ((!(node.m || {}).grade || node.m.grade === endpoint.grade) &&
+    (!(node.m || {}).unit || node.m.unit === endpoint.unit)));
   const counts = new Map();
   for (const m of mapsData) {
     const nodes = (m.data && m.data.n) || [];
     const edges = (m.data && m.data.e) || [];
-    const byLabel = new Map(nodes.map(n => [n.l, n]));
-    const linked = new Set();
-    for (const e of edges) {
-      const src = nodes.find(n => n.i === e.s), tgt = nodes.find(n => n.i === e.t);
-      if (src && tgt) { linked.add(src.l + '|' + tgt.l); linked.add(tgt.l + '|' + src.l); }
-    }
-    for (const n of nodes) {
-      const meta = n.m || {};
-      if (!meta.grade || !meta.unit) continue;
-      const topics = curriculum[meta.grade] && curriculum[meta.grade][meta.unit];
-      if (!topics) continue;
-      const idx = topics.indexOf(n.l);
-      if (idx <= 0) continue;
-      const prereq = topics[idx - 1];
-      const hasPrereq = byLabel.has(prereq) && linked.has(n.l + '|' + prereq);
-      if (!hasPrereq) {
-        if (!counts.has(n.l)) counts.set(n.l, new Map());
-        const byPrereq = counts.get(n.l);
-        const rec = byPrereq.get(prereq) || { studentIds: new Set(), unit: meta.unit, grade: meta.grade };
-        rec.studentIds.add(m.owner_id);
-        byPrereq.set(prereq, rec);
-      }
+    for (const rule of prerequisiteData.edges || []) {
+      const targets = nodes.filter(n => matches(n, rule.target));
+      if (!targets.length) continue;
+      const sources = nodes.filter(n => matches(n, rule.source));
+      const connected = edges.some(e => sources.some(n => n.i === e.s) && targets.some(n => n.i === e.t) && (!e.rt || e.rt === 'prerequisite'));
+      if (connected) continue;
+      const key = JSON.stringify([rule.source, rule.target]);
+      if (!counts.has(key)) counts.set(key, { topic: rule.target.label, prereq: rule.source.label,
+        grade: rule.source.grade, unit: rule.source.unit, reason: rule.reason, studentIds: new Set() });
+      counts.get(key).studentIds.add(m.owner_id);
     }
   }
-  const flat = [];
-  for (const [topic, byPrereq] of counts) {
-    for (const [prereq, rec] of byPrereq) {
-      const taught = taughtSet && taughtSet.size ? taughtSet.has(rec.grade + '::' + rec.unit + '::' + prereq) : null;
-      flat.push({ topic, prereq, count: rec.studentIds.size, studentIds: rec.studentIds, unit: rec.unit, grade: rec.grade, taught });
-    }
-  }
-  // Taught-and-missing first (the strongest signal), then by count.
-  return flat.sort((a, b) => (b.taught === true) - (a.taught === true) || b.count - a.count);
+  return [...counts.values()].map(rec => ({ ...rec, count: rec.studentIds.size,
+    taught: taughtSet && taughtSet.size ? taughtSet.has(`${rec.grade}::${rec.unit}::${rec.prereq}`) : null,
+  })).sort((a, b) => (b.taught === true) - (a.taught === true) || b.count - a.count);
 }
 
 // Beta: classwide gap analysis input - "what has the teacher taught?"
@@ -365,15 +320,17 @@ function collectUnitsFromMaps(mapsWithData) {
 function renderMapThumbnail(svg, mapData) {
   const NODE_H = 40, NODE_R = 12;
   svg.innerHTML = '';
-  const nodesArr = (mapData && mapData.n) || [];
+  const originalNodes = (mapData && mapData.n) || [];
+  // Compact arrangement keeps labels visible on wide maps. Only preview
+  // coordinates change; the saved map retains its authored positions.
+  const wide = originalNodes.length && Math.max(...originalNodes.map(n=>n.x)) - Math.min(...originalNodes.map(n=>n.x)) > 800;
+  const nodesArr = wide ? originalNodes.map((n,i)=>({...n,x:(i%2)*200,y:Math.floor(i/2)*70})) : originalNodes;
+  svg.setAttribute('aria-label', wide ? 'Connection preview arranged to fit; open map for original layout' : 'Map connection preview');
   const edgesArr = (mapData && mapData.e) || [];
   if (!nodesArr.length) { svg.setAttribute('viewBox', '0 0 300 100'); return; }
 
-  // One consistent color, not the per-unit rainbow the main canvas uses -
-  // at thumbnail size you can't actually read six pastel hues as distinct
-  // units, so all it did was look noisy. A single solid accent reads as a
-  // clean "shape at a glance" instead.
-  const NODE_FILL = '#1976d2', NODE_STROKE = '#14588f';
+  // Keep compact labels readable against one opaque, consistent node color.
+  const NODE_FILL = '#eaf2ff', NODE_STROKE = '#89acd5';
   function widthFor(label) { return Math.max(50, Math.min(label.length * 6.5 + 16, 170)); }
 
   const byId = new Map(nodesArr.map(n => [n.i, n]));
@@ -400,8 +357,16 @@ function renderMapThumbnail(svg, mapData) {
     rect.setAttribute('rx', NODE_R);
     rect.setAttribute('fill', NODE_FILL);
     rect.setAttribute('stroke', NODE_STROKE);
-    rect.setAttribute('fill-opacity', '0.85');
+    rect.setAttribute('fill-opacity', '1');
     g.appendChild(rect);
+    const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    label.textContent = n.l.length > 23 ? n.l.slice(0, 22) + '…' : n.l;
+    label.setAttribute('x', w / 2); label.setAttribute('y', NODE_H / 2);
+    label.setAttribute('text-anchor', 'middle'); label.setAttribute('dominant-baseline', 'middle');
+    label.setAttribute('font-size', '13'); label.setAttribute('font-family', 'system-ui, sans-serif');
+    label.setAttribute('fill', '#173e70');
+    const title = document.createElementNS('http://www.w3.org/2000/svg', 'title'); title.textContent = n.l;
+    g.appendChild(title); g.appendChild(label);
     svg.appendChild(g);
     minX = Math.min(minX, n.x); minY = Math.min(minY, n.y);
     maxX = Math.max(maxX, n.x + w); maxY = Math.max(maxY, n.y + NODE_H);
@@ -432,7 +397,7 @@ function renderStudentMapCards(container, roster, mapsWithData, hrefFor) {
     const m = mostRecentByStudent.get(student.student_id);
     const card = document.createElement(m ? 'a' : 'div');
     card.className = 'map-card' + (m ? '' : ' map-card-empty');
-    if (m) { card.href = hrefFor(m); card.target = '_blank'; }
+    if (m) { card.href = hrefFor(m); card.title = 'Open read-only map'; }
     const thumbWrap = document.createElement('div');
     thumbWrap.className = 'map-card-thumb';
     if (m) {
@@ -452,12 +417,32 @@ function renderStudentMapCards(container, roster, mapsWithData, hrefFor) {
     if (m) {
       const titleEl = document.createElement('div');
       titleEl.className = 'map-card-title';
-      titleEl.textContent = m.title;
+      titleEl.textContent = m.title + ' · Read-only';
       body.appendChild(titleEl);
     }
     card.appendChild(thumbWrap);
     card.appendChild(body);
-    grid.appendChild(card);
+    const item = document.createElement('div');
+    item.appendChild(card);
+    if (m) {
+      const details = document.createElement('details');
+      const summary = document.createElement('summary'); summary.textContent = 'Feedback draft';
+      details.appendChild(summary);
+      const label = document.createElement('label'); label.className = 'feedback-draft-label';
+      label.textContent = 'Notes for this student';
+      const input = document.createElement('textarea'); input.className = 'feedback-draft';
+      input.placeholder = 'Ask about a connection or suggest an example…'; label.appendChild(input);
+      const storageKey = 'span-feedback-draft:' + m.id;
+      try { input.value = localStorage.getItem(storageKey) || ''; } catch (_) {}
+      const note = document.createElement('p'); note.className = 'hint';
+      note.textContent = 'Saved on this device only. Copy this draft to share with the student.';
+      input.oninput = () => {
+        try { localStorage.setItem(storageKey, input.value); note.textContent = 'Saved on this device only. Copy this draft to share with the student.'; }
+        catch (_) { note.textContent = 'Device storage unavailable. Copy this draft before leaving.'; }
+      };
+      details.appendChild(label); details.appendChild(note); item.appendChild(details);
+    }
+    grid.appendChild(item);
   });
   container.appendChild(grid);
 }
@@ -517,7 +502,7 @@ function renderTaughtTopicsChecklist(container, cls, mapsWithData, curriculum, o
 
   const hint = document.createElement('p');
   hint.className = 'hint';
-  hint.textContent = "Mark topics you've already covered - missing-prerequisite gaps below can then tell \"not taught yet\" apart from a real gap.";
+  hint.textContent = "Mark topics you've already covered - missing-prerequisite connections above can then tell \"not taught yet\" apart from a real gap.";
   container.appendChild(hint);
 
   const units = collectUnitsFromMaps(mapsWithData);
@@ -816,7 +801,7 @@ function addExpandableRow(li, labelNode, badgeText, badgeClass, studentIds, rost
     if (m && hrefFor) {
       const a = document.createElement('a');
       a.href = hrefFor(m);
-      a.target = '_blank';
+      a.title = 'Open read-only map';
       a.textContent = name;
       subLi.appendChild(a);
     } else {
@@ -895,9 +880,10 @@ function renderClassInsights(summaryEl, grid, roster, mapsData, curriculum, taug
   missingCard.appendChild(insightList(missing, (item, li) => {
     const span = document.createElement('span');
     const topicSpan = document.createElement('strong');
-    topicSpan.textContent = item.topic;
+    topicSpan.textContent = item.prereq + ' → ' + item.topic;
+    topicSpan.title = item.reason || '';
     span.appendChild(topicSpan);
-    span.appendChild(document.createTextNode(` → missing "${item.prereq}"`));
+    span.appendChild(document.createTextNode(' — connection missing'));
     if (item.taught === true) {
       const tag = document.createElement('span');
       tag.className = 'beta-tag';
@@ -913,7 +899,7 @@ function renderClassInsights(summaryEl, grid, roster, mapsData, curriculum, taug
       span.appendChild(tag);
     }
     expandRow(li, span, `${item.count} student${item.count === 1 ? '' : 's'}`, 'insights-badge-warn', item.studentIds);
-  }, 'No prerequisite gaps spotted in curriculum-tagged concepts.'));
+  }, prerequisiteDataAvailable ? 'No missing connections among the reviewed prerequisite relationships.' : 'Prerequisite analysis is temporarily unavailable. Reload to try again.'));
   grid.appendChild(missingCard);
 
   const progressCard = insightCard('Student progress');
@@ -937,6 +923,7 @@ function renderClassInsights(summaryEl, grid, roster, mapsData, curriculum, taug
   grid.appendChild(coverageCard);
 
   const provenanceCard = insightCard('Concept provenance');
+  provenanceCard.classList.add('provenance-card');
   const provenanceHint = document.createElement('p'); provenanceHint.className = 'hint';
   provenanceHint.textContent = 'Concepts each student typed or dragged in themselves vs. added from an Explore suggestion.';
   provenanceCard.appendChild(provenanceHint);
@@ -982,13 +969,15 @@ function setupExportReportButton(header, className, onToggleAnonymous) {
   if (onToggleAnonymous) {
     const anonBtn = document.createElement('button');
     anonBtn.id = 'anonymousModeBtn';
-    anonBtn.textContent = 'Anonymous mode';
+    anonBtn.textContent = 'Anonymous mode: off';
+    anonBtn.setAttribute('aria-pressed', 'false');
     anonBtn.title = 'Hide student names - for projecting class patterns without putting names on screen';
     let anonymous = false;
     anonBtn.onclick = () => {
       anonymous = !anonymous;
       anonBtn.classList.toggle('active', anonymous);
-      anonBtn.textContent = anonymous ? 'Anonymous mode: on' : 'Anonymous mode';
+      anonBtn.textContent = anonymous ? 'Anonymous mode: on' : 'Anonymous mode: off';
+      anonBtn.setAttribute('aria-pressed', String(anonymous));
       onToggleAnonymous(anonymous);
     };
     actions.appendChild(anonBtn);
@@ -1072,8 +1061,8 @@ function renderClassDashboard(wrap, cls, roster, maps, mapsWithData, curriculum,
           const mapLi = document.createElement('li');
           const a = document.createElement('a');
           a.href = hrefFor(m);
-          a.target = '_blank';
-          a.textContent = m.title;
+          a.title = 'Open read-only map';
+          a.textContent = m.title + ' · Read-only';
           mapLi.appendChild(a);
           mapsUl.appendChild(mapLi);
         });
@@ -1327,7 +1316,7 @@ function renderSampleDashboard() {
 
   renderClassDashboard(
     body, sampleClass, roster, maps, maps, curriculumData,
-    (m) => `playground?share=${encodeMapForShare(m.data)}`,
+    (m) => `playground?share=${encodeMapForShare(m.data)}&readonly=1`,
     async () => {}, // fake save: no account, nothing to persist
     header, 'Period 3 - Ratios & Proportions', buildSampleActivityFns()
   );

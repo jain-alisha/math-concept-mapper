@@ -164,6 +164,7 @@
       padding: 0.6em 1.1em; border-radius: 8px; font-size: 0.9em; font-weight: 600;
     }
   </style>
+  <link rel="stylesheet" href="site-shell.css">
 </head>
 <body>
 <div id="topbar">
@@ -211,8 +212,7 @@
     </div>
 
     <div id="roleToggleRow" style="display:none; margin-bottom:1.5em;">
-      <button id="toggleRoleBtn" type="button" class="role-preview-cta" style="border:none; cursor:pointer;"></button>
-      <p class="auth-error" id="toggleRoleError"></p>
+      <p class="hint">Teacher access is enabled by a Span administrator after verification. <a href="https://github.com/jain-alisha/math-concept-mapper/issues/new" target="_blank" rel="noopener">Contact the Span team</a> to request access; do not include student information.</p>
     </div>
 
     <div id="classesTeacherView" style="display:none;">
@@ -277,5 +277,6 @@
 <script src="vendor/supabase.js"></script>
 <script src="auth.js"></script>
 <script src="settings.js"></script>
+<script src="site-shell.js"></script>
 </body>
 </html>

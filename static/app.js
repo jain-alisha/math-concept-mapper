@@ -1,6 +1,7 @@
 // Math Concept Mapper — Advanced AI reason display, map-aware
 
 let conceptsData = {};
+let prerequisiteData = { aliases: {}, edges: [] };
 let nodeIdCounter = 1;
 let linkIdCounter = 1;
 let nodes = [];
@@ -42,6 +43,7 @@ function resetHistory() {
   updateUndoRedoButtons();
 }
 function undo() {
+  if (isReadonly) return;
   if (historyIndex <= 0) return;
   historyIndex--;
   suppressHistory = true;
@@ -53,6 +55,7 @@ function undo() {
   updateUndoRedoButtons();
 }
 function redo() {
+  if (isReadonly) return;
   if (historyIndex >= historyStack.length - 1) return;
   historyIndex++;
   suppressHistory = true;
@@ -100,11 +103,7 @@ let isReadonly = false;
 // autosave() and loadShareMode() below.
 let shareDraftKey = null;
 
-// Set in loadSampleMap() - the demo map isn't anyone's authored work, so
-// its edit history shouldn't feed the "new connections since last visit"
-// momentum message (see computeMomentumMessage): opening the sample after
-// using your own map would otherwise compare the sample's link count
-// against whatever you'd left your own map at.
+// Set when loading the sample, so the title reflects the current map.
 let isSampleMode = false;
 
 const NODE_HEIGHT = 54, NODE_RADIUS = 17, NODE_MIN_WIDTH = 100, NODE_MAX_WIDTH = 420, NODE_HORIZ_PADDING = 22;
@@ -285,6 +284,8 @@ function showPromptDialog(message, defaultValue = '') {
 // --------- Initialization ---------
 window.onload = async function() {
   conceptsData = await fetch('concepts.json').then(r => r.json());
+  prerequisiteData = await fetch('prerequisites.json').then(r => { if (!r.ok) throw new Error('Unavailable'); return r.json(); }).catch(() => ({ aliases: {}, edges: [] }));
+  setupEditorPanels();
   initTopicPicker();
   renderConceptList();
   resizeCanvas();
@@ -307,8 +308,14 @@ window.onload = async function() {
     await loadReadonlyMap(params.get('view'));
     applyReadonlyUI();
   } else if (params.get('share')) {
-    loadShareMode(params.get('share'));
-    await setupActivityContext(params);
+    if (params.get('readonly') === '1') {
+      isReadonly = true;
+      loadSharedMap(params.get('share'));
+      applyReadonlyUI();
+    } else {
+      loadShareMode(params.get('share'));
+      await setupActivityContext(params);
+    }
   } else if (params.get('sample') === '1') {
     loadSampleMap();
   } else {
@@ -318,6 +325,7 @@ window.onload = async function() {
 
   renderCanvas();
   setupCustomConcept();
+  updateMapTitle();
   resetHistory();
 };
 
@@ -382,6 +390,10 @@ async function loadReadonlyMap(id) {
 }
 
 function applyReadonlyUI() {
+  const sidebar = document.getElementById('sidebar');
+  if (sidebar) sidebar.style.display = 'none';
+  const checker = document.getElementById('checkMapBtn');
+  if (checker) checker.style.display = 'none';
   const banner = document.getElementById('readonlyBanner');
   if (banner) {
     banner.textContent = cloudMapTitle
@@ -393,8 +405,7 @@ function applyReadonlyUI() {
   if (shareBtn) shareBtn.style.display = 'none';
   const clearMapBtn = document.getElementById('clearMapBtn');
   if (clearMapBtn) clearMapBtn.style.display = 'none';
-  const authArea = document.getElementById('authArea');
-  if (authArea) authArea.style.display = 'none';
+  for (const id of ['clearMapBtnInPanel','saveMapBtn','saveCopyBtn','undoBtn','redoBtn']) { const el=document.getElementById(id); if(el) el.style.display='none'; }
   const customConceptRow = document.querySelector('.custom-concept-row');
   if (customConceptRow) customConceptRow.style.display = 'none';
   const playDemoBtn = document.getElementById('playDemoBtn');
@@ -848,11 +859,7 @@ function setupClearMapButton() {
   if (panelBtn) panelBtn.onclick = clearMap;
 }
 
-// There's no zoom/scale on this canvas, so "fit" can't shrink the whole
-// map into view the way a true zoom-to-fit would - it scrolls to the
-// map's top-left corner instead, which is still the main thing a student
-// needs on a map that's grown past the visible viewport: a reliable way
-// back to "the start" instead of scrolling around looking for an edge.
+// The Find map start action scrolls to the first content, without promising zoom-to-fit.
 function setupUndoRedoButtons() {
   const undoBtn = document.getElementById('undoBtn');
   const redoBtn = document.getElementById('redoBtn');
@@ -1081,141 +1088,29 @@ function setupExportPdfButton() {
   };
 }
 
-// --- Beta: Instant AI summary ---
-// Heuristic, not a model call - groups the map's own nodes by curriculum
-// unit and compares how well-connected each unit's nodes are, same
-// "connected vs isolated" signal isolated-concept highlighting already
-// computes per node, just rolled up per unit.
-//
-// Framed as a nudge toward a specific node rather than a strength/weakness
-// verdict: it asks a question or suggests a concept to connect, and points
-// at the relevant node(s) on the canvas (see summaryHighlightIds) instead
-// of just naming a unit in prose. Phrasing rotates via `pickPhrase` (seeded by
-// the day, so it's stable within a session but doesn't say the same thing
-// every day), and a clear non-gap just gets acknowledged rather than a
-// gap being manufactured to fill the sentence.
-
-const SUMMARY_MOMENTUM_KEY = 'spanSummaryMomentum';
-const SUMMARY_MOMENTUM_MIN_HOURS = 18;
-
-// Deterministic pick so re-opening the panel doesn't change the wording
-// mid-session, but different days/units land on different phrasing.
-function pickPhrase(seedStr, options) {
-  let h = 0;
-  for (let i = 0; i < seedStr.length; i++) h = (h * 31 + seedStr.charCodeAt(i)) >>> 0;
-  return options[h % options.length];
-}
-
-// Real day-over-day progress is more motivating than a rephrased gap, so
-// it takes priority when there's a positive delta to report. Only fires
-// once enough time has passed since the last check-in, and only when the
-// map actually grew - no "0 new connections" message.
-function computeMomentumMessage(linksArr) {
-  // Not the student's own authored map - comparing link counts across
-  // different maps/snapshots is meaningless (and was exactly how opening
-  // the sample map could report invented "growth"). Only ever compare a
-  // map against its own previous visit.
-  if (isSampleMode || isReadonly || shareDraftKey) return null;
-  // Scoped per map identity (the cloud map id once signed in and saved,
-  // otherwise a fixed local-only key) so switching between two of your
-  // own saved maps doesn't get compared against each other either.
-  const scopeKey = SUMMARY_MOMENTUM_KEY + ':' + (cloudMapId || 'local');
-  let stored = null;
-  try { stored = JSON.parse(localStorage.getItem(scopeKey) || 'null'); } catch (e) { stored = null; }
-  const now = Date.now();
-  const linkCount = linksArr.length;
-  const hoursSince = stored ? (now - stored.timestamp) / 36e5 : Infinity;
-  let message = null;
-  if (stored && hoursSince >= SUMMARY_MOMENTUM_MIN_HOURS) {
-    const delta = linkCount - stored.linkCount;
-    if (delta > 0) {
-      message = `You've added ${delta} new connection${delta === 1 ? '' : 's'} to this map since your last visit — nice work.`;
-    }
-  }
-  if (!stored || hoursSince >= SUMMARY_MOMENTUM_MIN_HOURS) {
-    try { localStorage.setItem(scopeKey, JSON.stringify({ linkCount, timestamp: now })); } catch (e) {}
-  }
-  return message;
-}
-
+// Describe the authored concepts, connections and explanations on this map.
 function computeMapSummary(nodesArr, linksArr) {
-  if (!nodesArr.length) {
-    return { text: 'Your map is empty — add a few concepts to get started.', highlightIds: [] };
+  if (!nodesArr.length) return { text: 'Your map is empty — add a few concepts to get started.', highlightIds: [] };
+  const valid = new Map(nodesArr.map(n => [n.id, n]));
+  const edges = linksArr.filter(l => valid.has(l.source) && valid.has(l.target));
+  const degree = new Map(nodesArr.map(n => [n.id, 0]));
+  edges.forEach(l => { degree.set(l.source, degree.get(l.source) + 1); degree.set(l.target, degree.get(l.target) + 1); });
+  const hub = [...nodesArr].sort((a,b) => degree.get(b.id) - degree.get(a.id))[0];
+  const isolated = nodesArr.filter(n => !degree.get(n.id));
+  const noted = edges.filter(l => l.note && l.note.trim());
+  let text = `Your map has ${nodesArr.length} concepts and ${edges.length} connections. `;
+  if (edges.length) {
+    text += `“${hub.label}” has the most connections (${degree.get(hub.id)}). `;
+    const example = noted[0] || edges[0];
+    text += `You linked “${valid.get(example.source).label}” → “${valid.get(example.target).label}”`;
+    text += example.note ? ` and explained: “${example.note.trim().replace(/[.!?]+$/, '')}”. ` : '. Try adding a note explaining why those ideas connect. ';
   }
-
-  const momentum = computeMomentumMessage(linksArr);
-  if (momentum) return { text: momentum, highlightIds: [] };
-
-  const today = new Date().toDateString();
-  const degree = new Map();
-  for (const n of nodesArr) degree.set(n.id, 0);
-  for (const l of linksArr) {
-    degree.set(l.source, (degree.get(l.source) || 0) + 1);
-    degree.set(l.target, (degree.get(l.target) || 0) + 1);
-  }
-  const byUnit = new Map(); // unit -> { total, connected, ids }
-  for (const n of nodesArr) {
-    const unit = n.meta && n.meta.unit;
-    if (!unit) continue;
-    if (!byUnit.has(unit)) byUnit.set(unit, { total: 0, connected: 0, ids: [] });
-    const rec = byUnit.get(unit);
-    rec.total++;
-    rec.ids.push(n.id);
-    if ((degree.get(n.id) || 0) > 0) rec.connected++;
-  }
-  if (!byUnit.size) {
-    return {
-      text: `${nodesArr.length} concept${nodesArr.length === 1 ? '' : 's'} on the map so far, none tagged to a curriculum unit yet. Drag topics in from the sidebar to get unit-by-unit insight.`,
-      highlightIds: [],
-    };
-  }
-
-  const units = [...byUnit.entries()]
-    .map(([unit, r]) => ({ unit, ...r, ratio: r.connected / r.total }))
-    .sort((a, b) => b.ratio - a.ratio || b.total - a.total);
-  const strong = units[0];
-  const thin = units[units.length - 1];
-
-  if (units.length === 1) {
-    const isolatedIds = strong.ids.filter(id => (degree.get(id) || 0) === 0);
-    if (!isolatedIds.length) {
-      return {
-        text: pickPhrase(strong.unit + today, [
-          `Your map is fully connected so far — nice work.`,
-          `Everything on your map connects to something else — solid start.`,
-        ]),
-        highlightIds: [],
-      };
-    }
-    return {
-      text: pickPhrase(strong.unit + strong.total + today, [
-        `What does ${strong.unit} build on? Try connecting one of the unlinked concepts to something it depends on.`,
-        `A few ${strong.unit} concepts aren't linked to anything yet — what would you connect them to?`,
-      ]),
-      highlightIds: isolatedIds,
-    };
-  }
-
-  const gap = strong.ratio - thin.ratio;
-  if (gap < 0.15 && thin.ratio >= 0.5) {
-    // No real gap between units - acknowledge it instead of manufacturing one.
-    return {
-      text: pickPhrase(strong.unit + thin.unit + today, [
-        `Your map is holding together well across ${strong.unit} and ${thin.unit} — keep going.`,
-        `Solid connections across both ${strong.unit} and ${thin.unit} so far.`,
-      ]),
-      highlightIds: [],
-    };
-  }
-
-  const thinIsolatedIds = thin.ids.filter(id => (degree.get(id) || 0) === 0);
-  const text = pickPhrase(thin.unit + strong.unit + today, [
-    `How does ${thin.unit} connect to ${strong.unit}?`,
-    `What in ${thin.unit} builds on what you've already mapped in ${strong.unit}?`,
-    `Try linking a concept in ${thin.unit} to something it depends on.`,
-  ]);
-  return { text, highlightIds: thinIsolatedIds.length ? thinIsolatedIds : thin.ids };
+  text += `${noted.length} of ${edges.length} connections have explanations. `;
+  if (isolated.length) text += `“${isolated[0].label}” is unlinked; what relationship could you explain?`;
+  else if (edges.length) text += 'Each concept has a link. Choose a connection and add an example that supports it.';
+  return { text, highlightIds: isolated.map(n => n.id) };
 }
+
 // Explain my map / What could I improve? live inside one "Help with my
 // map" dropdown now - this only owns the outer menu's open/close; each
 // item's own click handler (setupAiSummaryButton/setupCheckMapButton)
@@ -1244,6 +1139,7 @@ function setupAiSummaryButton() {
   const panel = document.getElementById('aiSummaryPanel');
   const text = document.getElementById('aiSummaryText');
   if (!btn || !panel || !text) return;
+  document.body.appendChild(panel);
   const closePanel = () => {
     panel.style.display = 'none';
     if (summaryHighlightIds.size) {
@@ -1259,7 +1155,7 @@ function setupAiSummaryButton() {
     text.textContent = summary.text;
     summaryHighlightIds = new Set(summary.highlightIds);
     checkMapDim = false; // Check My Map's dimming is a separate highlight source - don't leave it stuck on
-    panel.style.display = 'block';
+    openEditorPanel('aiSummaryPanel', btn);
     renderCanvas();
   };
   // Capture phase: node/link clicks on the canvas call stopPropagation()
@@ -1281,34 +1177,6 @@ function setupAiSummaryButton() {
 // edge (Explain / Keep anyway / Remove connection), never a silent edit.
 // ============================================================
 
-const STOPWORDS = new Set(['a','an','the','of','in','on','to','from','with','and','or','as','is','for']);
-function contentWords(label) {
-  return label.toLowerCase().replace(/[^a-z0-9²³√×÷≤≥\s]/g, ' ').split(/\s+/).filter(w => w && !STOPWORDS.has(w));
-}
-// A candidate bridge is usually a sibling skill, not a true intermediate
-// step, when it shares most of its wording with one of the two concepts
-// it would sit between - e.g. "Write two-step equations" between "Write
-// one-step equations" and "Solve one-step equations" (shares "write" +
-// "equations" with the source), or "Constant of proportionality in
-// graphs" between two "...in tables" topics. A genuine prerequisite is
-// usually a topically distinct phrase, not a same-skill variant.
-function isSiblingVariant(candidate, other) {
-  const cWords = contentWords(candidate), oWords = new Set(contentWords(other));
-  if (!cWords.length) return false;
-  const shared = cWords.filter(w => oWords.has(w)).length;
-  return shared / cWords.length >= 0.5;
-}
-
-function curriculumPos(label) {
-  for (const grade in conceptsData) {
-    for (const unit in conceptsData[grade]) {
-      const idx = conceptsData[grade][unit].indexOf(label);
-      if (idx !== -1) return { grade, unit, idx, topics: conceptsData[grade][unit] };
-    }
-  }
-  return null;
-}
-
 function checkMyMap() {
   const degree = new Map(nodes.map(n => [n.id, 0]));
   links.forEach(l => {
@@ -1318,62 +1186,17 @@ function checkMyMap() {
 
   const isolated = nodes.filter(n => (degree.get(n.id) || 0) === 0);
 
-  const missingBridge = [];
-  const questionable = [];
-  const onMapLabels = new Set(nodes.map(n => n.label));
-  links.forEach(l => {
-    if (checkMapDismissed.has(l.id)) return;
-    // A connection explicitly tagged as a related idea, example, or a
-    // different representation isn't a prerequisite claim at all - Connect
-    // doesn't ask what kind of relationship this is, so an untagged link
-    // (relType === '') still gets the benefit of the doubt here, but one a
-    // student (or Explore's "related" question) has already classified as
-    // non-prerequisite is exempt from both checks below.
-    if (l.relType === 'related' || l.relType === 'example' || l.relType === 'representation') return;
-    const src = nodes.find(n => n.id === l.source), tgt = nodes.find(n => n.id === l.target);
-    if (!src || !tgt) return;
-    const posA = curriculumPos(src.label), posB = curriculumPos(tgt.label);
-    if (!posA || !posB) return;
-    // Deliberately same-unit only: cross-unit and cross-grade edges are
-    // often the most valuable connections on a map (that's the whole
-    // point of a map over a flat topic list), so distance alone can't
-    // tell a genuine long-range prerequisite apart from a careless jump
-    // once units differ - only flag within a single unit, where the
-    // curriculum's own step-by-step order is a much stronger signal.
-    if (posA.grade !== posB.grade || posA.unit !== posB.unit) return;
-    const dist = Math.abs(posA.idx - posB.idx);
-    if (dist <= 1) return; // adjacent in the curriculum sequence - a direct edge is expected here
-    if (dist <= 3) {
-      const lo = Math.min(posA.idx, posB.idx), hi = Math.max(posA.idx, posB.idx);
-      const between = posA.topics.slice(lo + 1, hi).filter(t =>
-        !onMapLabels.has(t) && !isSiblingVariant(t, src.label) && !isSiblingVariant(t, tgt.label));
-      if (between.length) {
-        missingBridge.push({ source: src, target: tgt, candidate: between[0], link: l, grade: posA.grade, unit: posA.unit });
-      }
-    } else {
-      questionable.push({
-        source: src, target: tgt, link: l,
-        // Framed as something to look at together, not a verdict - distance
-        // in a flat topic list is only a hint, and a long-range connection
-        // is often exactly the kind of cross-topic thinking a concept map
-        // is for. The relationship-type picker below lets a student settle
-        // it in one click instead of treating every long jump as an error.
-        reason: `${src.label} and ${tgt.label} skip over ${dist - 1} other topics in ${posA.unit}. That's not necessarily wrong - just worth tagging what kind of connection this is.`,
-      });
-    }
-  });
-
-  const missingRelationship = [];
-  const tagged = nodes.filter(n => curriculumPos(n.label));
-  for (let i = 0; i < tagged.length; i++) {
-    for (let j = i + 1; j < tagged.length; j++) {
-      const a = tagged[i], b = tagged[j];
-      const posA = curriculumPos(a.label), posB = curriculumPos(b.label);
-      if (posA.grade === posB.grade && posA.unit === posB.unit && Math.abs(posA.idx - posB.idx) === 1) {
-        const already = links.some(l => (l.source === a.id && l.target === b.id) || (l.source === b.id && l.target === a.id));
-        if (!already) missingRelationship.push({ a, b, unit: posA.unit });
-      }
-    }
+  const missingBridge = [], questionable = [], missingRelationship = [];
+  const canonical = label => prerequisiteData.aliases[label] || label;
+  const matches = (n, endpoint) => canonical(n.label) === endpoint.label && (canonical(n.label) !== n.label || ((!n.meta?.grade || n.meta.grade === endpoint.grade) && (!n.meta?.unit || n.meta.unit === endpoint.unit)));
+  for (const edge of prerequisiteData.edges) {
+    const a = nodes.find(n => matches(n, edge.source));
+    const b = nodes.find(n => matches(n, edge.target));
+    if (!a || !b) continue;
+    const direct = links.find(l => l.source === a.id && l.target === b.id);
+    const reverse = links.find(l => l.source === b.id && l.target === a.id && l.relType === 'prerequisite');
+    if (reverse && !checkMapDismissed.has(reverse.id)) questionable.push({ source:b, target:a, link:reverse, reason:edge.reason + ' For a prerequisite arrow, the foundation comes first.' });
+    if (!direct && !reverse && !links.some(l => l.source === b.id && l.target === a.id)) missingRelationship.push({ a, b, unit: edge.target.unit });
   }
 
   return { isolated, missingBridge, missingRelationship, questionable };
@@ -1545,11 +1368,12 @@ function setupCheckMapButton() {
   const btn = document.getElementById('checkMapBtn');
   const panel = document.getElementById('checkMapPanel');
   if (!btn || !panel) return;
+  document.body.appendChild(panel);
   btn.onclick = e => {
     e.stopPropagation();
     const isOpen = getComputedStyle(panel).display !== 'none';
     if (isOpen) { closeCheckMapPanel(); return; }
-    panel.style.display = 'block';
+    openEditorPanel('checkMapPanel', btn);
     renderCheckMapPanel();
   };
   document.addEventListener('click', e => {
@@ -1581,23 +1405,25 @@ function cloudReady() {
 }
 
 function queueCloudSave() {
-  if (!cloudReady() || !cloudMapId) return;
+  if (isReadonly || !cloudReady() || !cloudMapId) return;
   clearTimeout(cloudSaveTimer);
   setSaveStatus('saving');
   cloudSaveTimer = setTimeout(flushCloudSave, 1200);
 }
 
 async function flushCloudSave() {
-  if (!cloudReady() || !cloudMapId) return;
+  if (isReadonly || !cloudReady() || !cloudMapId) return;
   clearTimeout(cloudSaveTimer);
+  const savingMapId = cloudMapId;
   setSaveStatus('saving');
   try {
     const result = await window.SpanAuth.saveMap({
       id: cloudMapId, title: cloudMapTitle, data: serializeMap(), lastKnownUpdatedAt: cloudMapUpdatedAt,
     });
+    if (cloudMapId !== savingMapId) return;
     if (result.conflict) {
       showCloudNotice('This map changed elsewhere — open "My Maps" to see the latest version.');
-      setSaveStatus('saved');
+      setSaveStatus('error');
     } else {
       cloudMapUpdatedAt = result.row.updated_at;
       setSaveStatus('saved');
@@ -1634,6 +1460,8 @@ function showCloudNotice(msg) {
 }
 
 async function saveCurrentMapAsNew(title, activityId) {
+  if (isReadonly) throw new Error('This map is read-only.');
+  clearTimeout(cloudSaveTimer);
   const result = await window.SpanAuth.saveMap({ id: null, title, data: serializeMap(), activityId });
   cloudMapId = result.row.id;
   cloudMapTitle = result.row.title;
@@ -1643,6 +1471,7 @@ async function saveCurrentMapAsNew(title, activityId) {
 }
 
 async function loadCloudMap(id) {
+  clearTimeout(cloudSaveTimer);
   const row = await window.SpanAuth.loadMapById(id);
   applyMapData(row.data);
   cloudMapId = row.id;
@@ -1873,6 +1702,7 @@ function setupAuthUI() {
   let timelineMaps = [];
   let timelinePlayTimer = null;
 
+  document.getElementById('timelinePanel').addEventListener('span:close', () => stopTimelinePlayback());
   function stopTimelinePlayback() {
     if (timelinePlayTimer) { clearInterval(timelinePlayTimer); timelinePlayTimer = null; }
     timelinePlayBtn.innerHTML = '&#9654;';
@@ -2020,6 +1850,10 @@ function setupAuthUI() {
       minX = Math.min(minX, n.x); minY = Math.min(minY, n.y);
       maxX = Math.max(maxX, n.x + w); maxY = Math.max(maxY, n.y + NODE_HEIGHT);
     }
+    for (const frame of timelineMaps) for (const n of frame.data?.n || []) {
+      minX=Math.min(minX,n.x); minY=Math.min(minY,n.y);
+      maxX=Math.max(maxX,n.x+getNodeWidth(n.l)); maxY=Math.max(maxY,n.y+NODE_HEIGHT);
+    }
     const pad = 24;
     svg.setAttribute('viewBox', `${minX - pad} ${minY - pad} ${maxX - minX + pad * 2} ${maxY - minY + pad * 2}`);
   }
@@ -2129,6 +1963,8 @@ function setupAuthUI() {
 
   saveMapBtn.onclick = async () => {
     const title = (mapTitleInput.value || '').trim() || 'Untitled map';
+    if (isReadonly || saveMapBtn.disabled) return;
+    clearTimeout(cloudSaveTimer);
     saveMapBtn.disabled = true;
     try {
       if (cloudMapId) {
@@ -2145,6 +1981,10 @@ function setupAuthUI() {
       } else {
         await saveCurrentMapAsNew(title, currentActivityId);
       }
+      mapTitleInput.value = title;
+      updateMapTitle();
+      await refreshMapList().catch(() => showCloudNotice('Map saved. Reopen My Maps to refresh the list.'));
+      setSaveStatus('saved');
       const original = saveMapBtn.textContent;
       saveMapBtn.textContent = 'Saved!';
       setTimeout(() => { saveMapBtn.textContent = original; }, 1500);
@@ -2155,42 +1995,23 @@ function setupAuthUI() {
     }
   };
 
-  // "Save a copy": a checkpoint, not an overwrite. Plain Save above
-  // overwrites cloudMapId in place - exactly the thing a student revising
-  // their starting map doesn't want. This instead always inserts a new
-  // row, then repoints cloudMapId/Title/UpdatedAt at it (same identity
-  // switch as a "Save As"), so every edit and autosave from this point
-  // targets the new copy while the original stays frozen at this moment.
-  // When there was a previous map, both versions get linked into one
-  // timeline (reusing it if the original was already in one) so they can
-  // be scrubbed between and compared.
+  // A named copy becomes the editing target. Timeline assignment is explicit.
+  async function refreshMapList() {
+    const [maps, timelines] = await Promise.all([window.SpanAuth.listMyMaps(), window.SpanAuth.listMyTimelines().catch(() => [])]);
+    renderMyMapsList(maps, timelines);
+  }
   if (saveCopyBtn) saveCopyBtn.onclick = async () => {
-    const previousId = cloudMapId;
-    const previousTitle = cloudMapTitle;
-    const typedTitle = (mapTitleInput.value || '').trim();
-    const title = (typedTitle && typedTitle !== previousTitle)
-      ? typedTitle
-      : `${previousTitle || 'Untitled map'} copy`;
+    if (isReadonly || saveCopyBtn.disabled) return;
     saveCopyBtn.disabled = true;
     try {
-      await saveCurrentMapAsNew(title, currentActivityId);
-      mapTitleInput.value = title;
-      if (previousId) {
-        let timelineId = null;
-        try {
-          const previousRow = await window.SpanAuth.loadMapById(previousId);
-          timelineId = previousRow.timeline_id;
-        } catch (e) { /* previous map may have been deleted meanwhile - fall through to no timeline */ }
-        if (!timelineId) {
-          const timeline = await window.SpanAuth.createTimeline(`${previousTitle || 'Untitled map'} history`);
-          timelineId = timeline.id;
-          await window.SpanAuth.setMapTimeline(previousId, timelineId);
-        }
-        await window.SpanAuth.setMapTimeline(cloudMapId, timelineId);
-      }
-      const original = saveCopyBtn.textContent;
-      saveCopyBtn.textContent = 'Saved a copy!';
-      setTimeout(() => { saveCopyBtn.textContent = original; }, 1500);
+      const title = await showPromptDialog('Name the new copy. You will continue editing this copy; the original stays saved.', `${cloudMapTitle || mapTitleInput.value.trim() || 'Untitled map'} copy`);
+      if (title === null || !title.trim()) return;
+      clearTimeout(cloudSaveTimer);
+      await saveCurrentMapAsNew(title.trim(), currentActivityId);
+      mapTitleInput.value = title.trim();
+      updateMapTitle();
+      await refreshMapList().catch(() => showCloudNotice('Copy saved. Reopen My Maps to refresh the list.'));
+      showCloudNotice(`Saved “${title.trim()}”. You are now editing this copy. Add maps to a timeline using My Maps when you want to compare them.`);
     } catch (e) {
       await showAlertDialog('Could not save a copy: ' + (e.message || e));
     } finally {
@@ -2436,8 +2257,11 @@ function setupInstructionsCollapse() {
 }
 
 // --- Concept search: filters the sidebar list and auto-expands matches ---
+function normalizeSearch(text) {
+  return String(text).normalize('NFKC').replace(/[\u2010-\u2015\u2212]/g, '-').replace(/\s+/g, ' ').trim().toLowerCase();
+}
 function filterSidebar(query) {
-  const q = query.trim().toLowerCase();
+  const q = normalizeSearch(query);
   const sidebarList = document.getElementById('sidebarList');
   const noResults = document.getElementById('noResults');
   let anyVisible = false;
@@ -2455,7 +2279,7 @@ function filterSidebar(query) {
       let unitHasMatch = false;
 
       topicUl.querySelectorAll('li').forEach(li => {
-        const match = !q || li.textContent.toLowerCase().includes(q);
+        const match = !q || normalizeSearch(li.textContent).includes(q);
         li.style.display = match ? '' : 'none';
         if (match) unitHasMatch = true;
       });
@@ -2501,27 +2325,37 @@ function setupSearchEvents() {
 // occupied, searches outward ring by ring on a grid sized to the new
 // node's own box until it finds a spot that doesn't overlap any existing
 // node (with a little breathing room).
-function findOpenNodePosition(label) {
-  const w = getNodeWidth(label), h = NODE_HEIGHT, PAD = 16;
-  const area = document.getElementById('canvasArea');
-  const baseX = Math.max(10, area ? area.scrollLeft + area.clientWidth / 2 - w / 2 : 90);
-  const baseY = Math.max(10, area ? area.scrollTop + area.clientHeight / 2 - h / 2 : 90);
-  const stepX = w + PAD, stepY = h + PAD;
-  const overlapsExisting = (x, y) => nodes.some(n => {
-    const nw = getNodeWidth(n.label);
-    return x < n.x + nw + PAD && x + w + PAD > n.x && y < n.y + NODE_HEIGHT + PAD && y + h + PAD > n.y;
-  });
-  if (!overlapsExisting(baseX, baseY)) return { x: baseX, y: baseY };
-  for (let ring = 1; ring <= 12; ring++) {
-    for (let dx = -ring; dx <= ring; dx++) {
-      for (let dy = -ring; dy <= ring; dy++) {
-        if (Math.max(Math.abs(dx), Math.abs(dy)) !== ring) continue; // only the ring's boundary cells
-        const x = Math.max(10, baseX + dx * stepX), y = Math.max(10, baseY + dy * stepY);
-        if (!overlapsExisting(x, y)) return { x, y };
-      }
+// Use the same collision check for dropped, typed, and suggested concepts.
+// Sample the real quadratic link path so a new box cannot masquerade as a link endpoint.
+function nodePositionIsClear(label, x, y, extra = [], includeGhosts = true) {
+  const w = getNodeWidth(label), pad = 20;
+  const boxes = nodes.map(n => ({x:n.x,y:n.y,w:getNodeWidth(n.label),h:NODE_HEIGHT})).concat(extra);
+  if (includeGhosts && ghostState) for (const s of ghostState.suggestions) if (s._pos) boxes.push({ ...s._pos, w:getNodeWidth(s.label), h:NODE_HEIGHT + 40 });
+  if (boxes.some(n => x < n.x+n.w+pad && x+w+pad > n.x && y < n.y+n.h+pad && y+NODE_HEIGHT+pad > n.y)) return false;
+  for (const link of links) {
+    const pts = linkEndpoints(link);
+    if (!pts) continue;
+    const {start,end} = pts, c = curveControlPoint(start,end);
+    for (let t=0; t<=1; t+=0.025) {
+      const px=(1-t)**2*start.x+2*(1-t)*t*c.x+t*t*end.x;
+      const py=(1-t)**2*start.y+2*(1-t)*t*c.y+t*t*end.y;
+      if (px>x-pad && px<x+w+pad && py>y-pad && py<y+NODE_HEIGHT+pad) return false;
     }
   }
-  return { x: baseX, y: baseY }; // extremely crowded map - fall back rather than search forever
+  return true;
+}
+function findOpenNodePosition(label, preferred, extra = [], includeGhosts = true) {
+  const w = getNodeWidth(label), area = document.getElementById('canvasArea');
+  const baseX = Math.max(16, preferred ? preferred.x : area ? area.scrollLeft + area.clientWidth/2 - w/2 : 90);
+  const baseY = Math.max(16, preferred ? preferred.y : area ? area.scrollTop + area.clientHeight/2 - NODE_HEIGHT/2 : 90);
+  const clear = (x,y) => nodePositionIsClear(label,x,y,extra,includeGhosts);
+  if (clear(baseX,baseY)) return {x:baseX,y:baseY};
+  for (let ring=1;ring<=20;ring++) for (let dy=-ring;dy<=ring;dy++) for (let dx=-ring;dx<=ring;dx++) {
+    if (Math.max(Math.abs(dx),Math.abs(dy))!==ring) continue;
+    const x=Math.max(16,baseX+dx*(w+36)),y=Math.max(16,baseY+dy*(NODE_HEIGHT+70));
+    if (clear(x,y)) return {x,y};
+  }
+  return {x:16,y:Math.max(16,...nodes.map(n=>n.y+NODE_HEIGHT+120),...extra.map(n=>n.y+n.h+120))};
 }
 
 // Scrolls the new node into the center of the viewport, then gives it a
@@ -2606,7 +2440,7 @@ document.getElementById('mapCanvas').ondrop = ev => {
   let data = ev.dataTransfer.getData('text/plain');
   if (!data) return;
   let obj = JSON.parse(data);
-  let bbox = ev.target.getBoundingClientRect ? ev.target.getBoundingClientRect() : {left:0,top:0};
+  const bbox = document.getElementById('mapCanvas').getBoundingClientRect();
   let x = ev.clientX - bbox.left, y = ev.clientY - bbox.top;
   // If dropped from AI panel, may have .label and .meta
   if (obj.fromAI) {
@@ -2618,6 +2452,7 @@ document.getElementById('mapCanvas').ondrop = ev => {
 
 function addNode(label, x, y, meta={}) {
   if (isReadonly) return;
+  ({x,y} = findOpenNodePosition(label, {x,y}, [], false));
   let node = {
     id: nodeIdCounter++,
     label, x, y,
@@ -2716,6 +2551,8 @@ function resolveChipCollisions(chips, nodeRects) {
 
 // --------- Main Canvas Drawing ---------
 function renderCanvas() {
+  updateMapTitle();
+  positionMapLegends();
   updateCanvasSize();
   const svg = document.getElementById('mapCanvas');
   svg.innerHTML = `
@@ -2971,10 +2808,10 @@ function renderCanvas() {
       badge.setAttribute('class', 'ai-added-badge');
       badge.setAttribute('transform', `translate(${w},${NODE_HEIGHT})`);
       const bCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-      bCircle.setAttribute('r', '8');
+      bCircle.setAttribute('r', '12');
       const bText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
       bText.textContent = '✦';
-      bText.setAttribute('font-size', '9');
+      bText.setAttribute('font-size', '16');
       bText.setAttribute('text-anchor', 'middle');
       bText.setAttribute('dominant-baseline', 'middle');
       bText.setAttribute('y', '0.5');
@@ -3184,27 +3021,8 @@ async function showNoteEditor(link, cb) {
   if (note !== null) cb(note);
 }
 function renderNotesSidebar() {
-  const notesDiv = document.getElementById('notesSidebar');
-  if (!notesDiv) return;
-  notesDiv.innerHTML = '';
-  for (let link of links) {
-    if (link.note && link.note.trim() !== '') {
-      let src = nodes.find(n => n.id === link.source);
-      let tgt = nodes.find(n => n.id === link.target);
-      if (!src || !tgt) continue;
-      let el = document.createElement('div');
-      el.className = 'sidebar-note';
-      let topicDiv = document.createElement('div');
-      topicDiv.className = 'sidebar-note-topic';
-      topicDiv.textContent = `[${src.label}, ${tgt.label}]`;
-      let txtDiv = document.createElement('div');
-      txtDiv.className = 'sidebar-note-txt';
-      txtDiv.textContent = `[${link.note}]`;
-      el.appendChild(topicDiv);
-      el.appendChild(txtDiv);
-      notesDiv.appendChild(el);
-    }
-  }
+  const el = document.getElementById('notesSidebar');
+  if (el) { el.replaceChildren(); el.hidden = true; }
 }
 
 // ============================================================
@@ -3251,6 +3069,29 @@ function layoutGhostPosition(anchor, index, total, question) {
 }
 
 async function requestSuggestions(node, question, exclude) {
+  // Directional results come from the same authored graph as the teacher
+  // analysis. They work without an AI service and cannot drift during rollout.
+  if (question === 'builds_on' || question === 'leads_to') {
+    const canonical = label => prerequisiteData.aliases[label] || label;
+    const used = new Set([...nodes.map(n => n.label), ...exclude].map(canonical));
+    const anchorSide = question === 'builds_on' ? 'target' : 'source';
+    const otherSide = question === 'builds_on' ? 'source' : 'target';
+    const seen = new Set();
+    return prerequisiteData.edges.filter(edge => {
+      const anchor = edge[anchorSide], other = edge[otherSide];
+      const renamed = canonical(node.label) !== node.label;
+      if (anchor.label !== canonical(node.label) || used.has(other.label) || seen.has(other.label)) return false;
+      if (!renamed && node.meta?.grade && node.meta.grade !== anchor.grade) return false;
+      if (!renamed && node.meta?.unit && node.meta.unit !== anchor.unit) return false;
+      seen.add(other.label); return true;
+    }).slice(0,3).map(edge => ({
+      label: edge[otherSide].label,
+      meta: {grade:edge[otherSide].grade, unit:edge[otherSide].unit},
+      source: question === 'builds_on' ? edge.source.label : node.label,
+      target: question === 'builds_on' ? node.label : edge.target.label,
+      relationship: question === 'builds_on' ? 'prerequisite' : 'builds toward', reason:edge.reason,
+    }));
+  }
   const backendUrl = window.AI_BACKEND_URL || 'http://localhost:5000';
   const res = await fetch(`${backendUrl}/recommend`, {
     method: 'POST',
@@ -3288,8 +3129,9 @@ async function openExploreQuestion(node, question) {
 }
 
 async function showMoreSuggestions() {
-  if (!ghostState) return;
-  const { node, question, shownLabels } = ghostState;
+  if (!ghostState || ghostState.loading) return;
+  const requestState = ghostState;
+  const { node, question, shownLabels } = requestState;
   ghostState.loading = true;
   renderCanvas();
   let suggestions = [];
@@ -3300,8 +3142,11 @@ async function showMoreSuggestions() {
     return;
   }
   if (!ghostState || ghostState.node !== node || ghostState.question !== question) return;
+  if (ghostState !== requestState) return;
+  suggestions = suggestions.filter(s => !shownLabels.has(s.label));
   suggestions.forEach(s => shownLabels.add(s.label));
-  ghostState.suggestions = suggestions;
+  ghostState.suggestions.push(...suggestions);
+  ghostState.exhausted = suggestions.length === 0;
   ghostState.loading = false;
   renderCanvas();
 }
@@ -3343,7 +3188,7 @@ function showGhostReason(s, anchorRect) {
   pop.style.left = Math.max(8, anchorRect.left - 60) + 'px';
   pop.style.top = (anchorRect.bottom + 8) + 'px';
   pop.innerHTML = `
-    <div class="reason-rel">${s.source} <span class="reason-arrow">&rarr;</span> ${s.target} <span class="reason-tag">${s.relationship}</span></div>
+    <div class="reason-rel">${escapeHtml(s.source)} <span class="reason-arrow">&rarr;</span> ${escapeHtml(s.target)} <span class="reason-tag">${escapeHtml(s.relationship)}</span></div>
     <p></p>
     <button id="closeReasonBtn" title="Close">&times;</button>
   `;
@@ -3373,7 +3218,10 @@ function renderGhostSuggestions(svg) {
     // recomputing from the *current* index/total meant adding or dismissing
     // one ghost changed the total, which reshuffled every remaining ghost
     // to new positions (the "collapse in" toward the center effect).
-    if (!s._pos) s._pos = layoutGhostPosition(anchor, i, total, ghostState.question);
+    if (!s._pos) {
+      const occupied = ghostState.suggestions.filter(o => o !== s && o._pos).map(o => ({...o._pos,w:getNodeWidth(o.label),h:NODE_HEIGHT+40}));
+      s._pos = findOpenNodePosition(s.label, layoutGhostPosition(anchor,i,total,ghostState.question), occupied, false);
+    }
     const pos = s._pos;
     const w = getNodeWidth(s.label);
 
@@ -3402,7 +3250,11 @@ function renderGhostSuggestions(svg) {
     g.appendChild(rect);
 
     const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-    text.textContent = '✦ ' + s.label;
+    text.textContent = s.label;
+    const textWidth = measureTextWidthAtSize(s.label, 14);
+    if (textWidth > w - 24) { text.setAttribute('textLength', w - 24); text.setAttribute('lengthAdjust', 'spacingAndGlyphs'); }
+    const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+    title.textContent = s.label; g.appendChild(title);
     text.setAttribute('x', w / 2);
     text.setAttribute('y', NODE_HEIGHT / 2 - 7);
     text.setAttribute('text-anchor', 'middle');
@@ -3606,9 +3458,9 @@ function updateNodeOverlays() {
         document.getElementById('closeExploreBtn').onclick = e => { e.stopPropagation(); ghostState = null; renderCanvas(); };
       } else {
         moreBar.style.display = 'block';
-        moreBar.innerHTML = ghostState.suggestions.length
-          ? `<button id="showMoreBtn">Show 3 more</button><button id="closeExploreBtn" title="Close">&times;</button>`
-          : `<span class="loading-label">Nothing else to suggest here.</span><button id="closeExploreBtn" title="Close">&times;</button>`;
+        moreBar.innerHTML = ghostState.suggestions.length && !ghostState.exhausted
+          ? `<button id="showMoreBtn">Show up to 3 more</button><button id="closeExploreBtn" title="Close">&times;</button>`
+          : `<span class="loading-label">No further verified connections for this question.</span><button id="closeExploreBtn" title="Close">&times;</button>`;
         const moreBtn = document.getElementById('showMoreBtn');
         if (moreBtn) moreBtn.onclick = e => { e.stopPropagation(); showMoreSuggestions(); };
         document.getElementById('closeExploreBtn').onclick = e => { e.stopPropagation(); ghostState = null; renderCanvas(); };
@@ -3630,3 +3482,60 @@ document.addEventListener('click', e => {
 });
 
 // ========== END ==========
+
+const EDITOR_PANELS = ['aiSummaryPanel','checkMapPanel','myMapsPanel','timelinePanel'];
+function openEditorPanel(id, anchor) {
+  for (const other of EDITOR_PANELS) if (other !== id) document.getElementById(other)?.style.setProperty('display','none');
+  const panel = document.getElementById(id);
+  if (!panel) return;
+  if (id === 'aiSummaryPanel' || id === 'checkMapPanel') {
+    const r = document.getElementById('helpMenuBtn').getBoundingClientRect();
+    panel.style.position = 'fixed';
+    panel.style.left = Math.max(8, Math.min(r.left, innerWidth - 390)) + 'px';
+    panel.style.top = (r.bottom + 8) + 'px';
+  }
+  panel.style.display = 'block';
+}
+function setupEditorPanels() {
+  for (const id of EDITOR_PANELS) {
+    const panel = document.getElementById(id);
+    if (!panel) continue;
+    new MutationObserver(() => {
+      if (getComputedStyle(panel).display === 'none') { panel.dispatchEvent(new Event('span:close')); return; }
+      for (const other of EDITOR_PANELS) if (other !== id) {
+        const el = document.getElementById(other);
+        if (el && getComputedStyle(el).display !== 'none') { el.style.display = 'none'; el.dispatchEvent(new Event('span:close')); }
+      }
+    }).observe(panel, { attributes: true, attributeFilter:['style'] });
+  }
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Escape') return;
+    for (const id of EDITOR_PANELS) {
+      const el = document.getElementById(id);
+      if (el) { el.style.display = 'none'; el.classList.remove('timeline-expanded'); el.dispatchEvent(new Event('span:close')); }
+    }
+    document.getElementById('helpDropdownMenu')?.classList.remove('open');
+    closeAllNodeOverlays(); summaryHighlightIds = new Set(); checkMapDim = false; renderCanvas();
+  });
+}
+function updateMapTitle() {
+  const title = cloudMapTitle || (isSampleMode ? 'Sample map' : shareDraftKey || isReadonly ? 'Shared map' : 'Untitled map');
+  const el = document.getElementById('openMapTitle');
+  if (el) { el.textContent = title; el.title = title; }
+}
+
+function positionMapLegends() {
+  const area = document.getElementById('canvasArea');
+  if (!area) return;
+  const rect = area.getBoundingClientRect();
+  for (const id of ['isolatedLegend','aiAddedLegend','arrowLegend']) {
+    const el = document.getElementById(id);
+    if (!el) continue;
+    el.style.position = 'fixed';
+    el.style.maxWidth = Math.max(100, rect.width - 48) + 'px';
+    if (id === 'aiAddedLegend') { el.style.right = Math.max(14, innerWidth-rect.right+14)+'px'; el.style.left='auto'; }
+    else { el.style.left=(rect.left+14)+'px'; el.style.right='auto'; }
+    if (id === 'arrowLegend') el.style.top=(rect.top+(isReadonly ? 54 : 12))+'px';
+    else el.style.bottom=Math.max(14,innerHeight-rect.bottom+14)+(id === 'aiAddedLegend' ? 60 : 0)+'px';
+  }
+}

@@ -271,35 +271,11 @@ alter table public.maps add column if not exists timeline_id uuid references pub
 -- ("update own maps"), so setting timeline_id needs no new maps policy.
 
 -- ============================================================
--- DEMO-ONLY, TEMPORARY: self-serve role toggle (student <-> teacher).
--- ============================================================
--- Drops the signup-code gate from an earlier revision of this file, if it
--- was ever run - this project decided against the code-gate approach.
-drop function if exists public.claim_teacher_role(text);
-drop table if exists public.teacher_signup_codes;
--- !! Intentionally ungated - any authenticated user can flip their own role
--- with no approval, and can flip back. Acceptable only because this
--- deployment is a demo with no real student data at stake. Before any real
--- usage, replace with a real gate (see TODO.md's "Auth & roles" section).
-create or replace function public.toggle_role()
-returns void
-language plpgsql security definer set search_path = public, pg_temp
-as $$
-declare
-  current_role text;
-begin
-  select coalesce(raw_app_meta_data->>'role', 'student') into current_role
-  from auth.users where id = auth.uid();
-
-  update auth.users
-  set raw_app_meta_data = raw_app_meta_data
-    || jsonb_build_object('role', case when current_role = 'teacher' then 'student' else 'teacher' end)
-  where id = auth.uid();
-end;
-$$;
-
-revoke execute on function public.toggle_role() from public;
-grant execute on function public.toggle_role() to authenticated;
+-- Teacher access is administrator-managed only.
+-- Remove the former demo RPC so authenticated users cannot self-promote.
+-- No code table is dropped: preserve any previously provisioned gate data.
+drop function if exists public.toggle_role();
+notify pgrst, 'reload schema';
 
 -- ============================================================
 -- Activities: a teacher-defined, named assignment with its own concept
