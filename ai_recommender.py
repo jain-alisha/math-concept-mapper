@@ -46,8 +46,9 @@ curriculum_topics = []
 for grade, units in curriculum.items():
     for unit, topics in units.items():
         for topic in topics:
-            concept_lookup[topic] = {'grade': grade, 'unit': unit}
-            curriculum_topics.append(topic)
+            if topic not in concept_lookup:
+                concept_lookup[topic] = {'grade': grade, 'unit': unit, 'conceptId': 'math:' + re.sub(r'[^a-z0-9]+', '-', topic.lower()).strip('-')}
+                curriculum_topics.append(topic)
 
 # --- Lightweight TF-IDF similarity (no ML model/download needed) ---
 # Curriculum topic labels are named systematically (e.g. "Addition",
@@ -167,7 +168,7 @@ def relationship_suggestions(selected_label, selected_meta, used_labels, questio
             target = selected_label if question == 'builds_on' else label
             results.append({
                 'label': label,
-                'meta': {'grade': endpoint['grade'], 'unit': endpoint['unit']},
+                'meta': {'grade': endpoint['grade'], 'unit': endpoint['unit'], 'conceptId': endpoint['conceptId']},
                 'source': source, 'target': target,
                 'relationship': RELATIONSHIP_LABEL[question],
                 'reason': edge['reason'],
@@ -182,7 +183,7 @@ def relationship_suggestions(selected_label, selected_meta, used_labels, questio
     candidates = [t for t in candidates if t not in used and t != canonical]
     ranked = semantic_similarity(canonical, candidates, topk=topk)
     return [{
-        'label': r['label'], 'meta': {'grade': grade, 'unit': unit},
+        'label': r['label'], 'meta': {'grade': grade, 'unit': unit, 'conceptId': concept_lookup[r['label']]['conceptId']},
         'source': selected_label, 'target': r['label'],
         'relationship': 'related',
         'reason': build_reason(selected_label, r['label'], 'related'),
@@ -295,6 +296,8 @@ def llm_relationship_suggestions(selected_label, grade, unit, used_labels, quest
         if label not in valid_labels or not reason:
             continue  # skip hallucinated topics or empty reasons
         meta = concept_lookup.get(label)
+        if meta and label in curriculum.get(grade, {}).get(unit, []):
+            meta = {**meta, 'grade': grade, 'unit': unit}
         if not meta:
             continue
         if question == 'builds_on':
@@ -326,8 +329,8 @@ def recommend():
         if question not in RELATIONSHIP_LABEL:
             question = 'related'
 
-        used_labels = set(n['label'] for n in nodes) | set(exclude)
-        selected_label = selected.get('label', '')
+        used_labels = {canonical_label(n['label']) for n in nodes} | {canonical_label(label) for label in exclude}
+        selected_label = canonical_label(selected.get('label', ''))
         selected_meta = selected.get('meta', {})
         grade, unit = resolved_meta(selected_label, selected_meta)
 

@@ -1,204 +1,807 @@
 {
-  "version": 1,
+  "version": 2,
   "aliases": {
-    "Understand a fraction a/b as a parts": "Build fractions from equal-sized unit fractions",
-    "Evaluate multi‑variable expressions": "Evaluate multi-variable expressions",
-    "Subtract mixed numbers integers": "Subtract positive and negative mixed numbers",
-    "Integer insertion in complex expressions": "Substitute integers into expressions and evaluate",
-    "Graph residual or error concept": "Interpret the difference between a data point and a trend line",
-    "Evaluate aⁿ for n ∈ Z": "Evaluate powers with integer exponents",
-    "Plot rational on number line": "Plot rational numbers on a number line",
-    "Mixed numbers to decimals conversions": "Convert mixed numbers to decimals",
-    "Fraction to decimal classification": "Identify terminating and repeating decimals",
-    "Scale drawings translations": "Interpret scale drawings",
-    "Scale drawing scale factor": "Find the scale factor of a drawing",
-    "Area of triangles trapezoids": "Find areas of triangles and trapezoids",
-    "Solve angle problems multiple steps": "Solve multi-step angle problems",
-    "Solve multistep equations decimals": "Solve multi-step equations with decimals",
-    "Identify solutions sets of equations": "Identify solution sets of equations",
-    "Find slope from two coords": "Find slope from two points",
-    "Properties of real numbers closure": "Explore closure under operations on real numbers",
-    "Rational operations closure": "Explain closure under operations on rational numbers",
-    "Mean absolute deviation calculation": "Calculate mean absolute deviation",
-    "Joint frequency interpretation": "Interpret joint frequencies",
-    "Marginal distribution usage": "Interpret marginal frequencies",
-    "Conditional distribution usage": "Interpret conditional relative frequencies",
-    "Determine if mapping is function": "Determine whether a mapping is a function",
-    "Function notation understanding": "Understand function notation",
-    "Contextualize functions word problems": "Interpret functions in word problems",
-    "System solution ↔ intersection": "Interpret a system solution as a graph intersection",
-    "Solve system: decimals": "Solve systems with decimal coefficients",
-    "Solve system: fractions": "Solve systems with fractional coefficients",
-    "Solve system: context": "Solve systems in real-world contexts",
-    "Number of solutions interpretation": "Interpret the number of solutions of a system",
-    "Equation ↔ proportional relationship": "Connect proportional relationships and equations",
-    "Convert standard ↔ scientific": "Convert between standard form and scientific notation",
-    "Convert decimals ↔ fractions": "Convert between decimals and fractions",
-    "Order of operations PEMDAS": "Use the order of operations",
-    "Evaluate exponents (whole)": "Evaluate powers with whole-number bases",
-    "Write algebraic expressions (1 op)": "Write algebraic expressions with one operation",
-    "Write algebraic expressions (2 ops)": "Write algebraic expressions with two operations",
-    "Variable term identification": "Identify variable terms",
-    "Coefficient identification": "Identify coefficients",
-    "Equivalent expressions recognition": "Recognize equivalent expressions",
-    "Divide fractions by whole number": "Divide fractions by whole numbers",
-    "Graph (x,y) in four quadrants": "Plot ordered pairs in all four quadrants",
-    "Perimeter: various shapes": "Find perimeters of polygons",
-    "Circle problems – word context": "Solve circle measurement word problems",
-    "Statistical question definition": "Recognize statistical questions",
-    "Simple probability definition": "Understand probability as a number from 0 to 1",
-    "Compound events – count sample space": "List outcomes in a compound-event sample space",
-    "Compound events – tree diagrams": "Use tree diagrams to represent compound events",
-    "Describe scatter association": "Describe association in scatter plots",
-    "Use MAD to describe accuracy": "Use mean absolute deviation to describe variability",
-    "Assess independence visually": "Compare conditional relative frequencies for association",
-    "Fractions": "Build fractions from equal-sized unit fractions",
-    "Equal parts": "Partition shapes into equal parts",
-    "Unit fractions": "Understand a unit fraction (1/b)",
-    "Number line": "Represent a fraction on a number line",
-    "Multiply a fraction by a whole": "Multiply a fraction by a whole number"
+    "Understand a fraction a/b as a parts": "Fraction",
+    "Evaluate multi‑variable expressions": "Substitution",
+    "Subtract mixed numbers integers": "Mixed numbers",
+    "Integer insertion in complex expressions": "Substitution",
+    "Graph residual or error concept": "Residual",
+    "Evaluate aⁿ for n ∈ Z": "Integer powers",
+    "Plot rational on number line": "Number line",
+    "Mixed numbers to decimals conversions": "Mixed numbers",
+    "Fraction to decimal classification": "Repeating decimals",
+    "Scale drawings translations": "Scale drawing",
+    "Scale drawing scale factor": "Scale factor",
+    "Area of triangles trapezoids": "Trapezoid area",
+    "Solve angle problems multiple steps": "Angle relationships",
+    "Solve multistep equations decimals": "Decimal equation",
+    "Identify solutions sets of equations": "Solution set",
+    "Find slope from two coords": "Slope",
+    "Properties of real numbers closure": "Closure",
+    "Rational operations closure": "Rational closure",
+    "Mean absolute deviation calculation": "Mean absolute deviation",
+    "Joint frequency interpretation": "Joint frequency",
+    "Marginal distribution usage": "Marginal frequency",
+    "Conditional distribution usage": "Conditional frequency",
+    "Determine if mapping is function": "Mapping",
+    "Function notation understanding": "Function notation",
+    "Contextualize functions word problems": "Function",
+    "System solution ↔ intersection": "System solution",
+    "Solve system: decimals": "Decimal coefficient",
+    "Solve system: fractions": "Fraction coefficient",
+    "Solve system: context": "Equation system",
+    "Number of solutions interpretation": "Number of solutions",
+    "Equation ↔ proportional relationship": "Proportional relationship",
+    "Convert standard ↔ scientific": "Standard form",
+    "Convert decimals ↔ fractions": "Fractions and decimals",
+    "Order of operations PEMDAS": "Order of operations",
+    "Evaluate exponents (whole)": "Exponent",
+    "Write algebraic expressions (1 op)": "Algebraic expression",
+    "Write algebraic expressions (2 ops)": "Algebraic expression",
+    "Variable term identification": "Variable",
+    "Coefficient identification": "Coefficient",
+    "Equivalent expressions recognition": "Equivalent expressions",
+    "Divide fractions by whole number": "Fraction division",
+    "Graph (x,y) in four quadrants": "Ordered pair",
+    "Perimeter: various shapes": "Polygon perimeter",
+    "Circle problems – word context": "Circle",
+    "Statistical question definition": "Statistical question",
+    "Simple probability definition": "Probability",
+    "Compound events – count sample space": "Sample space",
+    "Compound events – tree diagrams": "Tree diagram",
+    "Describe scatter association": "Association",
+    "Use MAD to describe accuracy": "Variability",
+    "Assess independence visually": "Association",
+    "Fractions": "Fraction",
+    "Equal parts": "Equal parts",
+    "Unit fractions": "Unit fraction",
+    "Number line": "Number line",
+    "Multiply a fraction by a whole": "Fraction multiplication",
+    "Multiplication as equal groups": "Equal groups",
+    "Multiplication as an array": "Array",
+    "Division as equal sharing": "Equal sharing",
+    "Division as equal grouping": "Equal grouping",
+    "Relate multiplication and division (fact families)": "Fact family",
+    "Multiplication facts: 2s, 5s, and 10s": "Multiplication facts",
+    "Multiplication facts: 3s and 4s": "Multiplication facts",
+    "Multiplication facts: 6s and 7s": "Multiplication facts",
+    "Multiplication facts: 8s and 9s": "Multiplication facts",
+    "Fluently multiply within 100": "Multiplication",
+    "Division facts within 100": "Division facts",
+    "Commutative property of multiplication": "Commutative property",
+    "Associative property of multiplication": "Associative property",
+    "Distributive property (breaking apart factors)": "Distributive property",
+    "Multiply a one-digit number by 10": "Multiples of ten",
+    "Solve one-step multiplication word problems": "Multiplication",
+    "Solve one-step division word problems": "Division",
+    "Two-step word problems with all four operations": "Order of operations",
+    "Represent an unknown quantity with a letter": "Unknown quantity",
+    "Identify a pattern in a number sequence": "Number pattern",
+    "Explain a pattern using properties of operations": "Number pattern",
+    "Place value to 1,000": "Place value",
+    "Read and write numbers to 1,000": "Whole numbers",
+    "Round to the nearest 10": "Rounding",
+    "Round to the nearest 100": "Rounding",
+    "Add within 1,000 (standard algorithm)": "Addition",
+    "Subtract within 1,000 (standard algorithm)": "Subtraction",
+    "Estimate sums and differences": "Estimation",
+    "Multiply a one-digit number by a multiple of 10": "Multiples of ten",
+    "Partition shapes into equal parts": "Equal parts",
+    "Understand a unit fraction (1/b)": "Unit fraction",
+    "Build fractions from equal-sized unit fractions": "Fraction",
+    "Represent a fraction on a number line": "Number line",
+    "Recognize equivalent fractions using models": "Equivalent fractions",
+    "Compare fractions with the same numerator": "Fraction comparison",
+    "Compare fractions with the same denominator": "Fraction comparison",
+    "Compare fractions using benchmarks (0, 1/2, 1)": "Benchmark fraction",
+    "Express whole numbers as fractions": "Whole numbers",
+    "Locate whole numbers on a fraction number line": "Number line",
+    "Tell time to the nearest minute": "Time",
+    "Solve elapsed time word problems": "Elapsed time",
+    "Measure and estimate liquid volume": "Liquid volume",
+    "Measure and estimate mass": "Mass",
+    "Solve word problems with volume and mass": "Measurement",
+    "Create a scaled picture graph": "Picture graph",
+    "Create a scaled bar graph": "Bar graph",
+    "Solve problems using a scaled graph": "Graph scale",
+    "Make a line plot with fractional measurements": "Line plot",
+    "Find the area of a shape by counting unit squares": "Unit square",
+    "Relate area to multiplication": "Area",
+    "Find the area of a rectangle using side lengths": "Rectangle area",
+    "Find the area of a rectilinear figure": "Composite area",
+    "Understand perimeter as a shape's boundary": "Perimeter",
+    "Find the perimeter of a polygon": "Polygon perimeter",
+    "Compare area and perimeter of two shapes": "Area and perimeter",
+    "Classify shapes by shared attributes": "Shape",
+    "Identify categories of quadrilaterals": "Quadrilateral",
+    "Draw shapes with specified attributes": "Shape properties",
+    "Partition a shape into equal areas": "Equal areas",
+    "Express the area of each part as a unit fraction": "Area fraction",
+    "Interpret a multiplication equation as a comparison": "Multiplicative comparison",
+    "Represent a comparison as a multiplication equation": "Multiplicative comparison",
+    "Solve multiplicative comparison word problems": "Multiplicative comparison",
+    "Multi-step word problems with the four operations": "Order of operations",
+    "Interpret remainders in division word problems": "Remainder",
+    "Find all factor pairs for a number (1-100)": "Factor pair",
+    "Determine if a number is prime or composite": "Prime and composite numbers",
+    "Generate a number pattern from a given rule": "Number pattern",
+    "Identify a feature of a pattern not stated in the rule": "Number pattern",
+    "Place value to 1,000,000": "Place value",
+    "Compare multi-digit whole numbers": "Whole numbers",
+    "Round multi-digit whole numbers": "Rounding",
+    "Add multi-digit whole numbers": "Addition",
+    "Subtract multi-digit whole numbers": "Subtraction",
+    "Multiply a number by a one-digit number": "Multiplication",
+    "Multiply two two-digit numbers": "Multiplication",
+    "Divide with a one-digit divisor": "Division",
+    "Interpret remainders in long division": "Remainder",
+    "Estimate quotients": "Estimation",
+    "Recognize equivalent fractions using area models": "Equivalent fractions",
+    "Generate equivalent fractions": "Equivalent fractions",
+    "Compare fractions with unlike denominators": "Fraction comparison",
+    "Decompose a fraction into a sum of unit fractions": "Unit fraction",
+    "Add fractions with the same denominator": "Fraction addition",
+    "Subtract fractions with the same denominator": "Fraction subtraction",
+    "Add mixed numbers with like denominators": "Mixed-number addition",
+    "Subtract mixed numbers with like denominators": "Mixed-number subtraction",
+    "Multiply a fraction by a whole number": "Fraction multiplication",
+    "Solve word problems involving fraction times whole number": "Fraction multiplication",
+    "Express a fraction with denominator 10 as denominator 100": "Tenths and hundredths",
+    "Add fractions with denominators 10 and 100": "Fraction addition",
+    "Understand decimal notation for tenths and hundredths": "Decimal",
+    "Compare decimals to hundredths": "Decimal comparison",
+    "Locate decimals on a number line": "Number line",
+    "Convert units of measurement within a system": "Unit conversion",
+    "Solve word problems involving measurement conversion": "Unit conversion",
+    "Use the four operations in measurement word problems": "Measurement",
+    "Make a line plot with fraction measurements": "Line plot",
+    "Solve problems using a line plot": "Line plot",
+    "Understand an angle as a fraction of a circle": "Angle",
+    "Measure an angle with a protractor": "Angle measure",
+    "Sketch an angle of a given measure": "Angle measure",
+    "Solve addition and subtraction angle problems": "Angle addition",
+    "Identify points, lines, line segments, and rays": "Points and lines",
+    "Identify angles (right, acute, obtuse)": "Angle types",
+    "Identify parallel and perpendicular lines": "Parallel and perpendicular lines",
+    "Classify two-dimensional shapes by lines and angles": "Shape properties",
+    "Identify lines of symmetry": "Line of symmetry",
+    "Draw lines of symmetry": "Line of symmetry",
+    "Evaluate expressions with parentheses, brackets, and braces": "Grouping symbols",
+    "Write a numerical expression from a verbal phrase": "Numerical expression",
+    "Interpret a numerical expression without evaluating it": "Numerical expression",
+    "Generate two numerical patterns from two given rules": "Number pattern",
+    "Form ordered pairs from corresponding pattern terms": "Ordered pair",
+    "Graph ordered pairs from two related patterns": "Coordinate plane",
+    "Understand place value (powers of 10)": "Place value",
+    "Read and write decimals to thousandths": "Decimal",
+    "Compare decimals to thousandths": "Decimal comparison",
+    "Round decimals to a given place": "Rounding",
+    "Multiply multi-digit whole numbers fluently": "Multiplication",
+    "Divide multi-digit whole numbers (two-digit divisors)": "Division",
+    "Estimate multi-digit products and quotients": "Estimation",
+    "Add and subtract decimals to hundredths": "Decimal addition",
+    "Multiply decimals to hundredths": "Decimal multiplication",
+    "Divide decimals to hundredths": "Decimal division",
+    "Add fractions with unlike denominators": "Fraction addition",
+    "Subtract fractions with unlike denominators": "Fraction subtraction",
+    "Estimate sums and differences of fractions": "Estimation",
+    "Solve word problems with unlike-denominator fractions": "Fraction addition",
+    "Interpret a fraction as division of the numerator by the denominator": "Division",
+    "Solve word problems involving division resulting in fractions": "Fraction quotient",
+    "Multiply a fraction by a fraction": "Fraction multiplication",
+    "Multiply a fraction by a mixed number": "Mixed-number multiplication",
+    "Find the area of a rectangle with fractional side lengths": "Rectangle area",
+    "Interpret multiplication as scaling (resizing)": "Scaling",
+    "Divide a unit fraction by a whole number": "Unit fraction",
+    "Divide a whole number by a unit fraction": "Fraction division",
+    "Solve word problems involving fraction division": "Fraction division",
+    "Convert among measurement units within a system": "Unit conversion",
+    "Solve multi-step problems with unit conversion": "Unit conversion",
+    "Solve problems using data from a line plot": "Line plot",
+    "Understand volume as a measurable attribute": "Volume",
+    "Measure volume by counting unit cubes": "Unit cube",
+    "Relate volume to multiplication and addition": "Volume",
+    "Find the volume of a rectangular prism using a formula": "Prism volume",
+    "Find the volume of composite solids": "Composite volume",
+    "Plot points on a coordinate plane (first quadrant)": "Coordinate plane",
+    "Represent real-world problems on a coordinate plane": "Coordinate plane",
+    "Classify two-dimensional shapes into categories": "Shape",
+    "Understand attributes shared across categories of shapes": "Shape properties",
+    "Classify shapes in a hierarchy based on properties": "Shape hierarchy",
+    "Ratio notation (a:b)": "Ratio notation",
+    "Ratio vocabulary": "Ratio",
+    "Equivalent ratios with whole numbers": "Equivalent ratios",
+    "Equivalent ratios – tables": "Ratio table",
+    "Equivalent ratios – tape diagrams": "Tape diagram",
+    "Ratio word problems": "Part-to-whole ratio",
+    "Unit rate definition": "Unit rate",
+    "Calculate unit rates with integers and decimals": "Equivalent rates",
+    "Calculate unit rates with fractions": "Quotient",
+    "Speed as distance divided by time": "Speed",
+    "Rate word problems": "Rate",
+    "Scale diagrams": "Scale",
+    "Percent as a rate": "Percent",
+    "Percent of quantity": "Part and whole",
+    "Percent word problems": "Percent equation",
+    "Percent problems: tax": "Sales tax",
+    "Percent problems: tip": "Tip",
+    "Percent problems: discount": "Discount",
+    "Convert between ratios, fractions, and percents": "Ratios and fractions",
+    "Whole-number place value": "Place value",
+    "Compare whole numbers": "Whole numbers",
+    "Rounding whole numbers": "Rounding",
+    "Multiply whole numbers": "Multiplication",
+    "Divide whole numbers": "Division",
+    "Multiply decimals": "Decimal multiplication",
+    "Divide decimals": "Decimal division",
+    "Simplify fractions": "Simplest form",
+    "Add and subtract fractions with like denominators": "Fraction addition",
+    "Add and subtract fractions with unlike denominators": "Fraction subtraction",
+    "Add and subtract fractions and mixed numbers": "Mixed-number addition",
+    "Subtract fractions and mixed numbers": "Mixed-number subtraction",
+    "Fraction multiplication models": "Area model",
+    "Multiply fractions": "Fraction multiplication",
+    "Divide fractions by whole numbers": "Fraction division",
+    "Divide fractions by fractions": "Fraction quotient",
+    "Cross-cancellation": "Common factor",
+    "Multiply decimals by decimals": "Decimal multiplication",
+    "Divide decimals by decimals": "Decimal division",
+    "Convert between decimals and fractions": "Fractions and decimals",
+    "Identify integers and other rational numbers": "Rational numbers",
+    "Integers on number line": "Number line",
+    "Ordering integers": "Integer order",
+    "Add integers": "Integer addition",
+    "Subtract integers": "Integer subtraction",
+    "Multiply integers": "Integer multiplication",
+    "Divide integers": "Integer division",
+    "Operations with negative decimals": "Signed decimals",
+    "Operations with negative fractions": "Signed fractions",
+    "Plot ordered pairs in all four quadrants": "Ordered pair",
+    "Distance between points (same x or y)": "Distance",
+    "Coordinate plane word problems": "Coordinate plane",
+    "Evaluate powers with whole-number bases": "Exponent",
+    "Evaluate powers (decimal base)": "Decimal powers",
+    "Evaluate powers (fraction base)": "Fraction powers",
+    "Use the order of operations": "Order of operations",
+    "Write numeric expressions": "Numerical expression",
+    "Write algebraic expressions with one operation": "Algebraic expression",
+    "Write algebraic expressions with two operations": "Algebraic expression",
+    "Identify variable terms": "Variable",
+    "Identify coefficients": "Coefficient",
+    "Identify terms, products, and factors": "Term",
+    "Evaluate expressions with variables": "Substitution",
+    "Evaluate multi-variable expressions": "Substitution",
+    "Algebraic expressions word problems": "Algebraic expression",
+    "Simplify by combining like terms": "Like terms",
+    "Apply distributive property": "Distributive property",
+    "Expand using area model": "Area model",
+    "Factor linear expressions": "Factored expression",
+    "Recognize equivalent expressions": "Equivalent expressions",
+    "Write expressions from context": "Algebraic expression",
+    "Write one-step equations": "One-step equation",
+    "Write two-step equations": "Two-step equation",
+    "Solve one-step equations": "Equation solution",
+    "Solve two-step equations": "Equation solution",
+    "Equations with fractions": "Fraction equation",
+    "Equation word problems": "Equation",
+    "Inequality notation (<, >, ≥, ≤)": "Inequality",
+    "Solve one-step inequalities": "Inequality solution",
+    "Graph inequality solutions": "Solution set",
+    "Inequality word problems": "Inequality",
+    "Types of lines and angles": "Lines and angles",
+    "Measure angles with protractor": "Angle measure",
+    "Complementary and supplementary angles": "Complementary angles",
+    "Adjacent and vertical angles": "Vertical angles",
+    "Classify triangles by sides": "Triangle types",
+    "Classify triangles by angles": "Triangle types",
+    "Quadrilateral properties": "Quadrilateral",
+    "Regular and irregular polygons": "Polygon",
+    "Find perimeters of polygons": "Polygon perimeter",
+    "Rectangle perimeter word problems": "Rectangle perimeter",
+    "Area of triangle": "Triangle area",
+    "Area of parallelogram": "Parallelogram area",
+    "Area of trapezoid": "Trapezoid area",
+    "Area of compound shapes": "Composite area",
+    "Circle circumference": "Circumference",
+    "Solve circle measurement word problems": "Circle",
+    "Nets of 3D solids": "Nets",
+    "Surface area of prisms": "Prism surface area",
+    "Surface area of triangular prisms": "Triangular prism",
+    "Surface area of pyramids": "Pyramid surface area",
+    "Surface area of cubes and rectangular prisms": "Cube surface area",
+    "Volume of rectangular prisms": "Prism volume",
+    "Volume of triangular prisms": "Triangular prism volume",
+    "Solve rectangular-prism volume word problems": "Prism volume",
+    "Cross-sections of solids": "Cross-section",
+    "Coordinate geometry: area and perimeter": "Area and perimeter",
+    "Plotting shapes on coordinate plane": "Coordinate plane",
+    "Translate shapes on coordinate plane": "Translation",
+    "Draw polygons on grid": "Polygon",
+    "Graph transformations": "Transformation",
+    "Recognize statistical questions": "Statistical question",
+    "Data collection methods": "Data collection",
+    "Create line plots": "Line plot",
+    "Create histograms": "Histogram",
+    "Create dot plots": "Dot plot",
+    "Create box plots": "Box plot",
+    "Calculate mean": "Mean",
+    "Calculate median": "Median",
+    "Calculate mode": "Mode",
+    "Calculate range": "Range",
+    "Calculate quartiles": "Quartile",
+    "Find interquartile range": "Interquartile range",
+    "Describe data distribution shape": "Distribution shape",
+    "Summarize center and spread": "Center and spread",
+    "Mean and median in context": "Mean and median",
+    "Identify outliers": "Outlier",
+    "Compare distributions": "Data distribution",
+    "Random and biased sampling": "Random sample",
+    "Representative samples": "Representative sample",
+    "Understand probability as a number from 0 to 1": "Probability",
+    "Probability of event": "Event",
+    "Probability and frequency": "Relative frequency",
+    "Probability word problems": "Probability",
+    "List outcomes in a compound-event sample space": "Sample space",
+    "Use tree diagrams to represent compound events": "Tree diagram",
+    "Probability simulations": "Simulation",
+    "Make predictions from data": "Prediction",
+    "Compute unit rates with fractional lengths": "Unit rate",
+    "Compute unit rates with fractional areas": "Unit rate",
+    "Unit rates in different units": "Unit conversion",
+    "Identify proportional relationships in tables": "Ratio table",
+    "Identify proportional relationships in graphs": "Proportional graph",
+    "Identify proportional relationships in equations": "Proportional relationship",
+    "Equivalent ratios with fractions": "Equivalent ratios",
+    "Do ratios form a proportion?": "Proportion",
+    "Proportions in word problems": "Proportion",
+    "Constant of proportionality in tables": "Constant of proportionality",
+    "Constant of proportionality in graphs": "Slope",
+    "Write proportional equations from tables": "Proportional equation",
+    "Write proportional equations from graphs": "Proportional equation",
+    "Solve percent of numbers": "Percent",
+    "Solve percent equations": "Percent equation",
+    "Multi-step ratio problems": "Ratio",
+    "Multi-step percent problems": "Percent",
+    "Percent increase in context": "Percent increase",
+    "Percent decrease in context": "Percent decrease",
+    "Solve simple interest": "Simple interest",
+    "Multi-step percent change": "Percent change",
+    "Estimate population using proportions": "Population estimate",
+    "Sale price and coupon problems": "Discount",
+    "Find original price from percent": "Original price",
+    "Compare coupons using percent": "Discount",
+    "Unit price conversions": "Unit price",
+    "Rate word problems with units conversions": "Unit conversion",
+    "Add and subtract integers on a number line": "Number line",
+    "Absolute value and opposites": "Opposite numbers",
+    "Integer addition rules": "Integer addition",
+    "Integer subtraction rules": "Integer subtraction",
+    "Multiply integers rules": "Integer multiplication",
+    "Divide integers rules": "Integer division",
+    "Add three or more integers": "Integer addition",
+    "Add positive and negative fractions": "Signed fractions",
+    "Subtract positive and negative mixed numbers": "Mixed numbers",
+    "Multiply fractions and integers": "Fraction multiplication",
+    "Multiply mixed numbers": "Mixed-number multiplication",
+    "Divide fractions and mixed numbers": "Mixed-number division",
+    "Multiply positive and negative decimals": "Signed decimals",
+    "Divide positive and negative decimals": "Decimal division",
+    "Add and subtract decimals and fractions": "Rational numbers",
+    "Substitute integers into expressions and evaluate": "Substitution",
+    "Real-world integer problems": "Integers",
+    "Decimal operations in context": "Decimal",
+    "Fraction operations in context": "Fraction",
+    "Add and subtract rational numbers": "Rational addition",
+    "Multiply and divide rational numbers": "Rational multiplication",
+    "Convert fractions to decimals": "Fractions and decimals",
+    "Classify rational numbers by decimal representation": "Rational numbers",
+    "Plot rational numbers on a number line": "Number line",
+    "Absolute value in context": "Absolute value",
+    "Distance between two rational numbers": "Distance",
+    "Convert mixed numbers to decimals": "Mixed numbers",
+    "Identify terminating and repeating decimals": "Repeating decimals",
+    "Simplify linear expressions combining terms": "Like terms",
+    "Use distributive property to expand": "Distributive property",
+    "Equivalent expressions with tiles": "Equivalent expressions",
+    "Simplify expressions with tiles": "Algebra tiles",
+    "Write expressions from word problems": "Algebraic expression",
+    "Simplify using the commutative and associative properties": "Operation properties",
+    "Create equivalent expressions": "Equivalent expressions",
+    "Identify expressions with variables": "Variable",
+    "Coefficient identification practice": "Coefficient",
+    "Term identification in linear expressions": "Term",
+    "Write one-step equations word problems": "One-step equation",
+    "Write two-step equations word problems": "Two-step equation",
+    "Solve two-step equations without parentheses": "Two-step equation",
+    "Solve two-step equations with parentheses": "Grouping symbols",
+    "Solve equations with fractions": "Fraction equation",
+    "Solve multi-step equations with decimals": "Decimal equation",
+    "Equation solving context problems": "Equation",
+    "Solve px + q = r type equations": "Linear equation",
+    "Inequality notation practice": "Inequality",
+    "Solve two-step inequalities": "Inequality solution",
+    "Inequality word problems context": "Inequality",
+    "Simplify with integer coefficients": "Integer coefficient",
+    "Simplify with rational coefficients": "Rational coefficient",
+    "Evaluate expressions including negatives": "Signed numbers",
+    "Evaluate expressions including fractions": "Fraction",
+    "Evaluate expressions including decimals": "Decimal",
+    "Multi-step expressions with negative numbers": "Order of operations",
+    "Construct equations from real-world context": "Equation",
+    "Construct inequalities from context": "Inequality",
+    "Use algebraic equations in context": "Equation",
+    "Identify solution sets of equations": "Solution set",
+    "Interpret scale drawings": "Scale drawing",
+    "Find the scale factor of a drawing": "Scale factor",
+    "Compute lengths from scale": "Scale",
+    "Compute area from scale": "Area scale factor",
+    "Construct triangles from angles": "Triangle",
+    "Construct triangles from sides": "Triangle",
+    "Triangle inequality problems": "Triangle inequality",
+    "Graph triangles on coordinate plane": "Coordinate plane",
+    "Graph quadrilaterals on grid": "Quadrilateral",
+    "Identify angle relationships": "Angle relationships",
+    "Find complementary and supplementary angles": "Supplementary angles",
+    "Vertical and adjacent angles": "Vertical angles",
+    "Solve multi-step angle problems": "Angle relationships",
+    "Measure circles: radius and diameter": "Radius and diameter",
+    "Circumference of circle": "Circumference",
+    "Area of circle": "Circle area",
+    "Circle word problems": "Circle",
+    "Area of rectangles and parallelograms": "Parallelogram area",
+    "Find areas of triangles and trapezoids": "Trapezoid area",
+    "Area of compound figures": "Composite area",
+    "Surface area of cubes": "Cube surface area",
+    "Surface area of rectangular prisms": "Prism surface area",
+    "Solve prism volume word problems": "Prism volume",
+    "Surface area and volume multi-step problems": "Surface area and volume",
+    "Cross-sections of 3D figures": "Cross-section",
+    "Angle equations in geometry": "Angle equation",
+    "Use geometry formulas in context": "Geometric formula",
+    "Compute distance on coordinate plane": "Distance",
+    "Graph transformations of shapes": "Transformation",
+    "Distinguish random and biased samples": "Random sample",
+    "Representative sampling practice": "Representative sample",
+    "Estimate population from samples": "Population estimate",
+    "Dataset creation and sampling": "Data collection",
+    "Create line plots from data": "Line plot",
+    "Create histograms from data": "Histogram",
+    "Create box plots from data": "Box plot",
+    "Compare distributions visually": "Data distribution",
+    "Calculate mean median mode": "Center",
+    "Calculate range quartiles IQR": "Spread",
+    "Identify outliers on plots": "Outlier",
+    "Describe distribution shapes": "Distribution shape",
+    "Mean and median in skewed data": "Skew",
+    "Interquartile range interpretation": "Interquartile range",
+    "Compare two distributions": "Data distribution",
+    "Simple probability of event": "Event",
+    "Experimental probability measurement": "Experimental probability",
+    "Theoretical probability calculation": "Theoretical probability",
+    "Compound events lists": "Compound event",
+    "Compound events with tree diagrams": "Tree diagram",
+    "Probability from simulations": "Simulation",
+    "Compare experimental and theoretical probability": "Probability models",
+    "Use probability models": "Probability model",
+    "Identify rational and irrational numbers": "Rational numbers",
+    "Define irrational numbers (√2, π)": "Irrational numbers",
+    "Convert repeating decimal to fraction": "Repeating decimals",
+    "Approximate irrational numbers": "Rational approximation",
+    "Compare numbers using rational approximations": "Number order",
+    "Locate irrationals on number line": "Number line",
+    "Properties of integer exponents": "Exponent rules",
+    "Evaluate powers with integer exponents": "Integer powers",
+    "Multiplication laws for exponents": "Product of powers",
+    "Division laws for exponents": "Quotient of powers",
+    "Zero exponent rule": "Zero exponent",
+    "Negative exponents rule": "Negative exponent",
+    "Scientific notation basics": "Scientific notation",
+    "Scientific notation with decimals": "Scientific notation",
+    "Convert between standard form and scientific notation": "Standard form",
+    "Multiply in scientific notation": "Scientific notation product",
+    "Divide in scientific notation": "Scientific notation quotient",
+    "Estimate using scientific notation": "Estimation",
+    "Evaluate square roots": "Square root",
+    "Evaluate cube roots": "Cube root",
+    "Simplify small radical expressions": "Radical",
+    "Use radicals to solve x² = p": "Square equation",
+    "Use radicals to solve x³ = p": "Cube equation",
+    "Identify √2 as irrational": "Irrational numbers",
+    "Simplify √(a × b)": "Product of radicals",
+    "Simplify √(a / b)": "Quotient of radicals",
+    "Simplify √(a²) = |a|": "Principal square root",
+    "Explore closure under operations on real numbers": "Closure",
+    "Explain closure under operations on rational numbers": "Rational closure",
+    "Irrational ± rational = irrational": "Irrational sum",
+    "Irrational × irrational possibilities": "Irrational product",
+    "Order of operations with exponents": "Order of operations",
+    "Evaluate expressions with exponents": "Exponent",
+    "Simplify exponential expressions": "Exponential expression",
+    "Factor using exponents": "Factor",
+    "Rewrite expressions aᵐaⁿ": "Product of powers",
+    "Rewrite (aᵐ)ⁿ": "Power of a power",
+    "Rewrite aᵐ/aⁿ": "Quotient of powers",
+    "Rewrite a⁻ᵐ": "Negative exponent",
+    "Rewrite a⁰": "Zero exponent",
+    "Distributive property with exponents": "Distributive property",
+    "Model expressions with structure": "Expression structure",
+    "Connect proportional relationships and equations": "Proportional relationship",
+    "Linear equation forms": "Linear equation",
+    "Plot linear equations": "Linear graph",
+    "Graph y = mx + b": "Slope-intercept form",
+    "Graph using slope and intercept": "Slope and intercept",
+    "Graph using two points": "Two-point form",
+    "Find slope from graph": "Slope",
+    "Find slope from two points": "Slope",
+    "Find y-intercept from graph": "Intercept",
+    "Write linear equation from graph": "Linear equation",
+    "Point-slope form application": "Point-slope form",
+    "Convert standard to slope form": "Standard form",
+    "Solve equations with exponents": "Exponential equation",
+    "Simplify equations before solving": "Equivalent equations",
+    "Apply inverse operations": "Inverse operations",
+    "Solve multi-step equations": "Multi-step equation",
+    "Solve equations with decimals": "Decimal equation",
+    "Contextual equation solving": "Equation",
+    "Check solutions algebraically": "Equation solution",
+    "Graphical solution of equations": "Graph intersection",
+    "Interpret a system solution as a graph intersection": "System solution",
+    "Solve system by graphing": "Graph intersection",
+    "Solve system by substitution": "Substitution",
+    "Solve system by elimination": "Elimination",
+    "Solve systems with decimal coefficients": "Decimal coefficient",
+    "Solve systems with fractional coefficients": "Fraction coefficient",
+    "Solve systems in real-world contexts": "Equation system",
+    "Interpret the number of solutions of a system": "Number of solutions",
+    "Create system from context": "Equation system",
+    "Inequality and linear equation analogy": "Inequality",
+    "Solve one-variable inequalities": "Inequality solution",
+    "Definition of function": "Function",
+    "Determine whether a mapping is a function": "Mapping",
+    "Function domain from table": "Domain",
+    "Function range from table": "Range",
+    "Evaluate function f(x)": "Function value",
+    "Identify functions from graphs": "Function graph",
+    "Identify non-functions": "Non-function",
+    "Compare multiple function tables": "Function table",
+    "Compare multiple graphs": "Function graph",
+    "Recognize linear and non-linear functions": "Linear and nonlinear functions",
+    "Interpret slope as rate of change": "Rate of change",
+    "Interpret intercept in context": "Intercept",
+    "Model bivariate data linearly": "Linear model",
+    "Fit trend line by eye": "Trend line",
+    "Approximate line equation": "Linear equation",
+    "Use functions to predict values": "Prediction",
+    "Interpret negative slope": "Negative slope",
+    "Predict beyond data range": "Extrapolation",
+    "Interpret the difference between a data point and a trend line": "Residual",
+    "Relate proportional to linear function": "Proportional function",
+    "Change form of linear function": "Linear function",
+    "Understand function notation": "Function notation",
+    "Compare function representations": "Function representation",
+    "Interpret functions in word problems": "Function",
+    "Understand congruence by rigid motions": "Congruence",
+    "Perform translations": "Translation",
+    "Perform reflections": "Reflection",
+    "Perform rotations": "Rotation",
+    "Combine rigid motions": "Rigid motion",
+    "Draw congruent shapes by movement": "Congruent shapes",
+    "Use SAS criterion": "SAS congruence",
+    "Use ASA criterion": "ASA congruence",
+    "Use SSS criterion": "SSS congruence",
+    "Prove triangles congruent": "Triangle congruence",
+    "Identify non-congruent shapes": "Non-congruent shapes",
+    "Identify angle types (acute, obtuse)": "Angle types",
+    "Supplementary and vertical angles": "Supplementary angles",
+    "Angles made by parallel lines": "Parallel-line angles",
+    "Angle bisector identification": "Angle bisector",
+    "Triangle interior angles sum": "Triangle angle sum",
+    "Triangle exterior angle theorem": "Exterior angle",
+    "Construct triangles from measures": "Triangle",
+    "Test triangle inequality": "Triangle inequality",
+    "Similarity by dilation": "Dilation",
+    "Similarity by AA criterion": "AA similarity",
+    "Similar triangles for unknown side": "Similar triangles",
+    "Scale factor calculation": "Scale factor",
+    "Applications of dilations": "Dilation",
+    "Find missing altitude via similarity": "Altitude",
+    "Shadow-length problems": "Similar triangles",
+    "Coordinates after translation": "Translation",
+    "Coordinates after reflection": "Reflection",
+    "Coordinates after rotation": "Rotation",
+    "Coordinates after dilation": "Dilation",
+    "Pythagorean theorem application": "Pythagorean theorem",
+    "Distance in coordinate plane": "Coordinate distance",
+    "Distance formula usage": "Distance formula",
+    "Real-world distance problems": "Distance",
+    "Understand 3D shapes and their nets": "Nets",
+    "Calculate volume of cones": "Cone volume",
+    "Calculate volume of cylinders": "Cylinder volume",
+    "Calculate volume of spheres": "Sphere volume",
+    "Compare volumes by scale factor": "Volume scale factor",
+    "Surface area of cones": "Cone surface area",
+    "Surface area of cylinders": "Cylinder surface area",
+    "Surface area of spheres": "Sphere surface area",
+    "Solve cylinder, cone, and sphere volume word problems": "Volume",
+    "Create scatter plots": "Scatter plot",
+    "Describe association in scatter plots": "Association",
+    "Identify linear trends": "Linear trend",
+    "Find line of best fit by eye": "Best-fit line",
+    "Estimate line equation": "Linear equation",
+    "Use slope in scatter plot": "Slope",
+    "Use intercept in scatter plot": "Intercept",
+    "Predict with linear model": "Linear model",
+    "Calculate mean absolute deviation": "Mean absolute deviation",
+    "Use mean absolute deviation to describe variability": "Variability",
+    "Construct equations for context data": "Data model",
+    "Identify categorical and quantitative data": "Data types",
+    "Two-way frequency tables": "Two-way table",
+    "Interpret joint frequencies": "Joint frequency",
+    "Interpret marginal frequencies": "Marginal frequency",
+    "Interpret conditional relative frequencies": "Conditional frequency",
+    "Find percent in two-way tables": "Relative frequency",
+    "Compare conditional relative frequencies for association": "Association",
+    "Understand random sampling": "Random sample",
+    "Generate random samples": "Random sample",
+    "Sampling with and without replacement": "Replacement",
+    "Calculate simple probability": "Probability",
+    "Approximate experimental probability": "Experimental probability",
+    "Calculate theoretical probability": "Theoretical probability",
+    "Probability of compound events": "Compound event",
+    "Combine probabilities using addition and multiplication rules": "Probability rules",
+    "Tree diagrams for compound events": "Tree diagram",
+    "Interpret probability word problems": "Probability",
+    "Make predictions using probability models": "Prediction",
+    "Use probability to assess decision options": "Expected outcomes"
   },
   "edges": [
     {
       "source": {
-        "label": "Partition shapes into equal parts",
+        "label": "Equal parts",
         "grade": "3rd Grade Math",
-        "unit": "Number & Operations—Fractions"
+        "unit": "Number & Operations—Fractions",
+        "conceptId": "math:equal-parts"
       },
       "target": {
-        "label": "Understand a unit fraction (1/b)",
+        "label": "Unit fraction",
         "grade": "3rd Grade Math",
-        "unit": "Number & Operations—Fractions"
+        "unit": "Number & Operations—Fractions",
+        "conceptId": "math:unit-fraction"
       },
       "reason": "A unit fraction names one of the equal parts of a whole; unequal pieces do not represent equal unit fractions."
     },
     {
       "source": {
-        "label": "Understand a unit fraction (1/b)",
+        "label": "Unit fraction",
         "grade": "3rd Grade Math",
-        "unit": "Number & Operations—Fractions"
+        "unit": "Number & Operations—Fractions",
+        "conceptId": "math:unit-fraction"
       },
       "target": {
-        "label": "Build fractions from equal-sized unit fractions",
+        "label": "Fraction",
         "grade": "3rd Grade Math",
-        "unit": "Number & Operations—Fractions"
+        "unit": "Number & Operations—Fractions",
+        "conceptId": "math:fraction"
       },
       "reason": "The numerator counts how many copies of the unit fraction are combined."
     },
     {
       "source": {
-        "label": "Build fractions from equal-sized unit fractions",
+        "label": "Number line",
         "grade": "3rd Grade Math",
-        "unit": "Number & Operations—Fractions"
+        "unit": "Number & Operations—Fractions",
+        "conceptId": "math:number-line"
       },
       "target": {
-        "label": "Represent a fraction on a number line",
+        "label": "Fraction",
         "grade": "3rd Grade Math",
-        "unit": "Number & Operations—Fractions"
+        "unit": "Number & Operations—Fractions",
+        "conceptId": "math:fraction"
       },
-      "reason": "Counting unit-fraction steps from zero locates a fraction on the number line."
+      "reason": "A number line gives fractions positions and shows their order and distance from zero."
     },
     {
       "source": {
-        "label": "Build fractions from equal-sized unit fractions",
+        "label": "Fraction",
         "grade": "3rd Grade Math",
-        "unit": "Number & Operations—Fractions"
+        "unit": "Number & Operations—Fractions",
+        "conceptId": "math:fraction"
       },
       "target": {
         "label": "Mixed numbers",
         "grade": "4th Grade Math",
-        "unit": "Number & Operations—Fractions"
+        "unit": "Number & Operations—Fractions",
+        "conceptId": "math:mixed-numbers"
       },
       "reason": "A mixed number combines complete wholes with a remaining fractional part."
     },
     {
       "source": {
-        "label": "Express whole numbers as fractions",
+        "label": "Whole numbers",
         "grade": "3rd Grade Math",
-        "unit": "Number & Operations—Fractions"
+        "unit": "Number & Operations—Fractions",
+        "conceptId": "math:whole-numbers"
       },
       "target": {
         "label": "Mixed numbers",
         "grade": "4th Grade Math",
-        "unit": "Number & Operations—Fractions"
+        "unit": "Number & Operations—Fractions",
+        "conceptId": "math:mixed-numbers"
       },
       "reason": "Writing whole units as fractions explains why a mixed number and an improper fraction can name the same quantity."
     },
     {
       "source": {
-        "label": "Recognize equivalent fractions using models",
-        "grade": "3rd Grade Math",
-        "unit": "Number & Operations—Fractions"
+        "label": "Equivalent fractions",
+        "grade": "4th Grade Math",
+        "unit": "Number & Operations—Fractions",
+        "conceptId": "math:equivalent-fractions"
       },
       "target": {
-        "label": "Generate equivalent fractions",
+        "label": "Fraction comparison",
         "grade": "4th Grade Math",
-        "unit": "Number & Operations—Fractions"
-      },
-      "reason": "Splitting each model part into the same number of smaller equal pieces motivates multiplying numerator and denominator by the same factor."
-    },
-    {
-      "source": {
-        "label": "Generate equivalent fractions",
-        "grade": "4th Grade Math",
-        "unit": "Number & Operations—Fractions"
-      },
-      "target": {
-        "label": "Compare fractions with unlike denominators",
-        "grade": "4th Grade Math",
-        "unit": "Number & Operations—Fractions"
+        "unit": "Number & Operations—Fractions",
+        "conceptId": "math:fraction-comparison"
       },
       "reason": "Equivalent fractions let both quantities be measured in equal-sized parts before comparing their numerators."
     },
     {
       "source": {
-        "label": "Generate equivalent fractions",
+        "label": "Equivalent fractions",
         "grade": "4th Grade Math",
-        "unit": "Number & Operations—Fractions"
+        "unit": "Number & Operations—Fractions",
+        "conceptId": "math:equivalent-fractions"
       },
       "target": {
-        "label": "Add fractions with unlike denominators",
+        "label": "Fraction addition",
         "grade": "5th Grade Math",
-        "unit": "Number & Operations—Fractions"
+        "unit": "Number & Operations—Fractions",
+        "conceptId": "math:fraction-addition"
       },
       "reason": "A common denominator rewrites both addends in equal-sized parts so their numerators can be added."
     },
     {
       "source": {
-        "label": "Generate equivalent fractions",
+        "label": "Equivalent fractions",
         "grade": "4th Grade Math",
-        "unit": "Number & Operations—Fractions"
+        "unit": "Number & Operations—Fractions",
+        "conceptId": "math:equivalent-fractions"
       },
       "target": {
-        "label": "Subtract fractions with unlike denominators",
+        "label": "Fraction subtraction",
         "grade": "5th Grade Math",
-        "unit": "Number & Operations—Fractions"
+        "unit": "Number & Operations—Fractions",
+        "conceptId": "math:fraction-subtraction"
       },
       "reason": "A common denominator expresses both quantities using the same unit fraction before subtraction."
     },
     {
       "source": {
-        "label": "Build fractions from equal-sized unit fractions",
+        "label": "Fraction",
         "grade": "3rd Grade Math",
-        "unit": "Number & Operations—Fractions"
+        "unit": "Number & Operations—Fractions",
+        "conceptId": "math:fraction"
       },
       "target": {
-        "label": "Add fractions with the same denominator",
+        "label": "Fraction addition",
         "grade": "4th Grade Math",
-        "unit": "Number & Operations—Fractions"
+        "unit": "Number & Operations—Fractions",
+        "conceptId": "math:fraction-addition"
       },
       "reason": "Fractions with a common denominator count the same-sized parts, so adding combines those counts."
     },
     {
       "source": {
-        "label": "Build fractions from equal-sized unit fractions",
+        "label": "Fraction",
         "grade": "3rd Grade Math",
-        "unit": "Number & Operations—Fractions"
+        "unit": "Number & Operations—Fractions",
+        "conceptId": "math:fraction"
       },
       "target": {
-        "label": "Subtract fractions with the same denominator",
+        "label": "Fraction subtraction",
         "grade": "4th Grade Math",
-        "unit": "Number & Operations—Fractions"
+        "unit": "Number & Operations—Fractions",
+        "conceptId": "math:fraction-subtraction"
       },
       "reason": "Subtracting removes some copies of the same unit fraction."
     },
@@ -206,12 +809,14 @@
       "source": {
         "label": "Mixed numbers",
         "grade": "4th Grade Math",
-        "unit": "Number & Operations—Fractions"
+        "unit": "Number & Operations—Fractions",
+        "conceptId": "math:mixed-numbers"
       },
       "target": {
-        "label": "Add mixed numbers with like denominators",
+        "label": "Mixed-number addition",
         "grade": "4th Grade Math",
-        "unit": "Number & Operations—Fractions"
+        "unit": "Number & Operations—Fractions",
+        "conceptId": "math:mixed-number-addition"
       },
       "reason": "Separating each mixed number into whole and fractional parts gives quantities that can be added in matching units."
     },
@@ -219,36 +824,27 @@
       "source": {
         "label": "Mixed numbers",
         "grade": "4th Grade Math",
-        "unit": "Number & Operations—Fractions"
+        "unit": "Number & Operations—Fractions",
+        "conceptId": "math:mixed-numbers"
       },
       "target": {
-        "label": "Subtract mixed numbers with like denominators",
+        "label": "Mixed-number subtraction",
         "grade": "4th Grade Math",
-        "unit": "Number & Operations—Fractions"
+        "unit": "Number & Operations—Fractions",
+        "conceptId": "math:mixed-number-subtraction"
       },
       "reason": "Understanding the whole and fractional parts allows one whole to be regrouped as fractional parts when needed."
     },
     {
       "source": {
-        "label": "Mixed numbers",
-        "grade": "4th Grade Math",
-        "unit": "Number & Operations—Fractions"
+        "label": "Fraction multiplication",
+        "grade": "5th Grade Math",
+        "unit": "Number & Operations—Fractions",
+        "conceptId": "math:fraction-multiplication"
       },
       "target": {
-        "label": "Multiply a fraction by a mixed number",
-        "grade": "5th Grade Math",
-        "unit": "Number & Operations—Fractions"
-      },
-      "reason": "Rewriting the mixed number as an improper fraction makes the multiplication a product of two fractions."
-    },
-    {
-      "source": {
-        "label": "Multiply a fraction by a fraction",
-        "grade": "5th Grade Math",
-        "unit": "Number & Operations—Fractions"
-      },
-      "target": {
-        "label": "Multiply a fraction by a mixed number",
+        "label": "Mixed-number multiplication",
+        "conceptId": "math:mixed-number-multiplication",
         "grade": "5th Grade Math",
         "unit": "Number & Operations—Fractions"
       },
@@ -258,25 +854,29 @@
       "source": {
         "label": "Mixed numbers",
         "grade": "4th Grade Math",
-        "unit": "Number & Operations—Fractions"
+        "unit": "Number & Operations—Fractions",
+        "conceptId": "math:mixed-numbers"
       },
       "target": {
-        "label": "Multiply mixed numbers",
+        "label": "Mixed-number multiplication",
         "grade": "7th Grade Math",
-        "unit": "The Number System"
+        "unit": "The Number System",
+        "conceptId": "math:mixed-number-multiplication"
       },
       "reason": "Converting mixed numbers to improper fractions makes their product accessible using fraction multiplication."
     },
     {
       "source": {
-        "label": "Multiply fractions",
+        "label": "Fraction multiplication",
         "grade": "6th Grade Math",
-        "unit": "The Number System"
+        "unit": "The Number System",
+        "conceptId": "math:fraction-multiplication"
       },
       "target": {
-        "label": "Multiply mixed numbers",
+        "label": "Mixed-number multiplication",
         "grade": "7th Grade Math",
-        "unit": "The Number System"
+        "unit": "The Number System",
+        "conceptId": "math:mixed-number-multiplication"
       },
       "reason": "After conversion to improper fractions, multiply the numerators and denominators using the fraction product rule."
     },
@@ -284,64 +884,59 @@
       "source": {
         "label": "Mixed numbers",
         "grade": "4th Grade Math",
-        "unit": "Number & Operations—Fractions"
+        "unit": "Number & Operations—Fractions",
+        "conceptId": "math:mixed-numbers"
       },
       "target": {
-        "label": "Divide fractions and mixed numbers",
+        "label": "Mixed-number division",
         "grade": "7th Grade Math",
-        "unit": "The Number System"
+        "unit": "The Number System",
+        "conceptId": "math:mixed-number-division"
       },
       "reason": "A mixed number can be rewritten as an improper fraction before interpreting and calculating the quotient."
     },
     {
       "source": {
-        "label": "Divide fractions by fractions",
+        "label": "Fraction quotient",
         "grade": "6th Grade Math",
-        "unit": "The Number System"
+        "unit": "The Number System",
+        "conceptId": "math:fraction-quotient"
       },
       "target": {
-        "label": "Divide fractions and mixed numbers",
+        "label": "Mixed-number division",
         "grade": "7th Grade Math",
-        "unit": "The Number System"
+        "unit": "The Number System",
+        "conceptId": "math:mixed-number-division"
       },
       "reason": "After converting mixed numbers, division uses the same quotient reasoning as dividing one fraction by another."
     },
     {
       "source": {
-        "label": "Multiply a fraction by a whole number",
-        "grade": "4th Grade Math",
-        "unit": "Number & Operations—Fractions"
+        "label": "Division",
+        "grade": "5th Grade Math",
+        "unit": "Number & Operations—Fractions",
+        "conceptId": "math:division"
       },
       "target": {
-        "label": "Multiply a fraction by a fraction",
-        "grade": "5th Grade Math",
-        "unit": "Number & Operations—Fractions"
-      },
-      "reason": "Scaling a whole-number amount by a fraction extends to scaling an amount that is itself fractional."
-    },
-    {
-      "source": {
-        "label": "Interpret a fraction as division of the numerator by the denominator",
-        "grade": "5th Grade Math",
-        "unit": "Number & Operations—Fractions"
-      },
-      "target": {
-        "label": "Divide fractions by fractions",
+        "label": "Fraction quotient",
         "grade": "6th Grade Math",
-        "unit": "The Number System"
+        "unit": "The Number System",
+        "conceptId": "math:fraction-quotient"
       },
       "reason": "Interpreting a fraction as a quotient helps explain fraction division as asking how many groups of the divisor fit."
     },
     {
       "source": {
-        "label": "Multiply fractions",
+        "label": "Fraction multiplication",
         "grade": "6th Grade Math",
-        "unit": "The Number System"
+        "unit": "The Number System",
+        "conceptId": "math:fraction-multiplication"
       },
       "target": {
-        "label": "Divide fractions by fractions",
+        "label": "Fraction quotient",
         "grade": "6th Grade Math",
-        "unit": "The Number System"
+        "unit": "The Number System",
+        "conceptId": "math:fraction-quotient"
       },
       "reason": "Multiplying by a reciprocal undoes multiplication by a nonzero fraction, explaining the fraction division algorithm."
     },
@@ -349,12 +944,14 @@
       "source": {
         "label": "Greatest common factor",
         "grade": "6th Grade Math",
-        "unit": "The Number System"
+        "unit": "The Number System",
+        "conceptId": "math:greatest-common-factor"
       },
       "target": {
-        "label": "Simplify fractions",
+        "label": "Simplest form",
         "grade": "6th Grade Math",
-        "unit": "The Number System"
+        "unit": "The Number System",
+        "conceptId": "math:simplest-form"
       },
       "reason": "Dividing numerator and denominator by their greatest common factor produces an equivalent fraction in lowest terms."
     },
@@ -362,12 +959,14 @@
       "source": {
         "label": "Least common multiple",
         "grade": "6th Grade Math",
-        "unit": "The Number System"
+        "unit": "The Number System",
+        "conceptId": "math:least-common-multiple"
       },
       "target": {
-        "label": "Add and subtract fractions with unlike denominators",
+        "label": "Fraction subtraction",
         "grade": "6th Grade Math",
-        "unit": "The Number System"
+        "unit": "The Number System",
+        "conceptId": "math:fraction-subtraction"
       },
       "reason": "The least common multiple of the denominators provides a shared unit for combining the fractions."
     },
@@ -375,38 +974,44 @@
       "source": {
         "label": "Equivalent fractions",
         "grade": "6th Grade Math",
-        "unit": "The Number System"
+        "unit": "The Number System",
+        "conceptId": "math:equivalent-fractions"
       },
       "target": {
-        "label": "Add and subtract fractions with unlike denominators",
+        "label": "Fraction subtraction",
         "grade": "6th Grade Math",
-        "unit": "The Number System"
+        "unit": "The Number System",
+        "conceptId": "math:fraction-subtraction"
       },
       "reason": "Equivalent fractions let both quantities be renamed with the same denominator before combining them."
     },
     {
       "source": {
-        "label": "Simplify fractions",
+        "label": "Common factor",
         "grade": "6th Grade Math",
-        "unit": "The Number System"
+        "unit": "The Number System",
+        "conceptId": "math:common-factor"
       },
       "target": {
-        "label": "Cross-cancellation",
+        "label": "Simplest form",
         "grade": "6th Grade Math",
-        "unit": "The Number System"
+        "unit": "The Number System",
+        "conceptId": "math:simplest-form"
       },
-      "reason": "Common factors can be canceled across a product because dividing numerator and denominator by the same nonzero value preserves it."
+      "reason": "Removing a common factor from numerator and denominator preserves a fraction’s value."
     },
     {
       "source": {
-        "label": "Fraction multiplication models",
+        "label": "Area model",
         "grade": "6th Grade Math",
-        "unit": "The Number System"
+        "unit": "The Number System",
+        "conceptId": "math:area-model"
       },
       "target": {
-        "label": "Multiply fractions",
+        "label": "Fraction multiplication",
         "grade": "6th Grade Math",
-        "unit": "The Number System"
+        "unit": "The Number System",
+        "conceptId": "math:fraction-multiplication"
       },
       "reason": "An area model shows why multiplying fractions multiplies both the numerators and the denominators."
     },
@@ -414,12 +1019,14 @@
       "source": {
         "label": "Prime factorization",
         "grade": "6th Grade Math",
-        "unit": "The Number System"
+        "unit": "The Number System",
+        "conceptId": "math:prime-factorization"
       },
       "target": {
         "label": "Greatest common factor",
         "grade": "6th Grade Math",
-        "unit": "The Number System"
+        "unit": "The Number System",
+        "conceptId": "math:greatest-common-factor"
       },
       "reason": "Prime factorizations expose the shared prime factors whose product is the greatest common factor."
     },
@@ -427,337 +1034,329 @@
       "source": {
         "label": "Prime factorization",
         "grade": "6th Grade Math",
-        "unit": "The Number System"
+        "unit": "The Number System",
+        "conceptId": "math:prime-factorization"
       },
       "target": {
         "label": "Least common multiple",
         "grade": "6th Grade Math",
-        "unit": "The Number System"
+        "unit": "The Number System",
+        "conceptId": "math:least-common-multiple"
       },
       "reason": "Using each prime factor with its greatest required exponent constructs a multiple shared by both numbers."
     },
     {
       "source": {
-        "label": "Ratio vocabulary",
+        "label": "Ratio",
         "grade": "6th Grade Math",
-        "unit": "Ratios & Proportional Relationships"
+        "unit": "Ratios & Proportional Relationships",
+        "conceptId": "math:ratio"
       },
       "target": {
-        "label": "Ratio notation (a:b)",
+        "label": "Ratio notation",
         "grade": "6th Grade Math",
-        "unit": "Ratios & Proportional Relationships"
+        "unit": "Ratios & Proportional Relationships",
+        "conceptId": "math:ratio-notation"
       },
       "reason": "Naming the two compared quantities gives meaning to the order of the numbers in ratio notation."
     },
     {
       "source": {
-        "label": "Ratio notation (a:b)",
+        "label": "Ratio notation",
         "grade": "6th Grade Math",
-        "unit": "Ratios & Proportional Relationships"
+        "unit": "Ratios & Proportional Relationships",
+        "conceptId": "math:ratio-notation"
       },
       "target": {
-        "label": "Equivalent ratios with whole numbers",
+        "label": "Equivalent ratios",
         "grade": "6th Grade Math",
-        "unit": "Ratios & Proportional Relationships"
+        "unit": "Ratios & Proportional Relationships",
+        "conceptId": "math:equivalent-ratios"
       },
       "reason": "Multiplying both quantities by the same whole-number factor preserves their ratio."
     },
     {
       "source": {
-        "label": "Equivalent ratios with whole numbers",
+        "label": "Equivalent ratios",
         "grade": "6th Grade Math",
-        "unit": "Ratios & Proportional Relationships"
+        "unit": "Ratios & Proportional Relationships",
+        "conceptId": "math:equivalent-ratios"
       },
       "target": {
-        "label": "Equivalent ratios – tables",
+        "label": "Ratio table",
         "grade": "6th Grade Math",
-        "unit": "Ratios & Proportional Relationships"
+        "unit": "Ratios & Proportional Relationships",
+        "conceptId": "math:ratio-table"
       },
       "reason": "A ratio table lists pairs generated by scaling both quantities by the same factor."
     },
     {
       "source": {
-        "label": "Ratio notation (a:b)",
+        "label": "Ratio",
+        "conceptId": "math:ratio",
         "grade": "6th Grade Math",
         "unit": "Ratios & Proportional Relationships"
       },
       "target": {
-        "label": "Unit rate definition",
+        "label": "Unit rate",
         "grade": "6th Grade Math",
-        "unit": "Ratios & Proportional Relationships"
+        "unit": "Ratios & Proportional Relationships",
+        "conceptId": "math:unit-rate"
       },
       "reason": "A unit rate rescales a ratio so the second quantity is one unit."
     },
     {
       "source": {
-        "label": "Unit rate definition",
+        "label": "Unit rate",
         "grade": "6th Grade Math",
-        "unit": "Ratios & Proportional Relationships"
+        "unit": "Ratios & Proportional Relationships",
+        "conceptId": "math:unit-rate"
       },
       "target": {
-        "label": "Calculate unit rates with integers and decimals",
+        "label": "Equivalent rates",
         "grade": "6th Grade Math",
-        "unit": "Ratios & Proportional Relationships"
+        "unit": "Ratios & Proportional Relationships",
+        "conceptId": "math:equivalent-rates"
       },
       "reason": "Dividing the first quantity by the second calculates the amount per one unit."
     },
     {
       "source": {
-        "label": "Unit rate definition",
+        "label": "Unit rate",
         "grade": "6th Grade Math",
-        "unit": "Ratios & Proportional Relationships"
+        "unit": "Ratios & Proportional Relationships",
+        "conceptId": "math:unit-rate"
       },
       "target": {
-        "label": "Speed as distance divided by time",
+        "label": "Speed",
         "grade": "6th Grade Math",
-        "unit": "Ratios & Proportional Relationships"
+        "unit": "Ratios & Proportional Relationships",
+        "conceptId": "math:speed"
       },
       "reason": "Speed is the unit rate obtained by dividing distance by elapsed time."
     },
     {
       "source": {
-        "label": "Ratio notation (a:b)",
+        "label": "Ratio",
+        "conceptId": "math:ratio",
         "grade": "6th Grade Math",
         "unit": "Ratios & Proportional Relationships"
       },
       "target": {
-        "label": "Ratio word problems",
+        "label": "Part-to-whole ratio",
         "grade": "6th Grade Math",
-        "unit": "Ratios & Proportional Relationships"
+        "unit": "Ratios & Proportional Relationships",
+        "conceptId": "math:part-to-whole-ratio"
       },
       "reason": "Ratio notation preserves which two quantities are being compared when translating a word problem."
     },
     {
       "source": {
-        "label": "Unit rate definition",
+        "label": "Fraction quotient",
         "grade": "6th Grade Math",
-        "unit": "Ratios & Proportional Relationships"
+        "unit": "The Number System",
+        "conceptId": "math:fraction-quotient"
       },
       "target": {
-        "label": "Compute unit rates with fractional lengths",
+        "label": "Unit rate",
         "grade": "7th Grade Math",
-        "unit": "Ratios & Proportional Relationships"
-      },
-      "reason": "A fractional-length rate still compares an amount per one unit, requiring division by a fractional quantity."
-    },
-    {
-      "source": {
-        "label": "Divide fractions by fractions",
-        "grade": "6th Grade Math",
-        "unit": "The Number System"
-      },
-      "target": {
-        "label": "Compute unit rates with fractional lengths",
-        "grade": "7th Grade Math",
-        "unit": "Ratios & Proportional Relationships"
+        "unit": "Ratios & Proportional Relationships",
+        "conceptId": "math:unit-rate"
       },
       "reason": "Dividing the fractional quantities calculates the amount corresponding to one unit of the second quantity."
     },
     {
       "source": {
-        "label": "Unit rate definition",
+        "label": "Equivalent ratios",
         "grade": "6th Grade Math",
-        "unit": "Ratios & Proportional Relationships"
+        "unit": "Ratios & Proportional Relationships",
+        "conceptId": "math:equivalent-ratios"
       },
       "target": {
-        "label": "Compute unit rates with fractional areas",
+        "label": "Ratio table",
         "grade": "7th Grade Math",
-        "unit": "Ratios & Proportional Relationships"
-      },
-      "reason": "Dividing area quantities yields the amount per one unit, even when the measurements are fractional."
-    },
-    {
-      "source": {
-        "label": "Equivalent ratios with whole numbers",
-        "grade": "6th Grade Math",
-        "unit": "Ratios & Proportional Relationships"
-      },
-      "target": {
-        "label": "Identify proportional relationships in tables",
-        "grade": "7th Grade Math",
-        "unit": "Ratios & Proportional Relationships"
+        "unit": "Ratios & Proportional Relationships",
+        "conceptId": "math:ratio-table"
       },
       "reason": "A proportional table maintains equivalent ratios between corresponding nonzero entries."
     },
     {
       "source": {
-        "label": "Unit rate definition",
+        "label": "Unit rate",
         "grade": "6th Grade Math",
-        "unit": "Ratios & Proportional Relationships"
+        "unit": "Ratios & Proportional Relationships",
+        "conceptId": "math:unit-rate"
       },
       "target": {
-        "label": "Constant of proportionality in tables",
+        "label": "Constant of proportionality",
         "grade": "7th Grade Math",
-        "unit": "Ratios & Proportional Relationships"
+        "unit": "Ratios & Proportional Relationships",
+        "conceptId": "math:constant-of-proportionality"
       },
       "reason": "In a proportional table the unit rate is the constant multiplier from the input to the output."
     },
     {
       "source": {
-        "label": "Identify proportional relationships in tables",
+        "label": "Ratio table",
         "grade": "7th Grade Math",
-        "unit": "Ratios & Proportional Relationships"
+        "unit": "Ratios & Proportional Relationships",
+        "conceptId": "math:ratio-table"
       },
       "target": {
-        "label": "Write proportional equations from tables",
+        "label": "Proportional equation",
         "grade": "7th Grade Math",
-        "unit": "Ratios & Proportional Relationships"
+        "unit": "Ratios & Proportional Relationships",
+        "conceptId": "math:proportional-equation"
       },
       "reason": "Recognizing the same multiplier in every row supports writing the relationship as y = kx."
     },
     {
       "source": {
-        "label": "Constant of proportionality in tables",
+        "label": "Constant of proportionality",
         "grade": "7th Grade Math",
-        "unit": "Ratios & Proportional Relationships"
+        "unit": "Ratios & Proportional Relationships",
+        "conceptId": "math:constant-of-proportionality"
       },
       "target": {
-        "label": "Write proportional equations from tables",
+        "label": "Proportional equation",
         "grade": "7th Grade Math",
-        "unit": "Ratios & Proportional Relationships"
+        "unit": "Ratios & Proportional Relationships",
+        "conceptId": "math:proportional-equation"
       },
       "reason": "The table’s constant ratio supplies the coefficient k in y = kx."
     },
     {
       "source": {
-        "label": "Percent as a rate",
+        "label": "Part and whole",
         "grade": "6th Grade Math",
-        "unit": "Ratios & Proportional Relationships"
+        "unit": "Ratios & Proportional Relationships",
+        "conceptId": "math:part-and-whole"
       },
       "target": {
-        "label": "Percent of quantity",
+        "label": "Percent",
         "grade": "6th Grade Math",
-        "unit": "Ratios & Proportional Relationships"
+        "unit": "Ratios & Proportional Relationships",
+        "conceptId": "math:percent"
       },
       "reason": "A percent is a rate per hundred; multiplying that rate by the whole gives the corresponding part."
     },
     {
       "source": {
-        "label": "Percent of quantity",
+        "label": "Part and whole",
         "grade": "6th Grade Math",
-        "unit": "Ratios & Proportional Relationships"
+        "unit": "Ratios & Proportional Relationships",
+        "conceptId": "math:part-and-whole"
       },
       "target": {
         "label": "Percent increase",
         "grade": "6th Grade Math",
-        "unit": "Ratios & Proportional Relationships"
+        "unit": "Ratios & Proportional Relationships",
+        "conceptId": "math:percent-increase"
       },
       "reason": "An increase adds a percentage of the original quantity to that original quantity."
     },
     {
       "source": {
-        "label": "Percent of quantity",
+        "label": "Part and whole",
         "grade": "6th Grade Math",
-        "unit": "Ratios & Proportional Relationships"
+        "unit": "Ratios & Proportional Relationships",
+        "conceptId": "math:part-and-whole"
       },
       "target": {
         "label": "Percent decrease",
         "grade": "6th Grade Math",
-        "unit": "Ratios & Proportional Relationships"
+        "unit": "Ratios & Proportional Relationships",
+        "conceptId": "math:percent-decrease"
       },
       "reason": "A decrease subtracts a percentage of the original quantity from that original quantity."
     },
     {
       "source": {
-        "label": "Percent of quantity",
+        "label": "Part and whole",
         "grade": "6th Grade Math",
-        "unit": "Ratios & Proportional Relationships"
+        "unit": "Ratios & Proportional Relationships",
+        "conceptId": "math:part-and-whole"
       },
       "target": {
-        "label": "Percent problems: tax",
+        "label": "Sales tax",
         "grade": "6th Grade Math",
-        "unit": "Ratios & Proportional Relationships"
+        "unit": "Ratios & Proportional Relationships",
+        "conceptId": "math:sales-tax"
       },
       "reason": "A tax amount is the stated percentage of the pretax price."
     },
     {
       "source": {
-        "label": "Percent of quantity",
+        "label": "Part and whole",
         "grade": "6th Grade Math",
-        "unit": "Ratios & Proportional Relationships"
+        "unit": "Ratios & Proportional Relationships",
+        "conceptId": "math:part-and-whole"
       },
       "target": {
-        "label": "Percent problems: tip",
+        "label": "Tip",
         "grade": "6th Grade Math",
-        "unit": "Ratios & Proportional Relationships"
+        "unit": "Ratios & Proportional Relationships",
+        "conceptId": "math:tip"
       },
       "reason": "A percentage tip is found by scaling the bill by the tip rate."
     },
     {
       "source": {
-        "label": "Percent of quantity",
+        "label": "Part and whole",
         "grade": "6th Grade Math",
-        "unit": "Ratios & Proportional Relationships"
+        "unit": "Ratios & Proportional Relationships",
+        "conceptId": "math:part-and-whole"
       },
       "target": {
-        "label": "Percent problems: discount",
+        "label": "Discount",
         "grade": "6th Grade Math",
-        "unit": "Ratios & Proportional Relationships"
+        "unit": "Ratios & Proportional Relationships",
+        "conceptId": "math:discount"
       },
       "reason": "The discount amount is a percentage of the original price and is subtracted to find the sale price."
     },
     {
       "source": {
-        "label": "Percent increase",
+        "label": "Number line",
         "grade": "6th Grade Math",
-        "unit": "Ratios & Proportional Relationships"
-      },
-      "target": {
-        "label": "Percent increase in context",
-        "grade": "7th Grade Math",
-        "unit": "Ratios & Proportional Relationships"
-      },
-      "reason": "The same original-plus-increase relationship can be used to interpret growth in a word problem."
-    },
-    {
-      "source": {
-        "label": "Percent decrease",
-        "grade": "6th Grade Math",
-        "unit": "Ratios & Proportional Relationships"
-      },
-      "target": {
-        "label": "Percent decrease in context",
-        "grade": "7th Grade Math",
-        "unit": "Ratios & Proportional Relationships"
-      },
-      "reason": "The same original-minus-decrease relationship applies when interpreting a reduction in context."
-    },
-    {
-      "source": {
-        "label": "Integers on number line",
-        "grade": "6th Grade Math",
-        "unit": "The Number System"
+        "unit": "The Number System",
+        "conceptId": "math:number-line"
       },
       "target": {
         "label": "Absolute value",
         "grade": "6th Grade Math",
-        "unit": "The Number System"
+        "unit": "The Number System",
+        "conceptId": "math:absolute-value"
       },
       "reason": "Absolute value measures the distance of a number from zero on the number line."
     },
     {
       "source": {
-        "label": "Integers on number line",
+        "label": "Number line",
         "grade": "6th Grade Math",
-        "unit": "The Number System"
+        "unit": "The Number System",
+        "conceptId": "math:number-line"
       },
       "target": {
-        "label": "Ordering integers",
+        "label": "Integer order",
         "grade": "6th Grade Math",
-        "unit": "The Number System"
+        "unit": "The Number System",
+        "conceptId": "math:integer-order"
       },
       "reason": "Positions farther right on a number line represent greater numbers."
     },
     {
       "source": {
-        "label": "Add integers",
+        "label": "Integer addition",
         "grade": "6th Grade Math",
-        "unit": "The Number System"
+        "unit": "The Number System",
+        "conceptId": "math:integer-addition"
       },
       "target": {
-        "label": "Subtract integers",
+        "label": "Integer subtraction",
         "grade": "6th Grade Math",
-        "unit": "The Number System"
+        "unit": "The Number System",
+        "conceptId": "math:integer-subtraction"
       },
       "reason": "Subtracting an integer can be understood as adding its opposite."
     },
@@ -765,49 +1364,42 @@
       "source": {
         "label": "Absolute value",
         "grade": "6th Grade Math",
-        "unit": "The Number System"
+        "unit": "The Number System",
+        "conceptId": "math:absolute-value"
       },
       "target": {
-        "label": "Distance between two rational numbers",
+        "label": "Distance",
         "grade": "7th Grade Math",
-        "unit": "The Number System"
+        "unit": "The Number System",
+        "conceptId": "math:distance"
       },
       "reason": "Distance is the absolute value of the difference, ensuring a nonnegative length."
     },
     {
       "source": {
-        "label": "Evaluate expressions with variables",
+        "label": "Coefficient",
         "grade": "6th Grade Math",
-        "unit": "Expressions & Equations"
+        "unit": "Expressions & Equations",
+        "conceptId": "math:coefficient"
       },
       "target": {
-        "label": "Evaluate multi-variable expressions",
+        "label": "Like terms",
         "grade": "6th Grade Math",
-        "unit": "Expressions & Equations"
-      },
-      "reason": "Substitution applies to each variable before performing the operations in the expression."
-    },
-    {
-      "source": {
-        "label": "Identify coefficients",
-        "grade": "6th Grade Math",
-        "unit": "Expressions & Equations"
-      },
-      "target": {
-        "label": "Simplify by combining like terms",
-        "grade": "6th Grade Math",
-        "unit": "Expressions & Equations"
+        "unit": "Expressions & Equations",
+        "conceptId": "math:like-terms"
       },
       "reason": "Coefficients count copies of a variable term, so like terms combine by adding their coefficients."
     },
     {
       "source": {
-        "label": "Apply distributive property",
+        "label": "Distributive property",
         "grade": "6th Grade Math",
-        "unit": "Expressions & Equations"
+        "unit": "Expressions & Equations",
+        "conceptId": "math:distributive-property"
       },
       "target": {
-        "label": "Factor linear expressions",
+        "label": "Factored expression",
+        "conceptId": "math:factored-expression",
         "grade": "6th Grade Math",
         "unit": "Expressions & Equations"
       },
@@ -815,181 +1407,164 @@
     },
     {
       "source": {
-        "label": "Solve one-step equations",
-        "grade": "6th Grade Math",
-        "unit": "Expressions & Equations"
+        "label": "Grouping symbols",
+        "conceptId": "math:grouping-symbols",
+        "grade": "5th Grade Math",
+        "unit": "Operations & Algebraic Thinking"
       },
       "target": {
-        "label": "Solve two-step equations",
-        "grade": "6th Grade Math",
-        "unit": "Expressions & Equations"
-      },
-      "reason": "Undoing one operation at a time extends from a single inverse operation to a sequence of inverse operations."
-    },
-    {
-      "source": {
-        "label": "Solve two-step equations without parentheses",
+        "label": "Two-step equation",
+        "conceptId": "math:two-step-equation",
         "grade": "7th Grade Math",
         "unit": "Expressions & Equations"
       },
-      "target": {
-        "label": "Solve two-step equations with parentheses",
-        "grade": "7th Grade Math",
-        "unit": "Expressions & Equations"
-      },
-      "reason": "Distributing or dividing through parentheses reduces the equation to familiar solving steps."
+      "reason": "Grouping symbols show which quantities stay together when using inverse operations in an equation."
     },
     {
       "source": {
-        "label": "Solve one-step inequalities",
+        "label": "Inequality",
         "grade": "6th Grade Math",
-        "unit": "Expressions & Equations"
+        "unit": "Expressions & Equations",
+        "conceptId": "math:inequality"
       },
       "target": {
-        "label": "Solve two-step inequalities",
-        "grade": "7th Grade Math",
-        "unit": "Expressions & Equations"
-      },
-      "reason": "Combining inverse operations solves two-step inequalities, retaining the sign reversal rule for a negative multiplier."
-    },
-    {
-      "source": {
-        "label": "Inequality notation (<, >, ≥, ≤)",
+        "label": "Solution set",
         "grade": "6th Grade Math",
-        "unit": "Expressions & Equations"
-      },
-      "target": {
-        "label": "Graph inequality solutions",
-        "grade": "6th Grade Math",
-        "unit": "Expressions & Equations"
+        "unit": "Expressions & Equations",
+        "conceptId": "math:solution-set"
       },
       "reason": "Strict and inclusive inequality symbols determine open or filled boundary points and the shaded direction."
     },
     {
       "source": {
-        "label": "Properties of integer exponents",
+        "label": "Exponent rules",
         "grade": "8th Grade Math",
-        "unit": "The Number System"
+        "unit": "The Number System",
+        "conceptId": "math:exponent-rules"
       },
       "target": {
-        "label": "Evaluate powers with integer exponents",
+        "label": "Integer powers",
         "grade": "8th Grade Math",
-        "unit": "The Number System"
+        "unit": "The Number System",
+        "conceptId": "math:integer-powers"
       },
       "reason": "Integer exponent rules define positive, zero, and negative powers consistently."
     },
     {
       "source": {
-        "label": "Negative exponents rule",
-        "grade": "8th Grade Math",
-        "unit": "The Number System"
-      },
-      "target": {
-        "label": "Simplify exponential expressions",
-        "grade": "8th Grade Math",
+        "label": "Exponent",
+        "conceptId": "math:exponent",
+        "grade": "6th Grade Math",
         "unit": "Expressions & Equations"
       },
-      "reason": "Replacing a negative power with its reciprocal allows exponential expressions to be rewritten using positive powers."
+      "target": {
+        "label": "Exponential expression",
+        "grade": "8th Grade Math",
+        "unit": "Expressions & Equations",
+        "conceptId": "math:exponential-expression"
+      },
+      "reason": "An exponential expression uses exponents to describe powers."
     },
     {
       "source": {
-        "label": "Multiplication laws for exponents",
+        "label": "Scientific notation",
         "grade": "8th Grade Math",
-        "unit": "The Number System"
+        "unit": "The Number System",
+        "conceptId": "math:scientific-notation"
       },
       "target": {
-        "label": "Simplify exponential expressions",
+        "label": "Scientific notation product",
         "grade": "8th Grade Math",
-        "unit": "Expressions & Equations"
-      },
-      "reason": "Products of powers with the same nonzero base simplify by adding exponents."
-    },
-    {
-      "source": {
-        "label": "Scientific notation basics",
-        "grade": "8th Grade Math",
-        "unit": "The Number System"
-      },
-      "target": {
-        "label": "Multiply in scientific notation",
-        "grade": "8th Grade Math",
-        "unit": "The Number System"
+        "unit": "The Number System",
+        "conceptId": "math:scientific-notation-product"
       },
       "reason": "Multiplying the coefficients and powers of ten separately uses the structure of scientific notation."
     },
     {
       "source": {
-        "label": "Scientific notation basics",
+        "label": "Scientific notation",
         "grade": "8th Grade Math",
-        "unit": "The Number System"
+        "unit": "The Number System",
+        "conceptId": "math:scientific-notation"
       },
       "target": {
-        "label": "Divide in scientific notation",
+        "label": "Scientific notation quotient",
         "grade": "8th Grade Math",
-        "unit": "The Number System"
+        "unit": "The Number System",
+        "conceptId": "math:scientific-notation-quotient"
       },
       "reason": "Dividing the coefficients and powers of ten separately uses the structure of scientific notation."
     },
     {
       "source": {
-        "label": "Evaluate square roots",
+        "label": "Square root",
         "grade": "8th Grade Math",
-        "unit": "The Number System"
+        "unit": "The Number System",
+        "conceptId": "math:square-root"
       },
       "target": {
-        "label": "Pythagorean theorem application",
+        "label": "Pythagorean theorem",
         "grade": "8th Grade Math",
-        "unit": "Geometry"
+        "unit": "Geometry",
+        "conceptId": "math:pythagorean-theorem"
       },
       "reason": "Finding a missing side from its squared length requires taking a square root."
     },
     {
       "source": {
-        "label": "Pythagorean theorem application",
+        "label": "Pythagorean theorem",
         "grade": "8th Grade Math",
-        "unit": "Geometry"
+        "unit": "Geometry",
+        "conceptId": "math:pythagorean-theorem"
       },
       "target": {
-        "label": "Distance in coordinate plane",
+        "label": "Coordinate distance",
         "grade": "8th Grade Math",
-        "unit": "Geometry"
+        "unit": "Geometry",
+        "conceptId": "math:coordinate-distance"
       },
       "reason": "Horizontal and vertical coordinate differences form the legs of a right triangle whose hypotenuse is the point-to-point distance."
     },
     {
       "source": {
-        "label": "Distance in coordinate plane",
+        "label": "Coordinate distance",
         "grade": "8th Grade Math",
-        "unit": "Geometry"
+        "unit": "Geometry",
+        "conceptId": "math:coordinate-distance"
       },
       "target": {
-        "label": "Distance formula usage",
+        "label": "Distance formula",
         "grade": "8th Grade Math",
-        "unit": "Geometry"
+        "unit": "Geometry",
+        "conceptId": "math:distance-formula"
       },
       "reason": "Writing the Pythagorean calculation in coordinate symbols gives the distance formula."
     },
     {
       "source": {
-        "label": "Find slope from two points",
+        "label": "Slope",
         "grade": "8th Grade Math",
-        "unit": "Expressions & Equations"
+        "unit": "Expressions & Equations",
+        "conceptId": "math:slope"
       },
       "target": {
-        "label": "Graph y = mx + b",
+        "label": "Slope-intercept form",
         "grade": "8th Grade Math",
-        "unit": "Expressions & Equations"
+        "unit": "Expressions & Equations",
+        "conceptId": "math:slope-intercept-form"
       },
       "reason": "Slope specifies the vertical change per horizontal unit in the linear equation."
     },
     {
       "source": {
-        "label": "Find y-intercept from graph",
+        "label": "Intercept",
         "grade": "8th Grade Math",
-        "unit": "Expressions & Equations"
+        "unit": "Expressions & Equations",
+        "conceptId": "math:intercept"
       },
       "target": {
-        "label": "Write linear equation from graph",
+        "label": "Slope-intercept form",
+        "conceptId": "math:slope-intercept-form",
         "grade": "8th Grade Math",
         "unit": "Expressions & Equations"
       },
@@ -997,287 +1572,316 @@
     },
     {
       "source": {
-        "label": "Find slope from graph",
+        "label": "Linear graph",
         "grade": "8th Grade Math",
-        "unit": "Expressions & Equations"
+        "unit": "Expressions & Equations",
+        "conceptId": "math:linear-graph"
       },
       "target": {
-        "label": "Write linear equation from graph",
+        "label": "Graph intersection",
         "grade": "8th Grade Math",
-        "unit": "Expressions & Equations"
-      },
-      "reason": "The graph’s rate of change supplies m in y = mx + b."
-    },
-    {
-      "source": {
-        "label": "Plot linear equations",
-        "grade": "8th Grade Math",
-        "unit": "Expressions & Equations"
-      },
-      "target": {
-        "label": "Solve system by graphing",
-        "grade": "8th Grade Math",
-        "unit": "Expressions & Equations"
+        "unit": "Expressions & Equations",
+        "conceptId": "math:graph-intersection"
       },
       "reason": "Graphing both equations allows their shared solution to be read at the intersection."
     },
     {
       "source": {
-        "label": "Interpret a system solution as a graph intersection",
+        "label": "Graph intersection",
         "grade": "8th Grade Math",
-        "unit": "Expressions & Equations"
+        "unit": "Expressions & Equations",
+        "conceptId": "math:graph-intersection"
       },
       "target": {
-        "label": "Solve system by graphing",
+        "label": "System solution",
         "grade": "8th Grade Math",
-        "unit": "Expressions & Equations"
+        "unit": "Expressions & Equations",
+        "conceptId": "math:system-solution"
       },
-      "reason": "An intersection represents an ordered pair satisfying both equations at once."
+      "reason": "An intersection gives values that satisfy both equations of a system."
     },
     {
       "source": {
-        "label": "Solve multi-step equations",
+        "label": "Multi-step equation",
+        "grade": "8th Grade Math",
+        "unit": "Expressions & Equations",
+        "conceptId": "math:multi-step-equation"
+      },
+      "target": {
+        "label": "Equation system",
+        "conceptId": "math:equation-system",
         "grade": "8th Grade Math",
         "unit": "Expressions & Equations"
       },
-      "target": {
-        "label": "Solve system by substitution",
-        "grade": "8th Grade Math",
-        "unit": "Expressions & Equations"
-      },
-      "reason": "Substitution replaces one variable with an equivalent expression, producing a one-variable equation to solve."
+      "reason": "Solving one equation provides the algebra used to find values satisfying a system."
     },
     {
       "source": {
-        "label": "Definition of function",
+        "label": "Mapping",
         "grade": "8th Grade Math",
-        "unit": "Functions"
+        "unit": "Functions",
+        "conceptId": "math:mapping"
       },
       "target": {
-        "label": "Determine whether a mapping is a function",
+        "label": "Function",
         "grade": "8th Grade Math",
-        "unit": "Functions"
+        "unit": "Functions",
+        "conceptId": "math:function"
       },
-      "reason": "The definition requires each input in the mapping to have exactly one output."
+      "reason": "A function is a mapping that assigns exactly one output to each input."
     },
     {
       "source": {
-        "label": "Definition of function",
+        "label": "Function",
         "grade": "8th Grade Math",
-        "unit": "Functions"
+        "unit": "Functions",
+        "conceptId": "math:function"
       },
       "target": {
-        "label": "Evaluate function f(x)",
+        "label": "Function value",
         "grade": "8th Grade Math",
-        "unit": "Functions"
+        "unit": "Functions",
+        "conceptId": "math:function-value"
       },
       "reason": "A function assigns an output to an input; evaluating f(x) computes that assigned output."
     },
     {
       "source": {
-        "label": "Find slope from graph",
+        "label": "Rate of change",
         "grade": "8th Grade Math",
-        "unit": "Expressions & Equations"
+        "unit": "Functions",
+        "conceptId": "math:rate-of-change"
       },
       "target": {
-        "label": "Interpret slope as rate of change",
+        "label": "Slope",
         "grade": "8th Grade Math",
-        "unit": "Functions"
+        "unit": "Expressions & Equations",
+        "conceptId": "math:slope"
       },
-      "reason": "Slope measures how much the output changes for each unit increase of the input."
+      "reason": "Slope measures the rate of change of y for each unit increase in x."
     },
     {
       "source": {
-        "label": "Create scatter plots",
+        "label": "Scatter plot",
         "grade": "8th Grade Math",
-        "unit": "Statistics & Probability"
+        "unit": "Statistics & Probability",
+        "conceptId": "math:scatter-plot"
       },
       "target": {
-        "label": "Describe association in scatter plots",
+        "label": "Association",
         "grade": "8th Grade Math",
-        "unit": "Statistics & Probability"
+        "unit": "Statistics & Probability",
+        "conceptId": "math:association"
       },
       "reason": "A scatter plot displays paired measurements so their direction, form, and strength of association can be described."
     },
     {
       "source": {
-        "label": "Create scatter plots",
+        "label": "Scatter plot",
         "grade": "8th Grade Math",
-        "unit": "Statistics & Probability"
+        "unit": "Statistics & Probability",
+        "conceptId": "math:scatter-plot"
       },
       "target": {
-        "label": "Find line of best fit by eye",
+        "label": "Best-fit line",
         "grade": "8th Grade Math",
-        "unit": "Statistics & Probability"
+        "unit": "Statistics & Probability",
+        "conceptId": "math:best-fit-line"
       },
       "reason": "A scatter plot shows the paired data whose overall linear trend the fitted line summarizes."
     },
     {
       "source": {
-        "label": "Find line of best fit by eye",
+        "label": "Best-fit line",
         "grade": "8th Grade Math",
-        "unit": "Statistics & Probability"
+        "unit": "Statistics & Probability",
+        "conceptId": "math:best-fit-line"
       },
       "target": {
-        "label": "Predict with linear model",
+        "label": "Linear model",
         "grade": "8th Grade Math",
-        "unit": "Statistics & Probability"
+        "unit": "Statistics & Probability",
+        "conceptId": "math:linear-model"
       },
       "reason": "A fitted line provides predicted output values for chosen inputs."
     },
     {
       "source": {
-        "label": "Calculate quartiles",
+        "label": "Quartile",
         "grade": "6th Grade Math",
-        "unit": "Statistics & Probability"
+        "unit": "Statistics & Probability",
+        "conceptId": "math:quartile"
       },
       "target": {
-        "label": "Find interquartile range",
+        "label": "Interquartile range",
         "grade": "6th Grade Math",
-        "unit": "Statistics & Probability"
+        "unit": "Statistics & Probability",
+        "conceptId": "math:interquartile-range"
       },
       "reason": "The interquartile range is the upper quartile minus the lower quartile."
     },
     {
       "source": {
-        "label": "Calculate mean",
+        "label": "Mean",
         "grade": "6th Grade Math",
-        "unit": "Statistics & Probability"
+        "unit": "Statistics & Probability",
+        "conceptId": "math:mean"
       },
       "target": {
-        "label": "Calculate mean absolute deviation",
+        "label": "Mean absolute deviation",
         "grade": "8th Grade Math",
-        "unit": "Statistics & Probability"
+        "unit": "Statistics & Probability",
+        "conceptId": "math:mean-absolute-deviation"
       },
       "reason": "Mean absolute deviation averages the absolute distances of the data values from their mean."
     },
     {
       "source": {
-        "label": "Two-way frequency tables",
+        "label": "Two-way table",
         "grade": "8th Grade Math",
-        "unit": "Statistics & Probability"
+        "unit": "Statistics & Probability",
+        "conceptId": "math:two-way-table"
       },
       "target": {
-        "label": "Interpret joint frequencies",
+        "label": "Joint frequency",
         "grade": "8th Grade Math",
-        "unit": "Statistics & Probability"
+        "unit": "Statistics & Probability",
+        "conceptId": "math:joint-frequency"
       },
       "reason": "A table cell counts observations belonging to both of its row and column categories."
     },
     {
       "source": {
-        "label": "Two-way frequency tables",
+        "label": "Two-way table",
         "grade": "8th Grade Math",
-        "unit": "Statistics & Probability"
+        "unit": "Statistics & Probability",
+        "conceptId": "math:two-way-table"
       },
       "target": {
-        "label": "Interpret conditional relative frequencies",
+        "label": "Conditional frequency",
         "grade": "8th Grade Math",
-        "unit": "Statistics & Probability"
+        "unit": "Statistics & Probability",
+        "conceptId": "math:conditional-frequency"
       },
       "reason": "Dividing a cell count by its row or column total describes a proportion within that selected group."
     },
     {
       "source": {
-        "label": "Understand probability as a number from 0 to 1",
+        "label": "Event",
         "grade": "6th Grade Math",
-        "unit": "Statistics & Probability"
+        "unit": "Statistics & Probability",
+        "conceptId": "math:event"
       },
       "target": {
-        "label": "Probability of event",
+        "label": "Probability",
         "grade": "6th Grade Math",
-        "unit": "Statistics & Probability"
+        "unit": "Statistics & Probability",
+        "conceptId": "math:probability"
       },
-      "reason": "An event probability quantifies how likely its outcomes are, from impossible to certain."
+      "reason": "An event is the set of outcomes whose chance a probability describes."
     },
     {
       "source": {
-        "label": "List outcomes in a compound-event sample space",
+        "label": "Sample space",
         "grade": "6th Grade Math",
-        "unit": "Statistics & Probability"
+        "unit": "Statistics & Probability",
+        "conceptId": "math:sample-space"
       },
       "target": {
-        "label": "Use tree diagrams to represent compound events",
+        "label": "Tree diagram",
         "grade": "6th Grade Math",
-        "unit": "Statistics & Probability"
+        "unit": "Statistics & Probability",
+        "conceptId": "math:tree-diagram"
       },
       "reason": "A tree organizes the same possible outcome sequences into successive branches."
     },
     {
       "source": {
-        "label": "Understand volume as a measurable attribute",
+        "label": "Unit cube",
         "grade": "5th Grade Math",
-        "unit": "Measurement & Data"
+        "unit": "Measurement & Data",
+        "conceptId": "math:unit-cube"
       },
       "target": {
-        "label": "Measure volume by counting unit cubes",
+        "label": "Volume",
         "grade": "5th Grade Math",
-        "unit": "Measurement & Data"
+        "unit": "Measurement & Data",
+        "conceptId": "math:volume"
       },
-      "reason": "Unit cubes provide equal-sized volume units that fill the solid without gaps or overlaps."
+      "reason": "Counting unit cubes gives a measure of the space occupied by a solid."
     },
     {
       "source": {
-        "label": "Measure volume by counting unit cubes",
+        "label": "Unit cube",
         "grade": "5th Grade Math",
-        "unit": "Measurement & Data"
+        "unit": "Measurement & Data",
+        "conceptId": "math:unit-cube"
       },
       "target": {
-        "label": "Find the volume of a rectangular prism using a formula",
+        "label": "Prism volume",
         "grade": "5th Grade Math",
-        "unit": "Measurement & Data"
+        "unit": "Measurement & Data",
+        "conceptId": "math:prism-volume"
       },
       "reason": "Counting cubes in one layer and multiplying by the number of layers yields length × width × height."
     },
     {
       "source": {
-        "label": "Measure circles: radius and diameter",
+        "label": "Radius and diameter",
         "grade": "7th Grade Math",
-        "unit": "Geometry"
+        "unit": "Geometry",
+        "conceptId": "math:radius-and-diameter"
       },
       "target": {
-        "label": "Area of circle",
+        "label": "Circle area",
         "grade": "7th Grade Math",
-        "unit": "Geometry"
+        "unit": "Geometry",
+        "conceptId": "math:circle-area"
       },
       "reason": "The area formula uses the radius squared, so the radius must be distinguished from the diameter."
     },
     {
       "source": {
-        "label": "Measure circles: radius and diameter",
+        "label": "Radius and diameter",
         "grade": "7th Grade Math",
-        "unit": "Geometry"
+        "unit": "Geometry",
+        "conceptId": "math:radius-and-diameter"
       },
       "target": {
-        "label": "Circumference of circle",
+        "label": "Circumference",
         "grade": "7th Grade Math",
-        "unit": "Geometry"
+        "unit": "Geometry",
+        "conceptId": "math:circumference"
       },
       "reason": "The circumference formulas use either the diameter or twice the radius."
     },
     {
       "source": {
-        "label": "Area of circle",
+        "label": "Circle area",
         "grade": "7th Grade Math",
-        "unit": "Geometry"
+        "unit": "Geometry",
+        "conceptId": "math:circle-area"
       },
       "target": {
-        "label": "Calculate volume of cylinders",
+        "label": "Cylinder volume",
         "grade": "8th Grade Math",
-        "unit": "Geometry"
+        "unit": "Geometry",
+        "conceptId": "math:cylinder-volume"
       },
       "reason": "Multiplying the circular base area by the height gives the volume of a cylinder."
     },
     {
       "source": {
-        "label": "Calculate volume of cylinders",
+        "label": "Cylinder volume",
         "grade": "8th Grade Math",
-        "unit": "Geometry"
+        "unit": "Geometry",
+        "conceptId": "math:cylinder-volume"
       },
       "target": {
-        "label": "Calculate volume of cones",
+        "label": "Cone volume",
         "grade": "8th Grade Math",
-        "unit": "Geometry"
+        "unit": "Geometry",
+        "conceptId": "math:cone-volume"
       },
       "reason": "A cone with the same base and height has one third of the corresponding cylinder’s volume."
     }

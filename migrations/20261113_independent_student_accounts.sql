@@ -1,9 +1,8 @@
--- Additive signup/recovery support. Run once before deploying student-accounts.
+-- Independent username/password signup support. Run once before deploying student-accounts.
 begin;
 create table if not exists public.student_accounts (
   user_id uuid primary key references auth.users(id) on delete cascade,
   username text not null unique check (username ~ '^[a-z][a-z0-9_]{3,23}$'),
-  recovery_hash text not null check (recovery_hash ~ '^[a-f0-9]{64}$'),
   created_at timestamptz not null default now()
 );
 alter table public.student_accounts enable row level security;

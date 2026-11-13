@@ -34,7 +34,7 @@ links, and one student has not submitted each class's final activity.
 
 Reload sample pages before recording for a consistent starting state. Leave
 Anonymous mode off when introducing the fictional class and on when demonstrating
-projection. No real student credentials, class invite codes or recovery keys are
+projection. No real student credentials, class invite codes are
 needed for the recording.
 
 ## Signed-in portfolio

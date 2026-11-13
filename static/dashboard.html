@@ -313,23 +313,16 @@
       <div class="auth-error" id="signInError"></div>
     </form>
     <form id="forgotPasswordForm" style="display:none;">
-      <label for="recoveryKind">Recover an account</label>
-      <select id="recoveryKind"><option value="student">Username + recovery key</option><option value="email">Email reset link</option></select>
-      <input id="recoveryUsername" aria-label="Username" placeholder="Username" autocomplete="username" autocapitalize="none" required />
-      <input id="recoveryKey" aria-label="Recovery key" placeholder="Recovery key from signup" autocomplete="off" required />
-      <input id="recoveryPassword" type="password" aria-label="New password" placeholder="New password (min 10 characters)" minlength="10" maxlength="128" autocomplete="new-password" required />
-      <input type="email" id="forgotEmail" aria-label="Email" placeholder="Email" autocomplete="email" hidden disabled />
-      <button type="submit">Reset password</button>
-      <button type="button" id="forgotBackBtn" style="background:none;border:none;color:#5b6472;text-decoration:underline;cursor:pointer;padding:0;font-size:0.85em;align-self:flex-start;">Back to sign in</button>
+      <p class="hint">For an email account, request a password reset link. If your account has no email, <a href="privacy">contact the Span team</a> for sign-in help.</p>
+      <input type="email" id="forgotEmail" aria-label="Account email" placeholder="Account email" autocomplete="email" required />
+      <button type="submit">Send reset link</button>
+      <button type="button" id="forgotBackBtn" style="background:none;border:none;color:var(--text-secondary);text-decoration:underline;cursor:pointer;padding:0;font-size:0.85em;align-self:flex-start;">Back to sign in</button>
       <div class="auth-error" id="forgotError"></div>
     </form>
     <form id="signUpForm" style="display:none;">
       <label for="signUpKind">Create an account</label>
-      <select id="signUpKind"><option value="student">Student · no email needed</option><option value="email">Adult / 13+ email account</option></select>
-      <p id="studentAccountHint" class="hint">Choose a username, not your real name. Your account can join multiple classes. For children under 13, a parent or school must arrange authorization with Span first.</p>
-      <label for="signUpAgeBand" id="signUpAgeLabel">Age group</label>
-      <select id="signUpAgeBand" required><option value="">Choose…</option><option value="under13">Under 13</option><option value="13plus">13 or older</option></select>
-      <input id="signUpAuthorization" aria-label="Parent or school authorization code" placeholder="Parent or school authorization code" autocomplete="off" hidden disabled />
+      <select id="signUpKind"><option value="student">Student · no email needed</option><option value="email">Email account</option></select>
+      <p id="studentAccountHint" class="hint">Choose a username, not your real name. Use the same account on any device and join multiple classes.</p>
       <input type="text" id="signUpUsername" aria-label="Username" placeholder="Username (4–24 characters)" autocomplete="username" autocapitalize="none" spellcheck="false" pattern="[A-Za-z][A-Za-z0-9_]{3,23}" minlength="4" maxlength="24" required />
       <input type="text" id="signUpName" aria-label="Display name" placeholder="Display name" autocomplete="name" hidden disabled />
       <input type="email" id="signUpEmail" aria-label="Email" placeholder="Email" autocomplete="email" hidden disabled />
@@ -342,6 +335,7 @@
 
 <script src="vendor/supabase.js"></script>
 <script src="auth.js"></script>
+<script src="concept-bank.js"></script>
 <script src="demo-data.js"></script>
 <script src="dashboard.js"></script>
 <script src="account-forms.js"></script>

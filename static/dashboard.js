@@ -594,7 +594,7 @@ function renderActivitiesCard(container, cls, curriculum, activityFns, onChange)
   const aiToggleCheckbox = document.createElement('input');
   aiToggleCheckbox.type = 'checkbox';
   aiToggleRow.appendChild(aiToggleCheckbox);
-  aiToggleRow.appendChild(document.createTextNode(' Disable Explore, Explain my map, and What could I improve? for students on this activity'));
+  aiToggleRow.appendChild(document.createTextNode(' Disable map help'));
   container.appendChild(aiToggleRow);
 
   const newBtn = document.createElement('button');
@@ -652,7 +652,7 @@ function renderActivitiesCard(container, cls, curriculum, activityFns, onChange)
   const newAiDisabledCheckbox = document.createElement('input');
   newAiDisabledCheckbox.type = 'checkbox';
   newAiDisabledLabel.appendChild(newAiDisabledCheckbox);
-  newAiDisabledLabel.appendChild(document.createTextNode(' Disable AI tools for students on this activity'));
+  newAiDisabledLabel.appendChild(document.createTextNode(' Disable map help'));
   form.appendChild(newAiDisabledLabel);
   const formActions = document.createElement('div');
   formActions.className = 'activity-form-actions';
