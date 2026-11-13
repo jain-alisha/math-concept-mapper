@@ -48,6 +48,14 @@ becomes a real problem):
   signup-code and admin-only-flow options this section has tried before)
   or remove the toggle entirely and go back to manual SQL promotion. Don't
   let this linger once the app has real users.
+- **Note on a 2026-11-13 reversal attempt:** a separate pass (merged from
+  branch `fix/span-pilot-qa`, see `docs/PILOT_QA_FIXES.md` item 2) removed
+  this toggle in favor of admin-only role management, arguing self-serve
+  switching - even reversible - is unsafe ahead of a real pilot. That's a
+  reasonable position for a pilot launch. The user explicitly asked to
+  restore the toggle instead (keeping the rest of that merge), so it's
+  back - but the safety argument above still stands and should be
+  revisited before this app has real student users.
 - Previously: role (`student`/`teacher`) had no self-serve path at all -
   see `static/auth.js` and `README.md` for the original manual-SQL
   promotion flow (still works as a fallback for one-off promotions).

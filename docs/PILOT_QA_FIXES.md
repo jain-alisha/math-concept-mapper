@@ -34,3 +34,7 @@ Built on main commit `0977a4b` (the existing in-page rename/dialog work), preser
 4. Recheck authenticated student/teacher headers, cloud save/copy/list refresh and read-only classroom access with test accounts.
 
 The graph intentionally covers authored relationships only; it is not an exhaustive prerequisite model for every catalog topic. Privacy copy describes current behavior, not a school data-processing agreement or compliance certification. There is no verified private support email in the repository; the public support page warns against posting student information.
+
+## Addendum (2026-11-13, after merge)
+
+Item 2's removal of self-serve role switching was reverted at the user's explicit request immediately after this branch was merged into `main` - the "Switch to teacher/student view" toggle (`toggle_role()`) is back, and `migrations/20261113_remove_demo_role_toggle.sql` was deleted rather than applied. The safety argument for admin-only role management still stands and is tracked in `TODO.md`'s "Auth & roles" section; it just wasn't the call made here. Everything else in this document reflects what's actually on `main`.

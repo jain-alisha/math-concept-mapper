@@ -271,11 +271,34 @@ alter table public.maps add column if not exists timeline_id uuid references pub
 -- ("update own maps"), so setting timeline_id needs no new maps policy.
 
 -- ============================================================
--- Teacher access is administrator-managed only.
--- Remove the former demo RPC so authenticated users cannot self-promote.
--- No code table is dropped: preserve any previously provisioned gate data.
-drop function if exists public.toggle_role();
-notify pgrst, 'reload schema';
+-- DEMO-ONLY, TEMPORARY: self-serve role toggle (student <-> teacher).
+-- ============================================================
+-- A 2026-11-13 merge briefly removed this in favor of admin-only role
+-- management (the safer choice for a real pilot - see TODO.md's
+-- "Auth & roles" section). The user explicitly asked to keep the
+-- self-serve toggle instead, so it's restored here. Intentionally
+-- ungated - any authenticated user can flip their own role with no
+-- approval, and can flip back. Acceptable only because this deployment is
+-- a demo with no real student data at stake.
+create or replace function public.toggle_role()
+returns void
+language plpgsql security definer set search_path = public, pg_temp
+as $$
+declare
+  current_role text;
+begin
+  select coalesce(raw_app_meta_data->>'role', 'student') into current_role
+  from auth.users where id = auth.uid();
+
+  update auth.users
+  set raw_app_meta_data = raw_app_meta_data
+    || jsonb_build_object('role', case when current_role = 'teacher' then 'student' else 'teacher' end)
+  where id = auth.uid();
+end;
+$$;
+
+revoke execute on function public.toggle_role() from public;
+grant execute on function public.toggle_role() to authenticated;
 
 -- ============================================================
 -- Activities: a teacher-defined, named assignment with its own concept
