@@ -15,6 +15,61 @@ let linkHoverTarget = null;
 let summaryHighlightIds = new Set();
 let demoPlaying = false;
 
+// --- Undo/redo: a bounded stack of serialized map snapshots, not a
+// command pattern - simpler and correct for every mutation (add/delete/
+// rename/note/move/ghost-accept) since they all already funnel through
+// addNode/addLink/deleteNode/deleteLink or call pushHistory() directly.
+// Drags push one snapshot on mouseup, not per pixel. resetHistory() is
+// called whenever a *different* map is loaded (autosave, a saved map,
+// sample, share link, Clear Map) so Undo never reaches across maps. ---
+let historyStack = [];
+let historyIndex = -1;
+let suppressHistory = false;
+const HISTORY_LIMIT = 60;
+function pushHistory() {
+  if (suppressHistory || isReadonly) return;
+  const snap = JSON.stringify(serializeMap());
+  if (historyIndex >= 0 && historyStack[historyIndex] === snap) return;
+  historyStack = historyStack.slice(0, historyIndex + 1);
+  historyStack.push(snap);
+  if (historyStack.length > HISTORY_LIMIT) historyStack.shift();
+  historyIndex = historyStack.length - 1;
+  updateUndoRedoButtons();
+}
+function resetHistory() {
+  historyStack = [JSON.stringify(serializeMap())];
+  historyIndex = 0;
+  updateUndoRedoButtons();
+}
+function undo() {
+  if (historyIndex <= 0) return;
+  historyIndex--;
+  suppressHistory = true;
+  applyMapData(JSON.parse(historyStack[historyIndex]));
+  suppressHistory = false;
+  selectedNode = null; selectedLink = null;
+  renderNotesSidebar(); renderCanvas();
+  autosave();
+  updateUndoRedoButtons();
+}
+function redo() {
+  if (historyIndex >= historyStack.length - 1) return;
+  historyIndex++;
+  suppressHistory = true;
+  applyMapData(JSON.parse(historyStack[historyIndex]));
+  suppressHistory = false;
+  selectedNode = null; selectedLink = null;
+  renderNotesSidebar(); renderCanvas();
+  autosave();
+  updateUndoRedoButtons();
+}
+function updateUndoRedoButtons() {
+  const undoBtn = document.getElementById('undoBtn');
+  const redoBtn = document.getElementById('redoBtn');
+  if (undoBtn) undoBtn.disabled = historyIndex <= 0;
+  if (redoBtn) redoBtn.disabled = historyIndex >= historyStack.length - 1;
+}
+
 // --- Node-level scaffolding (click a node -> Edit/Connect/Explore) ---
 let nodeToolbarState = null;   // { node }
 let exploreMenuState = null;   // { node }
@@ -175,6 +230,7 @@ window.onload = async function() {
   setupCheckMapButton();
   setupAuthUI();
   setupPlayDemoButton();
+  setupUndoRedoButtons();
 
   const params = new URLSearchParams(window.location.search);
   if (params.get('view') && params.get('readonly') === '1') {
@@ -192,6 +248,7 @@ window.onload = async function() {
 
   renderCanvas();
   setupCustomConcept();
+  resetHistory();
 };
 
 // A student reaches the Playground with ?activity=<id> from their Student
@@ -246,6 +303,7 @@ async function loadReadonlyMap(id) {
     cloudMapId = null;
     cloudMapTitle = row.title;
     cloudMapUpdatedAt = null;
+    setSaveStatus('saved');
   } catch (e) {
     console.error('Could not load map for read-only viewing:', e);
   }
@@ -703,11 +761,13 @@ function clearMap() {
   cloudMapId = null;
   cloudMapTitle = null;
   cloudMapUpdatedAt = null;
+  setSaveStatus('saved');
   const mapTitleInput = document.getElementById('mapTitleInput');
   if (mapTitleInput) mapTitleInput.value = '';
   renderNotesSidebar();
   renderCanvas();
   autosave();
+  resetHistory();
 }
 function setupClearMapButton() {
   const topbarBtn = document.getElementById('clearMapBtn');
@@ -721,6 +781,25 @@ function setupClearMapButton() {
 // map's top-left corner instead, which is still the main thing a student
 // needs on a map that's grown past the visible viewport: a reliable way
 // back to "the start" instead of scrolling around looking for an edge.
+function setupUndoRedoButtons() {
+  const undoBtn = document.getElementById('undoBtn');
+  const redoBtn = document.getElementById('redoBtn');
+  if (!undoBtn || !redoBtn) return;
+  undoBtn.onclick = undo;
+  redoBtn.onclick = redo;
+  // Ctrl/Cmd+Z and Ctrl/Cmd+Shift+Z (or Ctrl+Y) as optional accelerators -
+  // the toolbar buttons are the discoverable path, this is just for users
+  // who already expect it. Skipped while typing in a text field so it
+  // doesn't fight with normal text-edit undo.
+  document.addEventListener('keydown', e => {
+    const tag = (e.target && e.target.tagName) || '';
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || e.target.isContentEditable) return;
+    if (!(e.ctrlKey || e.metaKey)) return;
+    if (e.key === 'z' && !e.shiftKey) { e.preventDefault(); undo(); }
+    else if ((e.key === 'z' && e.shiftKey) || e.key === 'y') { e.preventDefault(); redo(); }
+  });
+}
+
 function setupFitMapButton() {
   const btn = document.getElementById('fitMapBtn');
   if (!btn) return;
@@ -1409,24 +1488,45 @@ function cloudReady() {
 function queueCloudSave() {
   if (!cloudReady() || !cloudMapId) return;
   clearTimeout(cloudSaveTimer);
+  setSaveStatus('saving');
   cloudSaveTimer = setTimeout(flushCloudSave, 1200);
 }
 
 async function flushCloudSave() {
   if (!cloudReady() || !cloudMapId) return;
   clearTimeout(cloudSaveTimer);
+  setSaveStatus('saving');
   try {
     const result = await window.SpanAuth.saveMap({
       id: cloudMapId, title: cloudMapTitle, data: serializeMap(), lastKnownUpdatedAt: cloudMapUpdatedAt,
     });
     if (result.conflict) {
       showCloudNotice('This map changed elsewhere — open "My Maps" to see the latest version.');
+      setSaveStatus('saved');
     } else {
       cloudMapUpdatedAt = result.row.updated_at;
+      setSaveStatus('saved');
     }
   } catch (e) {
     console.error('Cloud save failed:', e);
+    setSaveStatus('error');
   }
+}
+
+// Only reflects the cloud-save path (debounced, behind cloudMapId) - plain
+// localStorage autosave is synchronous and effectively can't fail in a way
+// worth surfacing. Deliberately never claims "Saved" for a save that
+// hasn't actually round-tripped yet; a failure stays visible (with a
+// click-to-retry) instead of silently reverting to the last good state.
+function setSaveStatus(status) {
+  const badge = document.getElementById('saveStatusBadge');
+  if (!badge) return;
+  if (!cloudMapId) { badge.style.display = 'none'; return; }
+  badge.style.display = 'inline-flex';
+  badge.className = 'save-status-badge save-status-' + status;
+  badge.textContent = status === 'saving' ? 'Saving…' : status === 'error' ? "Couldn't save — retry" : 'Saved';
+  badge.onclick = status === 'error' ? () => flushCloudSave() : null;
+  badge.style.cursor = status === 'error' ? 'pointer' : 'default';
 }
 
 function showCloudNotice(msg) {
@@ -1443,6 +1543,7 @@ async function saveCurrentMapAsNew(title, activityId) {
   cloudMapId = result.row.id;
   cloudMapTitle = result.row.title;
   cloudMapUpdatedAt = result.row.updated_at;
+  setSaveStatus('saved');
   return result.row;
 }
 
@@ -1452,7 +1553,9 @@ async function loadCloudMap(id) {
   cloudMapId = row.id;
   cloudMapTitle = row.title;
   cloudMapUpdatedAt = row.updated_at;
+  setSaveStatus('saved');
   renderCanvas();
+  resetHistory();
 }
 
 document.addEventListener('visibilitychange', () => {
@@ -1586,6 +1689,7 @@ function setupAuthUI() {
   signOutBtn.onclick = async () => {
     await window.SpanAuth.signOut();
     cloudMapId = null; cloudMapTitle = null; cloudMapUpdatedAt = null;
+    setSaveStatus('saved');
     myMapsPanel.style.display = 'none';
     timelinePanel.style.display = 'none';
     timelinePanel.classList.remove('timeline-expanded');
@@ -1660,7 +1764,7 @@ function setupAuthUI() {
         e.stopPropagation();
         if (!confirm(`Delete "${row.title}"?`)) return;
         await window.SpanAuth.deleteMap(row.id);
-        if (cloudMapId === row.id) { cloudMapId = null; cloudMapTitle = null; cloudMapUpdatedAt = null; }
+        if (cloudMapId === row.id) { cloudMapId = null; cloudMapTitle = null; cloudMapUpdatedAt = null; setSaveStatus('saved'); }
         li.remove();
       };
       li.appendChild(titleSpan);
@@ -2315,6 +2419,7 @@ function addNode(label, x, y, meta={}) {
   nodes.push(node);
   renderCanvas();
   autosave();
+  pushHistory();
   // Onboarding's done the moment there's a first real concept on the map
   // (not the sample/demo map, which starts pre-populated) - collapse the
   // instructions out of the way automatically, same as a manual toggle.
@@ -2444,6 +2549,7 @@ function renderCanvas() {
           renderNotesSidebar();
           renderCanvas();
           autosave();
+          pushHistory();
         });
       }
     };
@@ -2746,6 +2852,7 @@ function renderCanvas() {
           renderNotesSidebar();
           renderCanvas();
           autosave();
+          pushHistory();
         });
       };
       svg.appendChild(g);
@@ -2773,7 +2880,7 @@ function dragNodeMove(e) {
   updateNodePosition(dragInfo.node);
 }
 function stopNodeDrag(e) {
-  if (dragInfo) autosave();
+  if (dragInfo) { autosave(); pushHistory(); }
   dragInfo = null;
   document.onmousemove = null;
   document.onmouseup = null;
@@ -2839,6 +2946,7 @@ function addLink(srcId, tgtId, relType = '') {
   renderNotesSidebar();
   renderCanvas();
   autosave();
+  pushHistory();
 }
 function deleteNode(nodeId) {
   if (isReadonly) return;
@@ -2848,6 +2956,7 @@ function deleteNode(nodeId) {
   renderNotesSidebar();
   renderCanvas();
   autosave();
+  pushHistory();
 }
 function deleteLink(linkId) {
   if (isReadonly) return;
@@ -2856,6 +2965,7 @@ function deleteLink(linkId) {
   renderNotesSidebar();
   renderCanvas();
   autosave();
+  pushHistory();
 }
 function showNoteEditor(link, cb) {
   let note = prompt('Edit note for this connection:', link.note || '');
@@ -3140,8 +3250,9 @@ function updateNodeOverlays() {
       if (connectPending === node) {
         toolbar.innerHTML = `<span class="toolbar-hint">Click another node to connect…</span><button data-act="cancel-connect">Cancel</button>`;
       } else {
-        toolbar.innerHTML = `<button data-act="edit">Edit</button><span class="sep">&middot;</span><button data-act="connect">Connect</button>` +
-          (aiToolsDisabled ? '' : `<span class="sep">&middot;</span><button data-act="explore">&#10022; Explore</button>`);
+        toolbar.innerHTML = `<button data-act="edit">Edit name</button><span class="sep">&middot;</span><button data-act="connect">Connect</button>` +
+          (aiToolsDisabled ? '' : `<span class="sep">&middot;</span><button data-act="explore">Find related ideas</button>`) +
+          `<span class="sep">&middot;</span><button data-act="delete" class="toolbar-danger" title="Delete this concept">Delete</button>`;
       }
       toolbar.onclick = e => {
         e.stopPropagation();
@@ -3153,6 +3264,8 @@ function updateNodeOverlays() {
             if (node.meta && node.meta.aiAdded) delete node.meta.aiAdded;
             renderNotesSidebar();
             renderCanvas();
+            autosave();
+            pushHistory();
           }
         } else if (act === 'connect') {
           connectPending = node;
@@ -3164,6 +3277,11 @@ function updateNodeOverlays() {
           exploreMenuState = { node };
           ghostState = null;
           renderCanvas();
+        } else if (act === 'delete') {
+          if (confirm(`Delete "${node.label}"?`)) {
+            nodeToolbarState = null;
+            deleteNode(node.id);
+          }
         }
       };
     } else {
@@ -3171,6 +3289,44 @@ function updateNodeOverlays() {
     }
   } else {
     toolbar.style.display = 'none';
+  }
+
+  const linkToolbar = document.getElementById('linkToolbar');
+  if (linkToolbar) {
+    if (selectedLink && links.includes(selectedLink) && !isReadonly) {
+      const link = selectedLink;
+      const path = document.querySelector(`#mapCanvas path[data-link-id="${link.id}"]`);
+      const svg = document.getElementById('mapCanvas');
+      if (path && svg && path.getTotalLength) {
+        const svgPt = path.getPointAtLength(path.getTotalLength() / 2);
+        const pt = svg.createSVGPoint();
+        pt.x = svgPt.x; pt.y = svgPt.y;
+        const screenPt = pt.matrixTransform(svg.getScreenCTM());
+        linkToolbar.style.display = 'flex';
+        linkToolbar.style.left = screenPt.x + 'px';
+        linkToolbar.style.top = screenPt.y + 'px';
+        linkToolbar.innerHTML = `<button data-act="note">${link.note ? 'Edit explanation' : 'Add explanation'}</button><span class="sep">&middot;</span><button data-act="delete" class="toolbar-danger" title="Delete this connection">Delete connection</button>`;
+        linkToolbar.onclick = e => {
+          e.stopPropagation();
+          const act = e.target.getAttribute('data-act');
+          if (act === 'note') {
+            showNoteEditor(link, (note) => {
+              link.note = note;
+              renderNotesSidebar();
+              renderCanvas();
+              autosave();
+              pushHistory();
+            });
+          } else if (act === 'delete') {
+            if (confirm('Delete this connection?')) deleteLink(link.id);
+          }
+        };
+      } else {
+        linkToolbar.style.display = 'none';
+      }
+    } else {
+      linkToolbar.style.display = 'none';
+    }
   }
 
   if (exploreMenuState && nodes.includes(exploreMenuState.node)) {
