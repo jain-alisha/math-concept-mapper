@@ -39,7 +39,24 @@ test('missing prerequisites use reviewed directed edges, aliases and grade quali
   const nodes = [n(1,'Fractions'),n(2,'old mixed')];
   assert.equal(c.computeMissingPrereqs([map('a','s',nodes)],{},new Set()).length,1);
   assert.equal(c.computeMissingPrereqs([map('a','s',nodes,[{s:1,t:2,rt:'prerequisite'}])],{}).length,0);
+  assert.equal(c.computeMissingPrereqs([map('a','s',nodes,[{s:1,t:2,rt:'related'}])],{}).length,0);
   assert.equal(c.computeMissingPrereqs([map('a','s',nodes,[{s:2,t:1,rt:'prerequisite'}])],{}).length,1);
   assert.equal(c.computeMissingPrereqs([map('a','s',[n(1,'Ratio word problems'),n(2,'Unit rate definition')])],{}).length,0);
   assert.equal(c.computeMissingPrereqs([map('a','s',[n(2,'Mixed numbers','7th Grade Math')])],{}).length,0);
+});
+
+test('progress breaks equal concept counts by link count', () => {
+  const c=load('dashboard.js');
+  const rows=c.computeStudentProgress([
+    map('a','one',[n(1,'A'),n(2,'B')],[{s:1,t:2}]),
+    map('b','two',[n(1,'A'),n(2,'B')])
+  ],[{student_id:'one',student_display_name:'One'},{student_id:'two',student_display_name:'Two'}]).rows;
+  assert.equal(rows[0].name,'Two');
+});
+test('anonymous projection hides identifying map titles without changing saved maps', () => {
+  const c=load('dashboard.js');
+  const original=[map('a','s',[n(1,'A')])]; original[0].title='Maya - personal work';
+  assert.equal(c.mapsForProjection(original,true)[0].title,'Saved map');
+  assert.equal(original[0].title,'Maya - personal work');
+  assert.equal(c.mapsForProjection(original,false),original);
 });

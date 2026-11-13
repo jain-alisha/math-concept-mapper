@@ -25,6 +25,13 @@ await db.exec(`insert into auth.users(id,email,raw_user_meta_data,raw_app_meta_d
 const rows=async(sql,params=[]) => (await db.query(sql,params)).rows;
 async function asUser(id,fn){await db.exec(`set role authenticated; select set_config('request.jwt.claim.sub','${id}',false);`);try{return await fn();}finally{await db.exec('reset role');}}
 let ownMap,checkpoint,firstClass,secondClass,firstActivity,secondActivity;
+test('demo role toggle goes both directions and changes only the caller',async()=>{
+  await asUser(alice,async()=>{await rows('select public.toggle_role()');});
+  assert.equal((await rows("select raw_app_meta_data->>'role' as role from auth.users where id=$1",[alice]))[0].role,'teacher');
+  await asUser(alice,async()=>{await rows('select public.toggle_role()');});
+  assert.equal((await rows("select raw_app_meta_data->>'role' as role from auth.users where id=$1",[alice]))[0].role,'student');
+  assert.equal((await rows("select raw_app_meta_data->>'role' as role from auth.users where id=$1",[teacher]))[0].role,'teacher');
+});
 test('one independent account can join two classes; no synthetic email leaks to roster',async()=>{
   firstClass=(await rows('insert into classes(teacher_id,name) values ($1,$2) returning *',[teacher,'Class A']))[0];
   secondClass=(await rows('insert into classes(teacher_id,name) values ($1,$2) returning *',[other,'Class B']))[0];
