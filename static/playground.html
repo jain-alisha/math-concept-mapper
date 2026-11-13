@@ -275,6 +275,17 @@
       color: #c2503a; font-size: 0.82em; font-weight: 600; padding: 0.5em 0.9em 0.5em 0.7em;
       border-radius: 9px; box-shadow: var(--shadow-sm); line-height: 1.4;
     }
+    /* A node added by accepting an Explore suggestion keeps a small sparkle
+       badge (see renderCanvas) - this names what that badge means the
+       first time one appears on the map, instead of relying only on its
+       hover tooltip (which touch devices can't reach). */
+    #aiAddedLegend {
+      display: none; position: absolute; bottom: 14px; right: 14px; z-index: 900; max-width: 260px;
+      align-items: center; gap: 0.5em; background: var(--surface); border: 1px solid var(--border);
+      color: var(--text-secondary); font-size: 0.8em; font-weight: 500; padding: 0.5em 0.8em;
+      border-radius: 9px; box-shadow: var(--shadow-sm); line-height: 1.4;
+    }
+    #aiAddedLegend .ai-added-dot { color: var(--brand); flex: none; }
     /* "Help with my map": Explain my map (AI Summary) and What could I
        improve? (Check my map) used to be two separate top-level pill
        buttons - consolidated into one menu per the redesign brief's "AI
@@ -951,6 +962,7 @@
     <div id="readonlyBanner" style="display:none;"></div>
     <div id="activityBanner" style="display:none;"></div>
     <div id="isolatedLegend">This idea isn't connected yet — what does it relate to? Select it, then Connect.</div>
+    <div id="aiAddedLegend"><span class="ai-added-dot">&#10022;</span> = added from a suggestion, not typed in yourself</div>
     <svg id="mapCanvas"></svg>
   </div>
 </div>

@@ -2738,6 +2738,7 @@ function renderCanvas() {
     degree.set(link.target, (degree.get(link.target) || 0) + 1);
   }
   let anyIsolated = false;
+  let anyAiAdded = false;
   for (let node of nodes) {
     let w = getNodeWidth(node.label);
     let g = document.createElementNS('http://www.w3.org/2000/svg','g');
@@ -2764,6 +2765,7 @@ function renderCanvas() {
 
     const isIsolated = (degree.get(node.id) || 0) === 0;
     if (isIsolated) anyIsolated = true;
+    if (node.meta && node.meta.aiAdded) anyAiAdded = true;
 
     let rect = document.createElementNS('http://www.w3.org/2000/svg','rect');
     rect.setAttribute('width', w);
@@ -2949,6 +2951,8 @@ function renderCanvas() {
 
   const isolatedLegend = document.getElementById('isolatedLegend');
   if (isolatedLegend) isolatedLegend.style.display = anyIsolated ? 'flex' : 'none';
+  const aiAddedLegend = document.getElementById('aiAddedLegend');
+  if (aiAddedLegend) aiAddedLegend.style.display = anyAiAdded ? 'flex' : 'none';
 
   // --- Note chips: nudge clear of nodes and each other, then draw on top ---
   if (noteChips.length) {
