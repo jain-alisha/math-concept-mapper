@@ -45,3 +45,7 @@ body.anonymous-projection .dash-header h1 { display: none !important; }
 .map-cards-grid details { font-size: .85rem; padding: 8px; overflow-wrap: anywhere; }
 .map-cards-grid details p { white-space: pre-wrap; }
 #sidebarGradeSelect, #sidebarUnitSelect { min-width: 0; max-width: 100%; }
+
+#editorToolbar { position: relative; }
+#editorToolbar #myMapsPanel,
+#editorToolbar #timelinePanel:not(.timeline-expanded) { top: calc(100% + 8px); max-width: calc(100vw - 24px); }

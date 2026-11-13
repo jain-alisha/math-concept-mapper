@@ -307,6 +307,9 @@ window.onload = async function() {
   if (params.get('view') && params.get('readonly') === '1') {
     await loadReadonlyMap(params.get('view'));
     applyReadonlyUI();
+  } else if (params.get('edit')) {
+    try { await loadCloudMap(params.get('edit')); }
+    catch (e) { await showAlertDialog('Could not open this map for editing: ' + e.message); }
   } else if (params.get('share')) {
     if (params.get('readonly') === '1') {
       isReadonly = true;
@@ -335,11 +338,12 @@ window.onload = async function() {
 // currentActivityId, read by saveCurrentMapAsNew) and shows which
 // assignment this is, same as the readonly banner shows "viewing X".
 async function setupActivityContext(params) {
+  const demoActivity = window.SpanDemo?.activities.find(a => a.id === params.get('demoActivity'));
   const activityId = params.get('activity');
-  if (!activityId || !window.SpanAuth || !window.SpanAuth.isConfigured) return;
+  if (!demoActivity && (!activityId || !window.SpanAuth || !window.SpanAuth.isConfigured)) return;
   try {
-    const activity = await window.SpanAuth.getActivity(activityId);
-    currentActivityId = activity.id;
+    const activity = demoActivity || await window.SpanAuth.getActivity(activityId);
+    currentActivityId = demoActivity ? null : activity.id;
     currentActivityName = activity.name;
     aiToolsDisabled = !!activity.ai_disabled;
     const banner = document.getElementById('activityBanner');
@@ -415,79 +419,9 @@ function applyReadonlyUI() {
 // --- "Explore a sample map" (playground?sample=1) ---
 function loadSampleMap() {
   isSampleMode = true;
-  // A real prerequisite pathway pulled from concepts.json (6th-8th grade),
-  // from ratios/basic equations up through linear functions and stats -
-  // meant to show off drag-drop, linking, notes, node coloring, and AI
-  // recommendations (which use this same grade/unit metadata) together.
-  const R_P = 'Ratios & Proportional Relationships', E_Q = 'Expressions & Equations',
-        NUM = 'The Number System', FUN = 'Functions', STAT = 'Statistics & Probability',
-        G6 = '6th Grade Math', G7 = '7th Grade Math', G8 = '8th Grade Math';
-
-  // Organic scatter layout (computed offline via a jitter + collision-resolution
-  // pass over the dependency graph below) instead of a rigid grid - positions
-  // are baked in here since they only need computing once.
-  const POS = {
-    A:[168,417], B:[166,568], C:[20,52],   D:[111,167], E:[22,326],
-    F:[492,263], G:[593,158], H:[446,67],  I:[563,498], J:[903,20],
-    K:[937,179], L:[933,507], M:[975,363], N:[1293,417],O:[1322,87],
-    P:[1401,192],Q:[1275,326],R:[1672,296],S:[1796,205],T:[1714,82],
-    U:[1661,554],V:[1676,463],
-  };
-
-  const sample = [
-    ['A', 'Ratio notation (a:b)',                          G6, R_P],
-    ['B', 'Write algebraic expressions (1 op)',            G6, E_Q],
-    ['C', 'Graph (x,y) in four quadrants',                 G6, NUM],
-    ['D', 'Unit rate definition',                          G6, R_P],
-    ['E', 'Write one-step equations',                      G6, E_Q],
-    ['F', 'Identify proportional relationships in tables', G7, R_P],
-    ['G', 'Solve one-step equations',                      G6, E_Q],
-    ['H', 'Constant of proportionality in tables',         G7, R_P],
-    ['I', 'Solve two-step equations',                      G6, E_Q],
-    ['J', 'Write proportional equations from tables',      G7, R_P],
-    ['K', 'Solve px + q = r type equations',               G7, E_Q],
-    ['L', 'Equation ↔ proportional relationship',          G8, E_Q],
-    ['M', 'Graph y = mx + b',                              G8, E_Q],
-    ['N', 'Find slope from two coords',                    G8, E_Q],
-    ['O', 'Definition of function',                        G8, FUN],
-    ['P', 'Write linear equation from graph',               G8, E_Q],
-    ['Q', 'Interpret slope as rate of change',              G8, FUN],
-    ['R', 'Solve system by graphing',                       G8, E_Q],
-    ['S', 'Create scatter plots',                           G8, STAT],
-    ['T', 'Relate proportional to linear function',         G8, FUN],
-    ['U', 'Find line of best fit by eye',                   G8, STAT],
-    ['V', 'Solve system by substitution',                   G8, E_Q],
-  ].map(([key, label, grade, unit]) => [key, label, POS[key][0], POS[key][1], grade, unit]);
-
-  const idFor = {};
-  for (const [key, label, x, y, grade, unit] of sample) {
-    const node = { id: nodeIdCounter++, label, x, y, meta: { grade, unit } };
-    nodes.push(node);
-    idFor[key] = node.id;
-  }
-
-  const edges = [
-    ['A', 'D'],
-    ['D', 'F', 'A unit rate is the constant of proportionality in its simplest form.'],
-    ['F', 'H'],
-    ['H', 'J', 'Once you can name the constant, you can write the equation: y = kx.'],
-    ['J', 'L'],
-    ['B', 'E'], ['E', 'G'], ['G', 'I'], ['I', 'K'],
-    ['C', 'M'],
-    ['L', 'M', 'Every proportional relationship is just a linear equation with b = 0.'],
-    ['M', 'N'], ['M', 'O', 'Once a line has an input→output rule, you’re already thinking in functions.'],
-    ['N', 'P', 'Slope plus one point is all point-slope form needs.'], ['O', 'Q'],
-    ['P', 'R'], ['Q', 'S', 'Real data rarely sits on a perfect line — scatter plots show slope as a trend, not a rule.'],
-    ['Q', 'T', 'Constant rate of change is what makes a function linear in the first place.'],
-    ['S', 'U'],
-    ['K', 'V', 'Substitution turns a 2-variable system into the 1-variable equation you already know how to solve.'],
-    ['R', 'V'],
-  ];
-
-  for (const [a, b, note] of edges) {
-    links.push({ id: linkIdCounter++, source: idFor[a], target: idFor[b], note: note || '' });
-  }
-  renderNotesSidebar();
+  applyMapData(window.SpanDemo.editor.data);
+  sidebarGrade='3rd Grade Math';sidebarUnit='Number & Operations—Fractions';
+  initTopicPicker(); renderConceptList();
 }
 
 // --- Beta: sample-mode "Play demo" walkthrough ---
@@ -580,9 +514,9 @@ async function playDemo() {
   const baseY = (nodes.length ? Math.max(...nodes.map(n => n.y)) : 40) + 140;
   const DROP_A = { x: 260, y: baseY };
   const DROP_B = { x: 560, y: baseY + 20 };
-  const UNIT = { grade: '7th Grade Math', unit: 'Ratios & Proportional Relationships' };
-  const LABEL_A = 'Percent word problems';
-  const LABEL_B = 'Convert fractions, decimals & percents';
+  const UNIT = { grade: '4th Grade Math', unit: 'Number & Operations—Fractions' };
+  const LABEL_A = 'Mixed numbers';
+  const LABEL_B = 'Add mixed numbers with like denominators';
   const SIDEBAR_ORIGIN = { left: 90, top: 160 };
 
   try {
@@ -1517,6 +1451,8 @@ async function saveCurrentMapAsNew(title, activityId) {
 async function loadCloudMap(id) {
   clearTimeout(cloudSaveTimer);
   const row = await window.SpanAuth.loadMapById(id);
+  const editingSession = await window.SpanAuth.getSession();
+  if (!editingSession || row.owner_id !== editingSession.user.id) throw new Error('You can only edit maps you own.');
   if (row.is_checkpoint) throw new Error('Open starting checkpoints in read-only view, or make a working copy.');
   currentActivityId = row.activity_id || null;
   currentActivityName = null; aiToolsDisabled = false;
@@ -1684,7 +1620,10 @@ function setupAuthUI() {
       titleSpan.textContent = row.title + (row.is_checkpoint ? ' 🔒' : '');
       titleSpan.className = 'my-map-title';
       titleSpan.onclick = async () => {
-        if (row.is_checkpoint) { window.location.href = 'playground?view=' + encodeURIComponent(row.id) + '&readonly=1'; return; }
+        if (row.is_checkpoint || isReadonly) {
+          window.location.href = 'playground?' + (row.is_checkpoint ? 'view=' : 'edit=') + encodeURIComponent(row.id) + (row.is_checkpoint ? '&readonly=1' : '');
+          return;
+        }
         await loadCloudMap(row.id);
         myMapsPanel.style.display = 'none';
         if (mapTitleInput) mapTitleInput.value = row.title;

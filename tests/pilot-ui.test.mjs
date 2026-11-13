@@ -49,3 +49,7 @@ test('PDF appendix preserves long Unicode explanations across pages',()=>{
   run(`nodes=[{id:1,label:'Fractions'},{id:2,label:'Equivalence'}];links=[{source:1,target:2,note:window.note}];appendMapNotesToPdf(window.pdf);`);
   assert.ok(pages>1);assert.match(rendered.join(''),/⅔ → ⁴⁄₆/);assert.ok(rendered.join('').endsWith('FINAL EXPLANATION'));dom.window.close();
 });
+test('direct editing route rejects another owner before loading their content',async()=>{
+  const {dom,w,run}=load('app.js');w.SpanAuth={loadMapById:async()=>({owner_id:'other',data:{n:[],e:[]}}),getSession:async()=>({user:{id:'me'}})};
+  await assert.rejects(()=>run("loadCloudMap('not-mine')"),/only edit maps you own/);dom.window.close();
+});
