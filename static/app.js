@@ -1494,6 +1494,7 @@ function setupAuthUI() {
   const createTimelineBtn = document.getElementById('createTimelineBtn');
   const timelineList = document.getElementById('timelineList');
   const timelineBackBtn = document.getElementById('timelineBackBtn');
+  const timelineExpandBtn = document.getElementById('timelineExpandBtn');
   const timelineFrame = document.getElementById('timelineFrame');
   const timelineEmpty = document.getElementById('timelineEmpty');
   const timelineControls = document.getElementById('timelineControls');
@@ -1587,6 +1588,7 @@ function setupAuthUI() {
     cloudMapId = null; cloudMapTitle = null; cloudMapUpdatedAt = null;
     myMapsPanel.style.display = 'none';
     timelinePanel.style.display = 'none';
+    timelinePanel.classList.remove('timeline-expanded');
     stopTimelinePlayback();
   };
 
@@ -1857,6 +1859,10 @@ function setupAuthUI() {
     showTimelineFrame(Number(timelineSlider.value));
   };
   timelineBackBtn.onclick = showTimelineList;
+  timelineExpandBtn.onclick = () => {
+    const expanded = timelinePanel.classList.toggle('timeline-expanded');
+    timelineExpandBtn.title = expanded ? 'Shrink' : 'Expand to full screen';
+  };
   timelinePlayBtn.onclick = () => {
     if (timelinePlayTimer) { stopTimelinePlayback(); return; }
     if (timelineMaps.length < 2) return;
@@ -1884,7 +1890,12 @@ function setupAuthUI() {
   };
   timelineBtn.onclick = async () => {
     const isOpen = getComputedStyle(timelinePanel).display !== 'none';
-    if (isOpen) { timelinePanel.style.display = 'none'; stopTimelinePlayback(); return; }
+    if (isOpen) {
+      timelinePanel.style.display = 'none';
+      timelinePanel.classList.remove('timeline-expanded');
+      stopTimelinePlayback();
+      return;
+    }
     myMapsPanel.style.display = 'none';
     timelinePanel.style.display = 'block';
     showTimelineList();
@@ -1902,6 +1913,7 @@ function setupAuthUI() {
     const isOpen = getComputedStyle(myMapsPanel).display !== 'none';
     if (isOpen) { myMapsPanel.style.display = 'none'; return; }
     timelinePanel.style.display = 'none';
+    timelinePanel.classList.remove('timeline-expanded');
     stopTimelinePlayback();
     myMapsPanel.style.display = 'block';
     myMapsList.innerHTML = '<li class="empty">Loading…</li>';

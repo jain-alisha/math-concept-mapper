@@ -83,13 +83,13 @@
 
     role: roleOf,
 
-    // Teacher sign-up: promotes the current user to 'teacher' only if
-    // `signupCode` matches a row in teacher_signup_codes (checked server-
-    // side in the RPC - see supabase-schema.sql). Returns the refreshed
-    // session (app_metadata changes only show up in a *new* JWT, so a plain
-    // getSession() right after the RPC would still show the stale role).
-    async claimTeacherRole(signupCode) {
-      const { error } = await client.rpc('claim_teacher_role', { signup_code: signupCode });
+    // DEMO-ONLY, TEMPORARY: flips the current user's role between student
+    // and teacher, no gate - see the loud comment on toggle_role() in
+    // supabase-schema.sql. Returns the refreshed session (app_metadata
+    // changes only show up in a *new* JWT, so a plain getSession() right
+    // after the RPC would still show the stale role).
+    async toggleRole() {
+      const { error } = await client.rpc('toggle_role');
       if (error) throw error;
       const { data, error: refreshError } = await client.auth.refreshSession();
       if (refreshError) throw refreshError;

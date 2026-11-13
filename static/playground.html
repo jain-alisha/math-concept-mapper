@@ -206,10 +206,29 @@
     }
     #timelineList .timeline-delete:hover { color: #c2503a; }
     #timelineList .empty { color: var(--text-muted); cursor: default; justify-content: center; }
+    .timeline-viewer-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.6em; }
     .timeline-back {
       background: none; border: none; color: var(--brand); font-family: inherit; font-size: 0.85em;
-      font-weight: 600; cursor: pointer; padding: 0 0 0.6em; display: block;
+      font-weight: 600; cursor: pointer; padding: 0; display: block;
     }
+    .timeline-expand-btn {
+      background: none; border: 1px solid var(--border); color: var(--text-secondary); cursor: pointer;
+      padding: 0.35em; border-radius: 7px; display: flex; align-items: center; justify-content: center;
+      transition: background 0.12s, color 0.12s; flex: none;
+    }
+    .timeline-expand-btn .icon { width: 15px; height: 15px; }
+    .timeline-expand-btn:hover { background: var(--bg); color: var(--text); }
+    /* Full-screen timeline: the scrub view is cramped at the panel's normal
+       340px width, so the expand toggle grows the whole panel to fill the
+       viewport instead of just the frame - the existing SVG already scales
+       to its container via viewBox, so no re-render is needed on expand. */
+    #timelinePanel.timeline-expanded {
+      position: fixed; left: 24px; right: 24px; top: 72px; bottom: 24px; width: auto; max-width: none;
+      display: flex; flex-direction: column;
+    }
+    #timelinePanel.timeline-expanded #timelineViewerView { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+    #timelinePanel.timeline-expanded #timelineFrameWrap { flex: 1; height: auto; min-height: 0; }
+    #timelinePanel.timeline-expanded .timeline-expand-btn { transform: rotate(180deg); }
     #timelineFrameWrap {
       width: 100%; height: 200px; background: var(--bg); border: 1px solid var(--border);
       border-radius: 9px; overflow: hidden; margin-bottom: 0.7em;
@@ -720,7 +739,12 @@
             <ul id="timelineList"></ul>
           </div>
           <div id="timelineViewerView" style="display:none;">
-            <button id="timelineBackBtn" class="timeline-back">&larr; All timelines</button>
+            <div class="timeline-viewer-header">
+              <button id="timelineBackBtn" class="timeline-back">&larr; All timelines</button>
+              <button id="timelineExpandBtn" class="timeline-expand-btn" title="Expand to full screen" type="button">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
+              </button>
+            </div>
             <div id="timelineFrameWrap">
               <svg id="timelineFrame"></svg>
             </div>

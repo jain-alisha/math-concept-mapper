@@ -37,15 +37,17 @@ becomes a real problem):
   claim, not a hidden UI button) can create a class.
 ## Auth & roles
 
-- **Done (2026-11-11):** teacher sign-up is now gated by a shared/rotating
-  signup code, replacing the earlier ungated "Become a teacher (demo)"
-  button. `settings.html`'s student view has a code input; `claim_teacher_role(signup_code)`
-  (`supabase-schema.sql`) only promotes the caller if the code matches a row
-  in `teacher_signup_codes` (no RLS SELECT policy on that table at all -
-  codes can only be checked server-side inside the function, never browsed
-  or guessed via the API). Rotate the code by deleting/inserting a row from
-  the Supabase SQL editor; distribute it to real teachers out of band
-  (school staff list, etc).
+- **⚠️ TEMPORARY, DEMO-ONLY — self-serve role toggle (2026-11-13, replacing
+  an earlier signup-code-gated version from 2026-11-11, which itself
+  replaced an even earlier ungated button from 2026-08-16).** `settings.html`
+  has a "Switch to teacher/student view" toggle for any signed-in user,
+  calling `toggle_role()` (`supabase-schema.sql`), which flips
+  `auth.users.app_metadata.role` with no gate and no approval - acceptable
+  only because this deployment is a demo with no real student data at
+  stake. **Before any real usage:** replace with a real gate (see the
+  signup-code and admin-only-flow options this section has tried before)
+  or remove the toggle entirely and go back to manual SQL promotion. Don't
+  let this linger once the app has real users.
 - Previously: role (`student`/`teacher`) had no self-serve path at all -
   see `static/auth.js` and `README.md` for the original manual-SQL
   promotion flow (still works as a fallback for one-off promotions).

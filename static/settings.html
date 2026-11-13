@@ -210,6 +210,11 @@
       </div>
     </div>
 
+    <div id="roleToggleRow" style="display:none; margin-bottom:1.5em;">
+      <button id="toggleRoleBtn" type="button" class="role-preview-cta" style="border:none; cursor:pointer;"></button>
+      <p class="auth-error" id="toggleRoleError"></p>
+    </div>
+
     <div id="classesTeacherView" style="display:none;">
       <h2>Your classes</h2>
       <p class="hint">Create a class to get an invite code your students can use to join. Each class links to its own Teacher Dashboard, where you'll see (read-only) any map your students save.</p>
@@ -229,15 +234,6 @@
       <div class="auth-error" id="joinClassError"></div>
       <h2 style="margin-top:1.8em;">Your classes</h2>
       <div id="studentClassList"></div>
-
-      <div class="role-preview" style="margin-top:1.8em;">
-        <p class="role-preview-note">Are you a teacher? Enter the signup code your school gave you to switch to a teacher account.</p>
-        <div class="join-class-row">
-          <input type="text" id="teacherSignupCodeInput" placeholder="Teacher signup code" maxlength="40" />
-          <button id="becomeTeacherBtn" type="button">Become a teacher →</button>
-        </div>
-        <p class="auth-error" id="becomeTeacherError"></p>
-      </div>
     </div>
   </section>
 </div>

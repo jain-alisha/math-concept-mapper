@@ -112,19 +112,13 @@ hides itself and logs a console note instead of breaking anything.
 purpose. Role lives in `auth.users.app_metadata`, which the client SDK cannot write directly
 (only a service-role/dashboard call, or a `SECURITY DEFINER` Postgres function, can).
 
-**Teacher sign-up:** a signed-in student can self-promote on `settings.html` by entering a
-teacher signup code, which calls `claim_teacher_role(signup_code)` in `supabase-schema.sql`.
-The code is checked server-side against the `teacher_signup_codes` table, which has no RLS
-SELECT policy at all — it can't be browsed or guessed via the API, only matched inside the
-function. Seed/rotate a code from the Supabase SQL editor (run as the table owner, bypassing
-RLS) and hand it to real teachers out of band:
-
-```sql
-delete from public.teacher_signup_codes;
-insert into public.teacher_signup_codes (code, note) values ('FALL26-TEACH', 'Fall 2026 staff code');
-```
-
-The manual SQL path below also still works for one-off promotions without a code:
+⚠️ **Temporary, demo-only exception:** a signed-in user can self-serve switch between the
+student and teacher views on `settings.html` with a "Switch to teacher/student view" toggle,
+which calls `toggle_role()` in `supabase-schema.sql` — completely ungated, and reversible in
+either direction. This is only acceptable because this deployment is a demo with no real
+student data at stake; see `TODO.md`'s "Auth & roles" section for the plan to replace it with
+a real gate before any real usage. The manual SQL path below still works and is the only
+*safe* promotion path until then:
 
 ```sql
 update auth.users

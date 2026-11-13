@@ -288,31 +288,27 @@ function setupAuthAndClasses() {
     }
   };
 
-  document.getElementById('becomeTeacherBtn').onclick = async () => {
-    const btn = document.getElementById('becomeTeacherBtn');
-    const codeInput = document.getElementById('teacherSignupCodeInput');
-    const errEl = document.getElementById('becomeTeacherError');
+  // DEMO-ONLY, TEMPORARY: see the loud comment on toggle_role() in
+  // supabase-schema.sql - self-serve, no gate, acceptable only because this
+  // deployment has no real student data at stake.
+  document.getElementById('toggleRoleBtn').onclick = async () => {
+    const btn = document.getElementById('toggleRoleBtn');
+    const errEl = document.getElementById('toggleRoleError');
     errEl.textContent = '';
-    const code = codeInput.value.trim();
-    if (!code) {
-      errEl.textContent = 'Enter your teacher signup code.';
-      return;
-    }
     btn.disabled = true;
     try {
-      const newSession = await window.SpanAuth.claimTeacherRole(code);
-      codeInput.value = '';
+      const newSession = await window.SpanAuth.toggleRole();
       updateAuthUI(newSession);
     } catch (e) {
-      errEl.textContent = e.message && e.message.includes('Invalid signup code')
-        ? 'That signup code is not valid.'
-        : (e.message || 'Could not update role.');
+      errEl.textContent = e.message || 'Could not update role.';
     } finally {
       btn.disabled = false;
     }
   };
 
   // --- Session-driven view switching ---
+  const roleToggleRow = document.getElementById('roleToggleRow');
+  const toggleRoleBtn = document.getElementById('toggleRoleBtn');
   function updateAuthUI(session) {
     if (session) {
       signInBtn.style.display = 'none';
@@ -322,6 +318,8 @@ function setupAuthAndClasses() {
       userLabel.textContent = `${name} (${role})`;
 
       classesSignedOut.style.display = 'none';
+      roleToggleRow.style.display = 'block';
+      toggleRoleBtn.textContent = role === 'teacher' ? 'Switch to student view →' : 'Switch to teacher view →';
       if (role === 'teacher') {
         classesTeacherView.style.display = '';
         classesStudentView.style.display = 'none';
@@ -335,6 +333,7 @@ function setupAuthAndClasses() {
       signInBtn.style.display = '';
       userMenu.style.display = 'none';
       classesSignedOut.style.display = '';
+      roleToggleRow.style.display = 'none';
       classesTeacherView.style.display = 'none';
       classesStudentView.style.display = 'none';
     }
