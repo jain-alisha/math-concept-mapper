@@ -13,7 +13,7 @@ Built on main commit `0977a4b` (the existing in-page rename/dialog work), preser
 - Save a copy asks for an explicit new title, guards concurrent clicks, refreshes the map list immediately, confirms the new editing identity and no longer creates hidden timelines. Timeline assignment remains an explicit action in My Maps.
 - Student summaries use their actual map concepts and timeline identities. Class summary explicitly uses the same student coverage metric as Curriculum coverage.
 - Teacher links open a read-only map in the same tab, with mutation controls and the editing sidebar removed. Read-only guards also cover undo/redo, cloud saving and shared-map URLs.
-- Added teacher feedback drafts per map, explicitly saved only on the current device for copying to the student. **These drafts are not delivered or synced.**
+- **Cut teacher feedback from this release.** Removed the local-only feedback draft boxes; teachers can view student maps read-only, but cannot leave or deliver feedback through Span.
 - Added visible SVG preview labels, compact arrangements for very wide thumbnails, stable Timeline bounds, responsive dashboard cards, roomier provenance labels, and on/off + aria state for anonymous mode.
 - Unified site navigation/auth state and split editor tools into a separate row. Updated homepage hero topics to grades 3–8 and added CoCreate Courses identity, privacy/student-data notice and a verified support-page contact.
 - Corrected reported catalog wording, normalized recurring volume/rational-number labels by grade, removed the duplicate exponential-expression topic, and moved whole-number equivalent ratios into grade 6.
