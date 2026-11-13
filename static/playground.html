@@ -152,6 +152,28 @@
     #signInForm button[type="submit"]:hover, #signUpForm button[type="submit"]:hover { background: #1568bd; }
     .auth-error { font-size: 0.85em; color: #c2503a; min-height: 1.2em; }
 
+    /* In-page replacements for window.confirm()/prompt() - native browser
+       dialogs can't be styled, block the whole tab (including any demo/
+       animation in progress), and read as jarring next to the rest of the
+       app. Reuses the same .modal-overlay/.modal shell as the auth modal. */
+    .confirm-dialog p { margin: 0 0 1.1em; font-size: 0.95em; line-height: 1.5; color: var(--text); white-space: pre-line; }
+    .confirm-dialog input {
+      width: 100%; box-sizing: border-box; padding: 0.6em 0.7em; border-radius: 7px; border: 1px solid var(--border);
+      font-size: 0.95em; font-family: inherit; background: var(--bg); margin-bottom: 1.1em; color: var(--text);
+    }
+    .confirm-dialog input:focus { outline: 2px solid #b5d3f2; outline-offset: 1px; }
+    .confirm-dialog-actions { display: flex; justify-content: flex-end; gap: 0.6em; }
+    .confirm-dialog-actions button {
+      padding: 0.55em 1.1em; border-radius: 7px; font-family: inherit; font-size: 0.9em; font-weight: 600;
+      cursor: pointer; border: 1px solid var(--border); background: var(--surface); color: var(--text);
+      transition: background 0.12s;
+    }
+    .confirm-dialog-actions button:hover { background: var(--bg); }
+    .confirm-dialog-actions button.confirm-dialog-ok { background: var(--brand); color: #fff; border-color: var(--brand); }
+    .confirm-dialog-actions button.confirm-dialog-ok:hover { background: #1568bd; }
+    .confirm-dialog-actions button.confirm-dialog-danger { background: #c2503a; color: #fff; border-color: #c2503a; }
+    .confirm-dialog-actions button.confirm-dialog-danger:hover { background: #a7402d; }
+
     #myMapsPanel {
       display: none; position: absolute; top: 52px; right: 1.2em; width: 300px;
       background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
@@ -964,6 +986,25 @@
     <div id="isolatedLegend">This idea isn't connected yet — what does it relate to? Select it, then Connect.</div>
     <div id="aiAddedLegend"><span class="ai-added-dot">&#10022;</span> = added from a suggestion, not typed in yourself</div>
     <svg id="mapCanvas"></svg>
+  </div>
+</div>
+<div id="confirmDialogOverlay" class="modal-overlay">
+  <div class="modal confirm-dialog">
+    <p id="confirmDialogMessage"></p>
+    <div class="confirm-dialog-actions">
+      <button id="confirmDialogCancel" type="button">Cancel</button>
+      <button id="confirmDialogOk" type="button">OK</button>
+    </div>
+  </div>
+</div>
+<div id="promptDialogOverlay" class="modal-overlay">
+  <div class="modal confirm-dialog">
+    <p id="promptDialogMessage"></p>
+    <input type="text" id="promptDialogInput" maxlength="200" />
+    <div class="confirm-dialog-actions">
+      <button id="promptDialogCancel" type="button">Cancel</button>
+      <button id="promptDialogOk" type="button" class="confirm-dialog-ok">OK</button>
+    </div>
   </div>
 </div>
 <div id="nodeToolbar" style="display:none;"></div>

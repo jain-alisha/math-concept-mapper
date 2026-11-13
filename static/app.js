@@ -214,6 +214,74 @@ function measureTextWidthAtSize(label, fontSize) {
   return width;
 }
 
+// --------- In-page confirm()/prompt() replacements ---------
+// Native browser dialogs can't be styled, block the whole tab (including
+// any Explore/demo animation in flight), and read as jarring next to the
+// rest of the app. These are drop-in async replacements - same two-outcome
+// shape (confirm: true/false, prompt: string/null), just backed by
+// #confirmDialogOverlay/#promptDialogOverlay instead of the browser chrome.
+function showConfirmDialog(message, opts = {}) {
+  return new Promise(resolve => {
+    const overlay = document.getElementById('confirmDialogOverlay');
+    const msgEl = document.getElementById('confirmDialogMessage');
+    const okBtn = document.getElementById('confirmDialogOk');
+    const cancelBtn = document.getElementById('confirmDialogCancel');
+    if (!overlay || !msgEl || !okBtn || !cancelBtn) { resolve(window.confirm(message)); return; }
+    msgEl.textContent = message;
+    okBtn.textContent = opts.okLabel || 'OK';
+    cancelBtn.textContent = opts.cancelLabel || 'Cancel';
+    cancelBtn.style.display = opts.alertOnly ? 'none' : '';
+    okBtn.className = 'confirm-dialog-' + (opts.danger ? 'danger' : 'ok');
+    overlay.style.display = 'flex';
+    const cleanup = (result) => {
+      overlay.style.display = 'none';
+      okBtn.onclick = null; cancelBtn.onclick = null; overlay.onclick = null;
+      document.removeEventListener('keydown', onKey);
+      resolve(result);
+    };
+    const onKey = (e) => {
+      if (e.key === 'Escape') cleanup(false);
+      else if (e.key === 'Enter') cleanup(true);
+    };
+    okBtn.onclick = () => cleanup(true);
+    cancelBtn.onclick = () => cleanup(false);
+    overlay.onclick = (e) => { if (e.target === overlay) cleanup(false); };
+    document.addEventListener('keydown', onKey);
+    okBtn.focus();
+  });
+}
+// alert() replacement - a confirm dialog with its Cancel button hidden,
+// same OK-only/Escape-to-dismiss shape as the browser's alert().
+function showAlertDialog(message) {
+  return showConfirmDialog(message, { alertOnly: true });
+}
+function showPromptDialog(message, defaultValue = '') {
+  return new Promise(resolve => {
+    const overlay = document.getElementById('promptDialogOverlay');
+    const msgEl = document.getElementById('promptDialogMessage');
+    const input = document.getElementById('promptDialogInput');
+    const okBtn = document.getElementById('promptDialogOk');
+    const cancelBtn = document.getElementById('promptDialogCancel');
+    if (!overlay || !msgEl || !input || !okBtn || !cancelBtn) { resolve(window.prompt(message, defaultValue)); return; }
+    msgEl.textContent = message;
+    input.value = defaultValue;
+    overlay.style.display = 'flex';
+    const cleanup = (result) => {
+      overlay.style.display = 'none';
+      okBtn.onclick = null; cancelBtn.onclick = null; overlay.onclick = null; input.onkeydown = null;
+      document.removeEventListener('keydown', onKey);
+      resolve(result);
+    };
+    const onKey = (e) => { if (e.key === 'Escape') cleanup(null); };
+    okBtn.onclick = () => cleanup(input.value);
+    cancelBtn.onclick = () => cleanup(null);
+    input.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); cleanup(input.value); } };
+    overlay.onclick = (e) => { if (e.target === overlay) cleanup(null); };
+    document.addEventListener('keydown', onKey);
+    setTimeout(() => { input.focus(); input.select(); }, 0);
+  });
+}
+
 // --------- Initialization ---------
 window.onload = async function() {
   conceptsData = await fetch('concepts.json').then(r => r.json());
@@ -718,8 +786,8 @@ function showShareBanner(hasDraft) {
     : 'Viewing a shared map — edits are saved as your own copy in this browser, not sent back to whoever shared it.';
   el.style.display = 'block';
   const resetBtn = document.getElementById('resetShareDraftBtn');
-  if (resetBtn) resetBtn.onclick = () => {
-    if (!confirm('Discard your changes and go back to the originally shared map?')) return;
+  if (resetBtn) resetBtn.onclick = async () => {
+    if (!await showConfirmDialog('Discard your changes and go back to the originally shared map?', { danger: true, okLabel: 'Discard' })) return;
     try { localStorage.removeItem(shareDraftKey); } catch (e) { /* ignore */ }
     loadSharedMap(new URLSearchParams(window.location.search).get('share'));
     showShareBanner(false);
@@ -736,7 +804,7 @@ function setupShareButton() {
     try {
       await navigator.clipboard.writeText(url);
     } catch (e) {
-      window.prompt('Copy this link:', url);
+      await showPromptDialog('Copy this link:', url);
       return;
     }
     const original = label.textContent;
@@ -750,10 +818,10 @@ function setupShareButton() {
 // rather than clearing-then-autosaving over it - "Clear Map" means "start
 // over on the canvas", not "wipe the saved copy in My Maps". The saved row
 // itself is untouched unless the user explicitly saves over it again.
-function clearMap() {
+async function clearMap() {
   if (isReadonly) return;
   if (!nodes.length && !links.length) return;
-  if (!confirm('Clear this map? This removes every concept and connection from the canvas. Anything already saved to My Maps is not affected.')) return;
+  if (!await showConfirmDialog('Clear this map? This removes every concept and connection from the canvas. Anything already saved to My Maps is not affected.', { danger: true, okLabel: 'Clear' })) return;
   nodes = [];
   links = [];
   nodeIdCounter = 1;
@@ -951,7 +1019,7 @@ function mapExportFilename() {
 
 async function exportMapToPdf() {
   const built = buildMapExportSvg();
-  if (!built) { alert('Add some concepts to your map before exporting.'); return; }
+  if (!built) { await showAlertDialog('Add some concepts to your map before exporting.'); return; }
   const { svg, w, h } = built;
 
   const RASTER_SCALE = 2; // crisp at normal print/zoom levels without ballooning file size
@@ -1006,7 +1074,7 @@ function setupExportPdfButton() {
       await exportMapToPdf();
     } catch (e) {
       console.error('PDF export failed:', e);
-      alert('Could not export PDF. Please try again.');
+      await showAlertDialog('Could not export PDF. Please try again.');
     } finally {
       btn.disabled = false;
     }
@@ -1761,7 +1829,7 @@ function setupAuthUI() {
         e.stopPropagation();
         let targetId = tlSelect.value;
         if (targetId === '__new__') {
-          const name = (window.prompt('Name this timeline:') || '').trim();
+          const name = (await showPromptDialog('Name this timeline:') || '').trim();
           if (!name) { tlSelect.value = row.timeline_id || ''; return; }
           try {
             const t = await window.SpanAuth.createTimeline(name);
@@ -1771,7 +1839,7 @@ function setupAuthUI() {
             opt.value = t.id; opt.textContent = t.name; opt.selected = true;
             tlSelect.insertBefore(opt, newOpt);
           } catch (err) {
-            alert('Could not create timeline: ' + (err.message || err));
+            await showAlertDialog('Could not create timeline: ' + (err.message || err));
             tlSelect.value = row.timeline_id || '';
             return;
           }
@@ -1780,7 +1848,7 @@ function setupAuthUI() {
           await window.SpanAuth.setMapTimeline(row.id, targetId || null);
           row.timeline_id = targetId || null;
         } catch (err) {
-          alert('Could not update timeline: ' + (err.message || err));
+          await showAlertDialog('Could not update timeline: ' + (err.message || err));
         }
       };
       const delBtn = document.createElement('button');
@@ -1789,7 +1857,7 @@ function setupAuthUI() {
       delBtn.title = 'Delete this map';
       delBtn.onclick = async (e) => {
         e.stopPropagation();
-        if (!confirm(`Delete "${row.title}"?`)) return;
+        if (!await showConfirmDialog(`Delete "${row.title}"?`, { danger: true, okLabel: 'Delete' })) return;
         await window.SpanAuth.deleteMap(row.id);
         if (cloudMapId === row.id) { cloudMapId = null; cloudMapTitle = null; cloudMapUpdatedAt = null; setSaveStatus('saved'); }
         li.remove();
@@ -1842,7 +1910,7 @@ function setupAuthUI() {
       delBtn.title = 'Delete this timeline (maps themselves are kept)';
       delBtn.onclick = async (e) => {
         e.stopPropagation();
-        if (!confirm(`Delete timeline "${t.name}"? The maps in it won't be deleted.`)) return;
+        if (!await showConfirmDialog(`Delete timeline "${t.name}"? The maps in it won't be deleted.`, { danger: true, okLabel: 'Delete' })) return;
         await window.SpanAuth.deleteTimeline(t.id);
         li.remove();
       };
@@ -2014,7 +2082,7 @@ function setupAuthUI() {
       timelineNameInput.value = '';
       await renderTimelineListPanel();
     } catch (e) {
-      alert('Could not create timeline: ' + (e.message || e));
+      await showAlertDialog('Could not create timeline: ' + (e.message || e));
     } finally {
       createTimelineBtn.disabled = false;
     }
@@ -2081,7 +2149,7 @@ function setupAuthUI() {
       saveMapBtn.textContent = 'Saved!';
       setTimeout(() => { saveMapBtn.textContent = original; }, 1500);
     } catch (e) {
-      alert('Could not save map: ' + (e.message || e));
+      await showAlertDialog('Could not save map: ' + (e.message || e));
     } finally {
       saveMapBtn.disabled = false;
     }
@@ -2124,7 +2192,7 @@ function setupAuthUI() {
       saveCopyBtn.textContent = 'Saved a copy!';
       setTimeout(() => { saveCopyBtn.textContent = original; }, 1500);
     } catch (e) {
-      alert('Could not save a copy: ' + (e.message || e));
+      await showAlertDialog('Could not save a copy: ' + (e.message || e));
     } finally {
       saveCopyBtn.disabled = false;
     }
@@ -2481,7 +2549,7 @@ function revealNewNode(node) {
 function setupCustomConcept() {
   const input = document.getElementById('customConceptInput');
   const btn = document.getElementById('customConceptBtn');
-  btn.onclick = () => {
+  btn.onclick = async () => {
     let val = input.value.trim();
     if (!val) return;
     // A silent duplicate is confusing either way it was meant: the student
@@ -2491,8 +2559,9 @@ function setupCustomConcept() {
     // instead of guessing.
     const existing = nodes.find(n => n.label.trim().toLowerCase() === val.toLowerCase());
     if (existing) {
-      const useExisting = confirm(
-        `"${val}" is already on your map.\n\nOK: highlight the existing one instead.\nCancel: add another, separate copy anyway.`
+      const useExisting = await showConfirmDialog(
+        `"${val}" is already on your map.`,
+        { okLabel: 'Highlight the existing one', cancelLabel: 'Add a separate copy anyway' }
       );
       if (useExisting) {
         revealNewNode(existing);
@@ -2753,13 +2822,13 @@ function renderCanvas() {
     g.setAttribute('role', 'button');
     g.setAttribute('aria-label', `${node.label} concept node`);
     g.classList.add('node-group');
-    g.onkeydown = e => {
+    g.onkeydown = async e => {
       if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();
         rect.onclick(e);
       } else if ((e.key === 'Delete' || e.key === 'Backspace') && !isReadonly) {
         e.preventDefault();
-        if (confirm(`Delete "${node.label}"?`)) deleteNode(node.id);
+        if (await showConfirmDialog(`Delete "${node.label}"?`, { danger: true, okLabel: 'Delete' })) deleteNode(node.id);
       }
     };
 
@@ -3110,8 +3179,8 @@ function deleteLink(linkId) {
   autosave();
   pushHistory();
 }
-function showNoteEditor(link, cb) {
-  let note = prompt('Edit note for this connection:', link.note || '');
+async function showNoteEditor(link, cb) {
+  let note = await showPromptDialog('These ideas connect because…', link.note || '');
   if (note !== null) cb(note);
 }
 function renderNotesSidebar() {
@@ -3397,11 +3466,11 @@ function updateNodeOverlays() {
           (aiToolsDisabled ? '' : `<span class="sep">&middot;</span><button data-act="explore">Find related ideas</button>`) +
           `<span class="sep">&middot;</span><button data-act="delete" class="toolbar-danger" title="Delete this concept">Delete</button>`;
       }
-      toolbar.onclick = e => {
+      toolbar.onclick = async e => {
         e.stopPropagation();
         const act = e.target.getAttribute('data-act');
         if (act === 'edit') {
-          const val = window.prompt('Rename concept:', node.label);
+          const val = await showPromptDialog('Rename concept:', node.label);
           if (val && val.trim() && val.trim() !== node.label) {
             node.label = val.trim();
             if (node.meta && node.meta.aiAdded) delete node.meta.aiAdded;
@@ -3421,7 +3490,7 @@ function updateNodeOverlays() {
           ghostState = null;
           renderCanvas();
         } else if (act === 'delete') {
-          if (confirm(`Delete "${node.label}"?`)) {
+          if (await showConfirmDialog(`Delete "${node.label}"?`, { danger: true, okLabel: 'Delete' })) {
             nodeToolbarState = null;
             deleteNode(node.id);
           }
@@ -3449,7 +3518,7 @@ function updateNodeOverlays() {
         linkToolbar.style.left = screenPt.x + 'px';
         linkToolbar.style.top = screenPt.y + 'px';
         linkToolbar.innerHTML = `<button data-act="note">${link.note ? 'Edit explanation' : 'Add explanation'}</button><span class="sep">&middot;</span><button data-act="delete" class="toolbar-danger" title="Delete this connection">Delete connection</button>`;
-        linkToolbar.onclick = e => {
+        linkToolbar.onclick = async e => {
           e.stopPropagation();
           const act = e.target.getAttribute('data-act');
           if (act === 'note') {
@@ -3461,7 +3530,7 @@ function updateNodeOverlays() {
               pushHistory();
             });
           } else if (act === 'delete') {
-            if (confirm('Delete this connection?')) deleteLink(link.id);
+            if (await showConfirmDialog('Delete this connection?', { danger: true, okLabel: 'Delete' })) deleteLink(link.id);
           }
         };
       } else {
