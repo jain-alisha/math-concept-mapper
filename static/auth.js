@@ -50,8 +50,8 @@
 
   window.SpanAuth = {
     isConfigured: true,
-    async signUpStudent(username, password, ageBand, authorizationCode) {
-      return studentAccountRequest({ action: 'signup', username, password, ageBand, authorizationCode });
+    async signUpStudent(username, password) {
+      return studentAccountRequest({ action: 'signup', username, password });
     },
     async deleteAccount() {
       const { data: { session } } = await client.auth.getSession();
@@ -67,9 +67,6 @@
       const { data, error } = await client.rpc('save_starting_checkpoint', { source_id: sourceId });
       if (error) throw error;
       return data;
-    },
-    async recoverStudent(username, recoveryKey, password) {
-      return studentAccountRequest({ action: 'recover', username, recoveryKey, password });
     },
     client,
 
@@ -99,7 +96,7 @@
     // that link is opened, at which point updatePassword() below can be
     // called to actually set the new password.
     async resetPasswordForEmail(email) {
-      if (email.toLowerCase().endsWith('@students.span.invalid')) throw new Error('Use your username and recovery key instead.');
+      if (email.toLowerCase().endsWith('@students.span.invalid')) throw new Error('Username accounts do not have an email reset link. Contact Span for sign-in help.');
       const { error } = await client.auth.resetPasswordForEmail(email, {
         redirectTo: window.location.origin + '/settings',
       });
@@ -158,7 +155,7 @@
     async loadMapById(id) {
       const { data, error } = await client.from('maps').select('*').eq('id', id).single();
       if (error) throw error;
-      return data;
+      return window.SpanConceptBank?.row(data) || data;
     },
 
     // Returns { row } on success, { conflict: true } if a stale write was
@@ -199,7 +196,7 @@
         .select('id,name,invite_code,created_at,taught_topics')
         .order('created_at', { ascending: false });
       if (error) throw error;
-      return data;
+      return window.SpanConceptBank ? data.map(window.SpanConceptBank.classRow) : data;
     },
 
     async createClass(name) {
@@ -317,7 +314,7 @@
         .in('activity_id', activities.map(a => a.id))
         .order('updated_at', { ascending: false });
       if (error) throw error;
-      return data;
+      return window.SpanConceptBank ? data.map(window.SpanConceptBank.row) : data;
     },
 
     // --- Activities: a teacher-defined assignment with its own concept
@@ -327,7 +324,7 @@
     async getActivity(id) {
       const { data, error } = await client.from('activities').select('id,class_id,name,concepts,ai_disabled').eq('id', id).single();
       if (error) throw error;
-      return data;
+      return window.SpanConceptBank?.activity(data) || data;
     },
 
     async listClassActivities(classId) {
@@ -337,7 +334,7 @@
         .eq('class_id', classId)
         .order('created_at', { ascending: false });
       if (error) throw error;
-      return data;
+      return window.SpanConceptBank ? data.map(window.SpanConceptBank.activity) : data;
     },
 
     async createActivity(classId, name, concepts, aiDisabled = false) {

@@ -351,7 +351,7 @@ async function setupActivityContext(params) {
     const banner = document.getElementById('activityBanner');
     if (banner) {
       banner.textContent = aiToolsDisabled
-        ? `Working on: ${activity.name} · AI tools are off for this activity`
+        ? `Working on: ${activity.name} · Disable map help: on`
         : `Working on: ${activity.name}`;
       banner.hidden = false;
     }
@@ -368,7 +368,7 @@ async function setupActivityContext(params) {
 // rebuilt elsewhere (renderNodeToolbar) and checks aiToolsDisabled itself,
 // so it stays gated even across re-renders.
 function applyAiToolsGate() {
-  // Both items live inside the "Help with my map" dropdown now - hide the
+  // Both items live inside the "Map help" dropdown now - hide the
   // whole trigger rather than leaving it open onto an empty menu.
   const exploreHint = document.getElementById('exploreOnboardingHint');
   if (exploreHint) exploreHint.hidden = aiToolsDisabled;
@@ -522,7 +522,7 @@ async function playDemo() {
   const DROP_B = { x: 560, y: baseY + 20 };
   const UNIT = { grade: '4th Grade Math', unit: 'Number & Operations—Fractions' };
   const LABEL_A = 'Mixed numbers';
-  const LABEL_B = 'Add mixed numbers with like denominators';
+  const LABEL_B = 'Mixed-number addition';
   const SIDEBAR_ORIGIN = { left: 90, top: 160 };
 
   try {
@@ -651,6 +651,7 @@ function serializeMap() {
 }
 
 function applyMapData(data) {
+  data = window.SpanConceptBank?.map(data) || data;
   nodes = (data.n || []).map(n => ({ id: n.i, label: n.l, x: n.x, y: n.y, meta: n.m || {} }));
   links = (data.e || []).map(l => ({ id: l.i, source: l.s, target: l.t, note: l.no || '', relType: l.rt || '' }));
   nodeIdCounter = nodes.reduce((max, n) => Math.max(max, n.id), 0) + 1;
@@ -2484,6 +2485,8 @@ document.getElementById('mapCanvas').ondrop = ev => {
 };
 
 function addNode(label, x, y, meta={}) {
+  const concept = window.SpanConceptBank?.resolve(label, meta);
+  if (concept) { label = concept.label; meta = {...meta,conceptId:concept.id}; }
   if (isReadonly) return;
   ({x,y} = findOpenNodePosition(label, {x,y}, [], false));
   let node = {
@@ -3145,7 +3148,10 @@ async function requestSuggestions(node, question, exclude) {
   });
   if (!res.ok) throw new Error('bad response');
   const data = await res.json();
-  return data.suggestions || [];
+  return (data.suggestions || []).map(s => {
+    const c=window.SpanConceptBank?.resolve(s.label,s.meta || {});
+    return c ? {...s,label:c.label,meta:{...s.meta,conceptId:c.id},reason:typeof s.reason==='string'?s.reason.replaceAll(s.label,c.label):s.reason,source:window.SpanConceptBank.resolve(s.source || '')?.label || s.source,target:window.SpanConceptBank.resolve(s.target || '')?.label || s.target} : s;
+  }).filter((s,i,all)=>!nodes.some(n=>n.label===s.label)&&all.findIndex(a=>a.label===s.label)===i);
 }
 
 async function openExploreQuestion(node, question) {
@@ -3365,6 +3371,7 @@ function updateNodeOverlays() {
           const val = await showPromptDialog('Rename concept:', node.label);
           if (val && val.trim() && val.trim() !== node.label) {
             node.label = val.trim();
+            if (node.meta) { delete node.meta.conceptId; delete node.meta.alignmentSkill; }
             if (node.meta && node.meta.aiAdded) delete node.meta.aiAdded;
             renderNotesSidebar();
             renderCanvas();

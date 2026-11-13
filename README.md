@@ -162,6 +162,8 @@ added, just run the newer half of the file (from the "Rostering" section onward)
 
 See [the deployment and data-controls guide](docs/INDEPENDENT_STUDENT_ACCOUNTS.md)
 for username/password signup without a personal email, multiple-class membership,
-under-13 authorization codes, protected checkpoints, self-service deletion and
-daily expiry. New installations also need the three migrations in that guide
+protected checkpoints, self-service deletion and
+daily expiry. Apply the current migrations in that guide
 after the base schema. Deploy the function/database before the new static UI.
+The concept bank now uses short noun labels with alignment metadata; see
+[Concept bank](docs/CONCEPT_BANK.md).

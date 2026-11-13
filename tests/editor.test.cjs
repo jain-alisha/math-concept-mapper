@@ -23,7 +23,7 @@ test('client graph returns disjoint Mixed numbers directions without calling bac
   const after=await c.requestSuggestions({label:'Mixed numbers',meta:{}},'leads_to',new Set());
   assert.ok(before.length); assert.ok(after.length);
   const more=await c.requestSuggestions({label:'Mixed numbers',meta:{}},'leads_to',new Set(after.map(s=>s.label)));
-  assert.ok([...after,...more].some(s=>s.label==='Multiply mixed numbers'));
+  assert.ok([...after,...more].some(s=>s.label==='Mixed-number multiplication'));
   assert.ok(before.every(s=>s.target==='Mixed numbers'));
   assert.ok(after.every(s=>s.source==='Mixed numbers'));
   assert.ok(!before.some(s=>after.some(t=>t.label===s.label)));

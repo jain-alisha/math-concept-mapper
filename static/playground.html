@@ -311,7 +311,7 @@
       border-radius: 9px; box-shadow: var(--shadow-sm); line-height: 1.4;
     }
     #aiAddedLegend .ai-added-dot { color: var(--brand); flex: none; }
-    /* "Help with my map": Explain my map (AI Summary) and What could I
+    /* "Map help": Explain my map (AI Summary) and What could I
        improve? (Check my map) used to be two separate top-level pill
        buttons - consolidated into one menu per the redesign brief's "AI
        clarity" section, since both operate on the whole map (unlike
@@ -802,7 +802,7 @@
       </button>
       <div class="help-dropdown-wrap" id="helpDropdownWrap">
         <button id="helpMenuBtn" class="tb-btn" type="button">
-          <span>&#10022; Help with my map</span>
+          <span>&#10022; Map help</span>
         </button>
         <div class="help-dropdown-menu" id="helpDropdownMenu">
           <div id="aiSummaryWrap" style="position:relative;">
@@ -924,23 +924,16 @@
       <div class="auth-error" id="signInError"></div>
     </form>
     <form id="forgotPasswordForm" style="display:none;">
-      <label for="recoveryKind">Recover an account</label>
-      <select id="recoveryKind"><option value="student">Username + recovery key</option><option value="email">Email reset link</option></select>
-      <input id="recoveryUsername" aria-label="Username" placeholder="Username" autocomplete="username" autocapitalize="none" required />
-      <input id="recoveryKey" aria-label="Recovery key" placeholder="Recovery key from signup" autocomplete="off" required />
-      <input id="recoveryPassword" type="password" aria-label="New password" placeholder="New password (min 10 characters)" minlength="10" maxlength="128" autocomplete="new-password" required />
-      <input type="email" id="forgotEmail" aria-label="Email" placeholder="Email" autocomplete="email" hidden disabled />
-      <button type="submit">Reset password</button>
-      <button type="button" id="forgotBackBtn" style="background:none;border:none;color:#5b6472;text-decoration:underline;cursor:pointer;padding:0;font-size:0.85em;align-self:flex-start;">Back to sign in</button>
+      <p class="hint">For an email account, request a password reset link. If your account has no email, <a href="privacy">contact the Span team</a> for sign-in help.</p>
+      <input type="email" id="forgotEmail" aria-label="Account email" placeholder="Account email" autocomplete="email" required />
+      <button type="submit">Send reset link</button>
+      <button type="button" id="forgotBackBtn" style="background:none;border:none;color:var(--text-secondary);text-decoration:underline;cursor:pointer;padding:0;font-size:0.85em;align-self:flex-start;">Back to sign in</button>
       <div class="auth-error" id="forgotError"></div>
     </form>
     <form id="signUpForm" style="display:none;">
       <label for="signUpKind">Create an account</label>
-      <select id="signUpKind"><option value="student">Student · no email needed</option><option value="email">Adult / 13+ email account</option></select>
-      <p id="studentAccountHint" class="hint">Choose a username, not your real name. Your account can join multiple classes. For children under 13, a parent or school must arrange authorization with Span first.</p>
-      <label for="signUpAgeBand" id="signUpAgeLabel">Age group</label>
-      <select id="signUpAgeBand" required><option value="">Choose…</option><option value="under13">Under 13</option><option value="13plus">13 or older</option></select>
-      <input id="signUpAuthorization" aria-label="Parent or school authorization code" placeholder="Parent or school authorization code" autocomplete="off" hidden disabled />
+      <select id="signUpKind"><option value="student">Student · no email needed</option><option value="email">Email account</option></select>
+      <p id="studentAccountHint" class="hint">Choose a username, not your real name. Use the same account on any device and join multiple classes.</p>
       <input type="text" id="signUpUsername" aria-label="Username" placeholder="Username (4–24 characters)" autocomplete="username" autocapitalize="none" spellcheck="false" pattern="[A-Za-z][A-Za-z0-9_]{3,23}" minlength="4" maxlength="24" required />
       <input type="text" id="signUpName" aria-label="Display name" placeholder="Display name" autocomplete="name" hidden disabled />
       <input type="email" id="signUpEmail" aria-label="Email" placeholder="Email" autocomplete="email" hidden disabled />
@@ -972,7 +965,7 @@
         </div>
       </div>
       <p id="exploreOnboardingHint" class="onboarding-more">Once you've made a few connections, try <strong>Find related ideas</strong> on any concept — those are only suggestions, so it's always your call whether to add one.</p>
-      <p id="activityOnboardingHint" class="onboarding-more" hidden>Help tools are off for this activity. Use your own connections and explain your thinking.</p>
+      <p id="activityOnboardingHint" class="onboarding-more" hidden>Disable map help is on for this activity. Use your own connections and explain your thinking.</p>
       <button id="playDemoBtn">&#9654; Play demo</button>
       </div>
     </div>
@@ -1052,6 +1045,7 @@
 <script src="vendor/supabase.js"></script>
 <script src="vendor/jspdf.umd.min.js"></script>
 <script src="auth.js"></script>
+<script src="concept-bank.js"></script>
 <script src="demo-data.js"></script>
 <script src="app.js"></script>
 <script src="account-forms.js"></script>

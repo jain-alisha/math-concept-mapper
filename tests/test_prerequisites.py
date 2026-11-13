@@ -11,31 +11,31 @@ class PrerequisiteTests(unittest.TestCase):
         before = self.suggestions('Mixed numbers', 'builds_on')
         after = self.suggestions('Mixed numbers', 'leads_to')
         self.assertTrue(before)
-        self.assertIn('Multiply mixed numbers', {s['label'] for s in after})
-        self.assertIn('Divide fractions and mixed numbers', {s['label'] for s in after})
+        self.assertIn('Mixed-number multiplication', {s['label'] for s in after})
+        self.assertIn('Mixed-number division', {s['label'] for s in after})
         self.assertFalse({s['label'] for s in before} & {s['label'] for s in after})
         self.assertTrue(all(s['target'] == 'Mixed numbers' for s in before))
         self.assertTrue(all(s['source'] == 'Mixed numbers' for s in after))
 
     def test_no_keyword_fallback_for_unknown_or_terminal_topic(self):
         self.assertEqual([], self.suggestions('Unlisted mixed fraction idea', 'builds_on'))
-        self.assertEqual([], self.suggestions('Divide fractions and mixed numbers', 'leads_to'))
+        self.assertEqual([], self.suggestions('Mixed-number division', 'leads_to'))
 
     def test_unit_rate_not_dependent_on_previous_ratio_word_problem(self):
         prerequisites = {s['label'] for s in self.suggestions('Unit rate definition', 'builds_on')}
-        self.assertIn('Ratio notation (a:b)', prerequisites)
-        self.assertNotIn('Ratio word problems', prerequisites)
+        self.assertIn('Ratio', prerequisites)
+        self.assertNotIn('Rate', prerequisites)
 
     def test_authored_reason_same_in_both_directions(self):
-        forward = next(s for s in self.suggestions('Mixed numbers', 'leads_to') if s['label'] == 'Multiply mixed numbers')
-        backward = next(s for s in self.suggestions('Multiply mixed numbers', 'builds_on') if s['label'] == 'Mixed numbers')
+        forward = next(s for s in self.suggestions('Mixed numbers', 'leads_to') if s['label'] == 'Mixed-number multiplication')
+        backward = next(s for s in self.suggestions('Mixed-number multiplication', 'builds_on') if s['label'] == 'Mixed numbers')
         self.assertEqual(forward['reason'], backward['reason'])
         self.assertIn('improper fractions', backward['reason'])
 
     def test_exclusions_and_legacy_custom_label_alias(self):
         suggestions = self.suggestions('Fractions', 'leads_to', exclude=['Mixed numbers'])
         self.assertNotIn('Mixed numbers', {s['label'] for s in suggestions})
-        self.assertIn('Represent a fraction on a number line', {s['label'] for s in suggestions})
+        self.assertIn('Fraction addition', {s['label'] for s in suggestions})
 
     def test_graph_endpoints_exist_and_have_no_cycles(self):
         all_topics = {(g, u, t) for g, units in recommender.curriculum.items() for u, topics in units.items() for t in topics}
@@ -55,12 +55,13 @@ class PrerequisiteTests(unittest.TestCase):
         done=set()
         for source in adjacency: walk(source, set(), done)
 
-    def test_catalog_deduplicated_within_grade(self):
-        for grade, units in recommender.curriculum.items():
-            topics = [t for ts in units.values() for t in ts]
-            self.assertEqual(len(topics), len(set(topics)), grade)
-        self.assertNotIn('Equivalent ratios with whole numbers', recommender.curriculum['7th Grade Math']['Ratios & Proportional Relationships'])
-        self.assertIn('Equivalent ratios with whole numbers', recommender.curriculum['6th Grade Math']['Ratios & Proportional Relationships'])
+    def test_catalog_deduplicated_within_units_and_concepts_keep_one_identity(self):
+        for units in recommender.curriculum.values():
+            for topics in units.values():
+                self.assertEqual(len(topics),len(set(topics)))
+        self.assertIn('Equivalent ratios',recommender.curriculum['7th Grade Math']['Ratios & Proportional Relationships'])
+        self.assertIn('Equivalent ratios',recommender.curriculum['6th Grade Math']['Ratios & Proportional Relationships'])
+        self.assertEqual('math:equivalent-ratios',recommender.concept_lookup['Equivalent ratios']['conceptId'])
 
     def test_dependency_requests_cannot_be_overridden_by_llm(self):
         with patch.object(recommender, '_call_llm_provider', side_effect=AssertionError('must not call provider')):
