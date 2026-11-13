@@ -17,6 +17,9 @@
       for (const group of Array.from(nav.querySelectorAll(':scope > .tb-group'))) tools.appendChild(group);
       mapActions = document.createElement('div'); mapActions.className='tb-group'; tools.appendChild(mapActions);
       for (const id of ['myMapsBtn','timelineBtn']) { const el=document.getElementById(id); if(el) mapActions.appendChild(el); }
+      // Panels follow their buttons into the editor row, so they open below
+      // its full height instead of covering the buttons after navigation cleanup.
+      for (const id of ['myMapsPanel','timelinePanel']) { const panel=document.getElementById(id); if(panel) tools.appendChild(panel); }
       bar.after(tools);
       document.getElementById('anonNavLinks')?.remove();
       menu = document.createElement('div'); menu.className = 'span-global-nav'; nav.prepend(menu);

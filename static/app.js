@@ -307,6 +307,9 @@ window.onload = async function() {
   if (params.get('view') && params.get('readonly') === '1') {
     await loadReadonlyMap(params.get('view'));
     applyReadonlyUI();
+  } else if (params.get('edit')) {
+    try { await loadCloudMap(params.get('edit')); }
+    catch (e) { await showAlertDialog('Could not open this map for editing: ' + e.message); }
   } else if (params.get('share')) {
     if (params.get('readonly') === '1') {
       isReadonly = true;
@@ -1448,6 +1451,8 @@ async function saveCurrentMapAsNew(title, activityId) {
 async function loadCloudMap(id) {
   clearTimeout(cloudSaveTimer);
   const row = await window.SpanAuth.loadMapById(id);
+  const editingSession = await window.SpanAuth.getSession();
+  if (!editingSession || row.owner_id !== editingSession.user.id) throw new Error('You can only edit maps you own.');
   if (row.is_checkpoint) throw new Error('Open starting checkpoints in read-only view, or make a working copy.');
   currentActivityId = row.activity_id || null;
   currentActivityName = null; aiToolsDisabled = false;
@@ -1615,7 +1620,10 @@ function setupAuthUI() {
       titleSpan.textContent = row.title + (row.is_checkpoint ? ' 🔒' : '');
       titleSpan.className = 'my-map-title';
       titleSpan.onclick = async () => {
-        if (row.is_checkpoint) { window.location.href = 'playground?view=' + encodeURIComponent(row.id) + '&readonly=1'; return; }
+        if (row.is_checkpoint || isReadonly) {
+          window.location.href = 'playground?' + (row.is_checkpoint ? 'view=' : 'edit=') + encodeURIComponent(row.id) + (row.is_checkpoint ? '&readonly=1' : '');
+          return;
+        }
         await loadCloudMap(row.id);
         myMapsPanel.style.display = 'none';
         if (mapTitleInput) mapTitleInput.value = row.title;

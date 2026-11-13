@@ -57,3 +57,7 @@ PR #4 merged as `3c6b939`. The existing Vercel project was connected to the publ
 The recording fixtures in this change replace the sparse, inconsistent sample datasets with two classes, twelve fictional students, six activities and seventy submissions, plus six student projects and three four-frame growth timelines. Both dashboards and sample editor share one source. Fifteen cloud presentation maps and three timelines were also seeded for the existing account. No real students were created. See `DEMO_WALKTHROUGH.md`.
 
 The demo toggle migration remains prepared but unapplied because it enables self-promotion to teacher. The QA deletion set is reviewed but not yet deleted. Phone viewport testing remains unavailable: the override still reported a desktop viewport.
+
+The recording pass also found My Maps and Timeline covering their toolbar triggers after the two-row navigation change. Both panels now move with the editor tools and anchor below that row; expanded Timeline retains its full-screen positioning.
+
+Opening an owned working map from a read-only checkpoint now starts a fresh editing route, rather than retaining read-only state and the old banner. The editing route verifies map ownership before loading.

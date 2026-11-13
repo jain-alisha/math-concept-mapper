@@ -28,3 +28,8 @@ test('student presentation switches growth timelines and opens demo activities w
   const select=w.document.querySelector('[aria-label="Growth timeline"]');assert.equal(select.options.length,3);select.value='demo-timeline-fractions';select.dispatchEvent(new w.Event('change'));assert.match(w.document.querySelector('#timelineLabel').textContent,/Fractions Tell a Story/);
   const toggle=w.document.querySelector('.class-activities-toggle');toggle.click();await new Promise(r=>setTimeout(r,0));const href=w.document.querySelector('.class-activities-list a').href;assert.match(href,/demoActivity=demo-activity-ratios/);assert.doesNotMatch(href,/\?activity=/);dom.window.close();
 });
+test('editor map panels stay anchored with their toolbar buttons after navigation cleanup',()=>{
+  const dom=new JSDOM(fs.readFileSync('static/playground.html','utf8'),{url:'https://spanmath.org/playground',runScripts:'outside-only'});const w=dom.window;w.document.addEventListener=()=>{};w.SpanAuth={isConfigured:false};Object.defineProperty(w.document,'readyState',{value:'complete',configurable:true});vm.runInContext(fs.readFileSync('static/site-shell.js','utf8'),dom.getInternalVMContext());
+  for(const id of ['myMapsPanel','timelinePanel'])assert.equal(w.document.getElementById(id).parentElement.id,'editorToolbar');
+  dom.window.close();
+});
