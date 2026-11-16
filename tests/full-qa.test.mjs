@@ -14,6 +14,18 @@ function fixture(file = 'app.js', html = '<svg id="mapCanvas"></svg>') {
   return {dom,w,d:w.document,run:code=>vm.runInContext(code,dom.getInternalVMContext())};
 }
 
+test('full editor render retains the visible node hit target with a wrapped label', () => {
+  const {dom,w,d,run} = fixture('app.js',fs.readFileSync('static/playground.html','utf8'));
+  w.SVGElement.prototype.getBBox = function() { return {width:this.textContent.length*9,height:18}; };
+  run("nodes=[{id:1,label:'A longer custom mathematical idea with several readable words',x:40,y:40,meta:{}}];links=[];renderCanvas();");
+  const node=d.querySelector('[data-node-id="1"]');
+  assert.ok(node.querySelector('rect.node'));
+  assert.equal(typeof node.querySelector('rect.node').onclick,'function');
+  assert.equal(node.querySelectorAll('text.node-label tspan').length,2);
+  assert.match(node.getAttribute('aria-label'),/A longer custom mathematical idea/);
+  dom.window.close();
+});
+
 test('Why renders relationship names and explanations safely as text', () => {
   const {dom,w,d} = fixture('app.js','<svg id="mapCanvas"></svg><div id="ghostReasonPopover"></div>');
   w.showGhostReason({source:'<img src=x>',target:'Number line',relationship:'prerequisite',reason:'Equal steps measure units.'},{left:100,bottom:50});
@@ -125,5 +137,20 @@ test('canonical cross-grade connections remain available without AI', async () =
   run('prerequisiteData='+fs.readFileSync('static/prerequisites.json','utf8'));
   const results=await w.requestSuggestions({label:'Equivalent fractions',meta:{grade:'3rd Grade Math',unit:'Number & Operations—Fractions'}},'leads_to',new Set());
   assert.ok(results.length);assert.ok(results.every(s=>s.source==='Equivalent fractions'));
+  dom.window.close();
+});
+
+test('a failed stale Explore request cannot replace a newer request for the same node', async () => {
+  const {dom,w,run} = fixture();
+  run('window.pending=[];renderCanvas=()=>{};requestSuggestions=()=>new Promise((resolve,reject)=>window.pending.push({resolve,reject}));window.anchor={label:"Fractions"};');
+  const first=run("openExploreQuestion(window.anchor,'related')");
+  const second=run("openExploreQuestion(window.anchor,'related')");
+  w.pending[0].reject(new Error('Old failure'));
+  await first;
+  assert.equal(run('ghostState.loading'),true);
+  assert.equal(run('ghostState.error'),false);
+  w.pending[1].resolve([]);
+  await second;
+  assert.equal(run('ghostState.loading'),false);
   dom.window.close();
 });

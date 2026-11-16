@@ -2317,7 +2317,9 @@ function setupSidebarEvents() {
     collapseBtn.textContent = sidebar.classList.contains('collapsed') ? '→' : '≡';
     collapseBtn.setAttribute('aria-label', sidebar.classList.contains('collapsed') ? 'Show concepts' : 'Hide concepts');
     collapseBtn.setAttribute('aria-expanded', String(!sidebar.classList.contains('collapsed')));
+    requestAnimationFrame(() => { resizeCanvas(); fitMap(); });
   };
+  sidebar.addEventListener('transitionend', resizeCanvas);
   setupInstructionsCollapse();
 }
 
@@ -2857,13 +2859,8 @@ function renderCanvas() {
     textEl.setAttribute('pointer-events', 'none');
     textEl.setAttribute('text-anchor', 'middle');
     textEl.setAttribute('dominant-baseline', 'middle');
-    // Box width is capped (NODE_MAX_WIDTH) so a handful of very long
-    // curriculum labels don't blow up the whole layout. A mild squeeze
-    // (textLength) still reads fine; beyond MIN_READABLE_RATIO it starts
-    // crushing letters together illegibly, so truncate with an ellipsis
-    // instead and expose the full label as a native hover tooltip (<title>
-    // on the whole node group, not just the text) rather than one
-    // unreadable squeezed-together line.
+    // Keep long names on two readable lines inside the capped node width.
+    // The full accessible name and tooltip remain available when truncated.
     const availableTextWidth = w - NODE_HORIZ_PADDING * 2;
     const naturalTextWidth = measureNodeTextWidth(labelText);
     if (naturalTextWidth > availableTextWidth) {
@@ -2875,10 +2872,13 @@ function renderCanvas() {
         if (!line) return;
         const span = document.createElementNS('http://www.w3.org/2000/svg','tspan');
         span.setAttribute('x', w/2); span.setAttribute('y', NODE_HEIGHT/2 + (index ? 10 : -10));
-        span.textContent = truncateLabelForDisplay(line,availableTextWidth); textEl.appendChild(span);
+        span.textContent = measureNodeTextWidth(line) > availableTextWidth
+          ? truncateLabelForDisplay(line,availableTextWidth) : line;
+        textEl.appendChild(span);
       });
       const titleEl = document.createElementNS('http://www.w3.org/2000/svg','title'); titleEl.textContent = node.label; g.appendChild(titleEl);
     }
+    g.appendChild(rect);
     g.appendChild(textEl);
 
     if (isIsolated) {
@@ -3231,7 +3231,7 @@ async function openExploreQuestion(node, question) {
   try {
     suggestions = await requestSuggestions(node, question, ghostState.shownLabels);
   } catch (e) {
-    if (ghostState && ghostState.node === node && ghostState.question === question) {
+    if (ghostState === requestState) {
       ghostState.loading = false; ghostState.error = true;
       renderCanvas();
     }
@@ -3254,7 +3254,7 @@ async function showMoreSuggestions() {
   try {
     suggestions = await requestSuggestions(node, question, shownLabels);
   } catch (e) {
-    if (ghostState) { ghostState.loading = false; renderCanvas(); }
+    if (ghostState === requestState) { ghostState.loading = false; renderCanvas(); }
     return;
   }
   if (!ghostState || ghostState.node !== node || ghostState.question !== question) return;
@@ -3307,6 +3307,17 @@ function showGhostReason(s, anchorRect) {
   pop.querySelector('.reason-rel').textContent = `${s.source} → ${s.target} (${s.relationship})`;
   pop.querySelector('p').textContent = s.reason;
   pop.querySelector('#closeReasonBtn').onclick = e => { e.stopPropagation(); pop.style.display = 'none'; };
+  clampFloatingPanel(pop);
+}
+
+function clampFloatingPanel(panel) {
+  panel.style.maxWidth = Math.max(100, innerWidth - 16) + 'px';
+  panel.style.boxSizing = 'border-box';
+  const rect = panel.getBoundingClientRect();
+  const dx = rect.left < 8 ? 8 - rect.left : rect.right > innerWidth - 8 ? innerWidth - 8 - rect.right : 0;
+  const dy = rect.top < 8 ? 8 - rect.top : rect.bottom > innerHeight - 8 ? innerHeight - 8 - rect.bottom : 0;
+  panel.style.left = (parseFloat(panel.style.left) || 0) + dx + 'px';
+  panel.style.top = (parseFloat(panel.style.top) || 0) + dy + 'px';
 }
 
 // Ghost suggestion nodes are real SVG elements appended after the real map
@@ -3580,6 +3591,7 @@ function updateNodeOverlays() {
         if (moreBtn) moreBtn.onclick = e => { e.stopPropagation(); showMoreSuggestions(); };
         document.getElementById('closeExploreBtn').onclick = e => { e.stopPropagation(); ghostState = null; renderCanvas(); };
       }
+      clampFloatingPanel(moreBar);
     } else {
       moreBar.style.display = 'none';
     }
@@ -3642,6 +3654,18 @@ function updateMapTitle() {
 function positionMapLegends() {
   const area = document.getElementById('canvasArea');
   if (!area) return;
+  const mobile = innerWidth <= 500;
+  const notices = document.getElementById('mapNotices');
+  for (const id of ['isolatedLegend','aiAddedLegend','arrowLegend']) {
+    const el = document.getElementById(id);
+    if (!el) continue;
+    const parent = mobile && notices ? notices : area;
+    if (el.parentElement !== parent) parent.appendChild(el);
+    if (mobile) {
+      Object.assign(el.style, {position:'static', left:'auto', right:'auto', top:'auto', bottom:'auto', maxWidth:'100%'});
+    }
+  }
+  if (mobile) return;
   const rect = area.getBoundingClientRect();
   for (const id of ['isolatedLegend','aiAddedLegend','arrowLegend']) {
     const el = document.getElementById(id);
