@@ -50,3 +50,39 @@ body.anonymous-projection .dash-header h1 { display: none !important; }
 #editorToolbar { position: relative; }
 #editorToolbar #myMapsPanel,
 #editorToolbar #timelinePanel:not(.timeline-expanded) { top: calc(100% + 8px); max-width: calc(100vw - 24px); }
+
+/* Keep map titles readable independently of their action controls. */
+#myMapsList li { flex-wrap:wrap; gap:8px; }
+#myMapsList .my-map-title { flex:1 0 100%; width:100%; min-width:0; white-space:normal; overflow-wrap:anywhere; text-align:left; border:0; background:transparent; font:inherit; color:inherit; padding:6px 0; cursor:pointer; }
+#myMapsPanel { width:360px; }
+.dashboard-sections { display:flex; flex-wrap:wrap; gap:16px; margin:16px 0; }
+.insights-row-clickable { width:100%; text-align:left; font:inherit; color:inherit; background:transparent; border:0; cursor:pointer; }
+.taught-checklist { max-height:320px; overflow:auto; }
+#activityConcepts { padding:12px; border-bottom:1px solid var(--border); }
+#activityConcepts li:focus-visible, #sidebarList li:focus-visible { outline:3px solid var(--brand); }
+@media(max-width:700px) {
+  .span-global-nav { flex-wrap:wrap; min-width:0; }
+  #topbar.span-editor-header > *, #editorToolbar > * { min-width:0; max-width:100%; }
+  #topbar.span-editor-header { overflow-wrap:anywhere; }
+}
+@media(max-width:500px) {
+  #sidebar { box-sizing:border-box; width:100% !important; flex:none; max-height:28vh; }
+  #sidebar.collapsed { width:100% !important; height:42px !important; max-height:42px; overflow:hidden; padding:4px 10px; }
+  #sidebar.collapsed > :not(#collapseBtn) { display:none !important; }
+  #collapseBtn { width:auto !important; max-width:100%; float:none; }
+  #mapWorkspace { min-height:180px; }
+  #editorToolbar { max-height:25vh; overflow:auto; flex:none; }
+}
+
+/* Bound the full curriculum picker while allowing setup before submissions. */
+#class-section-3 .dash-card, #class-section-3 { scroll-margin-top:16px; }
+#class-section-3 .taught-unit { padding:4px 0; }
+#sidebar.collapsed > :not(#collapseBtn) { display:none !important; }
+#sidebar li[role=button] { cursor:pointer; }
+#sidebar li[role=button]::after { content:' +'; color:var(--brand); font-weight:700; }
+.dash-card > input[type=search], .dash-card input[aria-label="Search taught topics"] { padding:9px; max-width:100%; margin:8px 12px 12px 0; }
+.my-maps-save-row input { min-width:0; }
+@media(max-width:500px) {
+  #isolatedLegend, #aiAddedLegend { position:static; max-width:none; margin:4px 8px; padding:4px 8px; font-size:.7rem; }
+  .tb-group { flex-wrap:wrap; }
+}

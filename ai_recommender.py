@@ -24,20 +24,13 @@ def canonical_label(label):
 
 def graph_edges_for(label, meta, question):
     """Only authored direct edges can establish dependency direction."""
-    original_label = label
     label = canonical_label(label)
     anchor_side = 'target' if question == 'builds_on' else 'source'
     for edge in prerequisite_graph['edges']:
         anchor = edge[anchor_side]
         if canonical_label(anchor['label']) != label:
             continue
-        # Historical aliases may have moved grades. Canonical catalog
-        # labels still require their grade/unit when the caller supplies it.
-        if original_label == label:
-            if meta.get('grade') and meta['grade'] != anchor['grade']:
-                continue
-            if meta.get('unit') and meta['unit'] != anchor['unit']:
-                continue
+        # Canonical concepts recur across grades; the reviewed edge supplies its context.
         yield edge
 
 # --- Build fast lookup: topic -> {grade, unit}

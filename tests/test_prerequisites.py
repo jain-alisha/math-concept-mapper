@@ -17,6 +17,10 @@ class PrerequisiteTests(unittest.TestCase):
         self.assertTrue(all(s['target'] == 'Mixed numbers' for s in before))
         self.assertTrue(all(s['source'] == 'Mixed numbers' for s in after))
 
+    def test_canonical_concept_crosses_grade_alignments(self):
+        suggestions = self.suggestions('Equivalent fractions', 'leads_to', meta={'grade':'3rd Grade Math','unit':'Number & Operations—Fractions'})
+        self.assertTrue(suggestions)
+
     def test_no_keyword_fallback_for_unknown_or_terminal_topic(self):
         self.assertEqual([], self.suggestions('Unlisted mixed fraction idea', 'builds_on'))
         self.assertEqual([], self.suggestions('Mixed-number division', 'leads_to'))

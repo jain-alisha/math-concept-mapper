@@ -33,14 +33,15 @@ test('teacher summary uses the coverage metric rather than swapping activity and
   maps.push(map('five','5',[n(1,'Ratios','7th Grade Math','Ratios'),n(2,'Rates','7th Grade Math','Ratios')],[{s:1,t:2}]));
   assert.match(c.computeClassSummary(maps), /Most students are working in Fractions \(6th Grade Math\): 4 students/);
 });
-test('missing prerequisites use reviewed directed edges, aliases and grade qualification', () => {
+test('discussion prompts respect existing connections, paths, aliases and grade qualification', () => {
   const c = load('dashboard.js');
   vm.runInContext(`prerequisiteData = { aliases: {'old mixed':'Mixed numbers'}, edges:[{source:{label:'Fractions',grade:'6th Grade Math',unit:'Fractions'},target:{label:'Mixed numbers',grade:'6th Grade Math',unit:'Fractions'},reason:'Units'}] };`,c);
   const nodes = [n(1,'Fractions'),n(2,'old mixed')];
   assert.equal(c.computeMissingPrereqs([map('a','s',nodes)],{},new Set()).length,1);
   assert.equal(c.computeMissingPrereqs([map('a','s',nodes,[{s:1,t:2,rt:'prerequisite'}])],{}).length,0);
   assert.equal(c.computeMissingPrereqs([map('a','s',nodes,[{s:1,t:2,rt:'related'}])],{}).length,0);
-  assert.equal(c.computeMissingPrereqs([map('a','s',nodes,[{s:2,t:1,rt:'prerequisite'}])],{}).length,1);
+  assert.equal(c.computeMissingPrereqs([map('a','s',nodes,[{s:2,t:1,rt:'prerequisite'}])],{}).length,0);
+  assert.equal(c.computeMissingPrereqs([map('a','s',[...nodes,n(3,'Bridge')],[{s:1,t:3},{s:3,t:2}])],{}).length,0);
   assert.equal(c.computeMissingPrereqs([map('a','s',[n(1,'Ratio word problems'),n(2,'Unit rate definition')])],{}).length,0);
   assert.equal(c.computeMissingPrereqs([map('a','s',[n(2,'Mixed numbers','7th Grade Math')])],{}).length,0);
 });

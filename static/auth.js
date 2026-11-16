@@ -344,6 +344,12 @@
       return data;
     },
 
+    async updateActivity(id, name, concepts, aiDisabled) {
+      const {data,error} = await client.from('activities').update({name,concepts,ai_disabled:aiDisabled}).eq('id',id).select().single();
+      if (error) throw error;
+      return window.SpanConceptBank ? window.SpanConceptBank.activity(data) : data;
+    },
+
     async setActivityAiDisabled(id, disabled) {
       const { error } = await client.from('activities').update({ ai_disabled: disabled }).eq('id', id);
       if (error) throw error;

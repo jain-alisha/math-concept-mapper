@@ -324,14 +324,15 @@ window.onload = async function() {
   } else if (params.get('sample') === '1') {
     loadSampleMap();
   } else {
-    loadAutosave();
     await setupActivityContext(params);
+    loadAutosave();
   }
 
   renderCanvas();
   setupCustomConcept();
   updateMapTitle();
   resetHistory();
+  if (nodes.length) fitMap();
 };
 
 // A student reaches the Playground with ?activity=<id> from their Student
@@ -355,6 +356,12 @@ async function setupActivityContext(params) {
         : `Working on: ${activity.name}`;
       banner.hidden = false;
     }
+    const list = document.createElement('section'); list.id = 'activityConcepts';
+    const heading = document.createElement('h2'); heading.textContent = 'Activity concepts'; list.appendChild(heading);
+    const ul = document.createElement('ul'); list.appendChild(ul);
+    (activity.concepts || []).forEach(key => { const [grade,unit,...topic] = key.split('::'); ul.appendChild(makeDraggableTopicLi(grade,unit,topic.join('::'))); });
+    document.getElementById('activityConcepts')?.remove();
+    document.getElementById('sidebarList').before(list);
     applyAiToolsGate();
   } catch (e) {
     console.error('Could not load activity:', e);
@@ -659,17 +666,41 @@ function applyMapData(data) {
   renderNotesSidebar();
 }
 
+function draftStorageKey() {
+  const params = new URLSearchParams(window.location.search);
+  const context = params.get('activity') || params.get('demoActivity');
+  return shareDraftKey || (cloudMapId ? AUTOSAVE_KEY + ':map:' + cloudMapId : context ? AUTOSAVE_KEY + ':activity:' + context : AUTOSAVE_KEY);
+}
+
+function syncCloudMapIdentity() {
+  const input = document.getElementById('mapTitleInput');
+  if (input) input.value = cloudMapTitle || '';
+  if (cloudMapId && window.history?.replaceState) {
+    const url = new URL(window.location.href);
+    ['share', 'sample', 'view', 'readonly', 'demoActivity'].forEach(key => url.searchParams.delete(key));
+    url.searchParams.set('edit', cloudMapId);
+    if (currentActivityId) url.searchParams.set('activity',currentActivityId);
+    else url.searchParams.delete('activity');
+    window.history.replaceState(null, '', url);
+    shareDraftKey = null;
+  } else if (window.history?.replaceState) {
+    const url = new URL(window.location.href); url.searchParams.delete('edit');
+    window.history.replaceState(null, '', url);
+  }
+  updateMapTitle();
+}
+
 function autosave() {
   if (isReadonly) return;
   try {
-    localStorage.setItem(shareDraftKey || AUTOSAVE_KEY, JSON.stringify(serializeMap()));
+    localStorage.setItem(draftStorageKey(), JSON.stringify({...serializeMap(), _cloudUpdatedAt:cloudMapUpdatedAt}));
   } catch (e) { /* storage unavailable/full - not critical, just skip */ }
   queueCloudSave();
 }
 
 function loadAutosave() {
   let raw;
-  try { raw = localStorage.getItem(AUTOSAVE_KEY); } catch (e) { return false; }
+  try { raw = localStorage.getItem(draftStorageKey()); } catch (e) { return false; }
   if (!raw) return false;
   try {
     const data = JSON.parse(raw);
@@ -785,6 +816,7 @@ async function clearMap() {
   cloudMapId = null;
   cloudMapTitle = null;
   cloudMapUpdatedAt = null;
+  clearTimeout(cloudSaveTimer); syncCloudMapIdentity();
   setSaveStatus('saved');
   const mapTitleInput = document.getElementById('mapTitleInput');
   if (mapTitleInput) mapTitleInput.value = '';
@@ -820,15 +852,28 @@ function setupUndoRedoButtons() {
   });
 }
 
+let canvasScale = 1;
+function setCanvasScale(scale) {
+  canvasScale = Math.max(0.1, Math.min(2, scale));
+  const svg = document.getElementById('mapCanvas');
+  svg.style.zoom = String(canvasScale);
+  const reset = document.getElementById('zoomResetBtn');
+  if (reset) reset.textContent = Math.round(canvasScale * 100) + '%';
+  renderCanvas();
+}
+function fitMap() {
+  const box = mapExportBoundingBox(), area = document.getElementById('canvasArea');
+  if (!box || !area) return;
+  setCanvasScale(Math.min(1,(area.clientWidth-40)/(box.maxX-box.minX),(area.clientHeight-40)/(box.maxY-box.minY)));
+  area.scrollTo({left:Math.max(0,box.minX*canvasScale-20),top:Math.max(0,box.minY*canvasScale-20)});
+}
 function setupFitMapButton() {
   const btn = document.getElementById('fitMapBtn');
   if (!btn) return;
-  btn.onclick = () => {
-    const box = mapExportBoundingBox();
-    const area = document.getElementById('canvasArea');
-    if (!box || !area) { if (area) area.scrollTo({ top: 0, left: 0, behavior: 'smooth' }); return; }
-    area.scrollTo({ top: Math.max(0, box.minY - 30), left: Math.max(0, box.minX - 30), behavior: 'smooth' });
-  };
+  btn.onclick = fitMap;
+  document.getElementById('zoomOutBtn').onclick = () => setCanvasScale(canvasScale / 1.2);
+  document.getElementById('zoomInBtn').onclick = () => setCanvasScale(canvasScale * 1.2);
+  document.getElementById('zoomResetBtn').onclick = () => setCanvasScale(1);
 }
 
 // --- Export current map to PDF, cropped tight to the nodes ---
@@ -1400,10 +1445,11 @@ async function flushCloudSave() {
   if (isReadonly || !cloudReady() || !cloudMapId) return;
   clearTimeout(cloudSaveTimer);
   const savingMapId = cloudMapId;
+  const savingData = serializeMap();
   setSaveStatus('saving');
   try {
     const result = await window.SpanAuth.saveMap({
-      id: cloudMapId, title: cloudMapTitle, data: serializeMap(), lastKnownUpdatedAt: cloudMapUpdatedAt,
+      id: cloudMapId, title: cloudMapTitle, data: savingData, lastKnownUpdatedAt: cloudMapUpdatedAt,
     });
     if (cloudMapId !== savingMapId) return;
     if (result.conflict) {
@@ -1411,11 +1457,12 @@ async function flushCloudSave() {
       setSaveStatus('error');
     } else {
       cloudMapUpdatedAt = result.row.updated_at;
-      setSaveStatus('saved');
+      try { localStorage.setItem(draftStorageKey(),JSON.stringify({...serializeMap(),_cloudUpdatedAt:cloudMapUpdatedAt})); } catch(e) { /* optional recovery cache */ }
+      setSaveStatus(JSON.stringify(serializeMap()) === JSON.stringify(savingData) ? 'saved' : 'saving');
     }
   } catch (e) {
     console.error('Cloud save failed:', e);
-    setSaveStatus('error');
+    if (cloudMapId === savingMapId) setSaveStatus('error');
   }
 }
 
@@ -1451,6 +1498,7 @@ async function saveCurrentMapAsNew(title, activityId) {
   cloudMapId = result.row.id;
   cloudMapTitle = result.row.title;
   cloudMapUpdatedAt = result.row.updated_at;
+  syncCloudMapIdentity();
   setSaveStatus('saved');
   return result.row;
 }
@@ -1466,12 +1514,21 @@ async function loadCloudMap(id) {
   const activityBanner = document.getElementById('activityBanner');
   if (activityBanner) activityBanner.hidden = true;
   if (currentActivityId) await setupActivityContext(new URLSearchParams({ activity: currentActivityId }));
-  else applyAiToolsGate();
+  else { document.getElementById('activityConcepts')?.remove(); applyAiToolsGate(); }
   applyMapData(row.data);
   cloudMapId = row.id;
   cloudMapTitle = row.title;
   cloudMapUpdatedAt = row.updated_at;
-  setSaveStatus('saved');
+  syncCloudMapIdentity();
+  let recovered = false;
+  try {
+    const draft = JSON.parse(localStorage.getItem(draftStorageKey()) || 'null');
+    if (draft && draft._cloudUpdatedAt === row.updated_at && JSON.stringify({n:draft.n,e:draft.e}) !== JSON.stringify(row.data)) {
+      recovered = true; applyMapData(draft); showCloudNotice('Recovered your unsent changes from this browser.');
+    }
+  } catch (e) { /* Local recovery must not prevent opening a cloud map. */ }
+  setSaveStatus(recovered ? 'error' : 'saved');
+  if (recovered) queueCloudSave();
   renderCanvas();
   resetHistory();
 }
@@ -1623,7 +1680,8 @@ function setupAuthUI() {
     }
     for (const row of rows) {
       const li = document.createElement('li');
-      const titleSpan = document.createElement('span');
+      const titleSpan = document.createElement('button');
+      titleSpan.type = 'button';
       titleSpan.textContent = row.title + (row.is_checkpoint ? ' 🔒' : '');
       titleSpan.className = 'my-map-title';
       titleSpan.onclick = async () => {
@@ -2153,7 +2211,10 @@ function makeDraggableTopicLi(grade, unit, topic) {
   li.ondragstart = ev => {
     ev.dataTransfer.setData('text/plain', JSON.stringify({ grade, unit, topic }));
   };
-  li.title = `${grade} › ${unit}`;
+  li.title = `${grade} › ${unit} · Click or press Enter to add`;
+  li.tabIndex = 0; li.setAttribute('role', 'button');
+  li.onclick = () => addCatalogConcept(topic, {grade, unit});
+  li.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); li.click(); } };
   return li;
 }
 
@@ -2231,13 +2292,7 @@ function renderSidebar() {
 
       const topicUl = document.createElement('ul');
       for (const topic of conceptsData[grade][unit]) {
-        const li = document.createElement('li');
-        li.textContent = topic;
-        li.draggable = true;
-        li.ondragstart = ev => {
-          ev.dataTransfer.setData('text/plain', JSON.stringify({grade, unit, topic}));
-        };
-        li.title = `${grade} › ${unit}`;
+        const li = makeDraggableTopicLi(grade, unit, topic);
         topicUl.appendChild(li);
       }
       unitLabel.appendChild(topicUl);
@@ -2260,6 +2315,8 @@ function setupSidebarEvents() {
   collapseBtn.onclick = () => {
     sidebar.classList.toggle('collapsed');
     collapseBtn.textContent = sidebar.classList.contains('collapsed') ? '→' : '≡';
+    collapseBtn.setAttribute('aria-label', sidebar.classList.contains('collapsed') ? 'Show concepts' : 'Hide concepts');
+    collapseBtn.setAttribute('aria-expanded', String(!sidebar.classList.contains('collapsed')));
   };
   setupInstructionsCollapse();
 }
@@ -2454,7 +2511,7 @@ function updateCanvasSize() {
   const svg = document.getElementById('mapCanvas');
   const area = document.getElementById('canvasArea');
   const PAD = 240;
-  let w = area.clientWidth, h = area.clientHeight;
+  let w = area.clientWidth / canvasScale, h = area.clientHeight / canvasScale;
   for (const n of nodes) {
     w = Math.max(w, n.x + getNodeWidth(n.label) + PAD);
     h = Math.max(h, n.y + NODE_HEIGHT + PAD);
@@ -2475,14 +2532,23 @@ document.getElementById('mapCanvas').ondrop = ev => {
   if (!data) return;
   let obj = JSON.parse(data);
   const bbox = document.getElementById('mapCanvas').getBoundingClientRect();
-  let x = ev.clientX - bbox.left, y = ev.clientY - bbox.top;
+  let x = (ev.clientX - bbox.left) / canvasScale, y = (ev.clientY - bbox.top) / canvasScale;
   // If dropped from AI panel, may have .label and .meta
   if (obj.fromAI) {
-    addNode(obj.label, x, y, obj.meta || {});
+    addCatalogConcept(obj.label, obj.meta || {}, {x,y});
     return;
   }
-  addNode(obj.topic, x, y, {grade: obj.grade, unit: obj.unit});
+  addCatalogConcept(obj.topic, {grade: obj.grade, unit: obj.unit}, {x,y});
 };
+
+async function addCatalogConcept(label, meta, position = {x:40, y:40}) {
+  const concept = window.SpanConceptBank?.resolve(label, meta);
+  const existing = nodes.find(n => concept?.id ? n.meta?.conceptId === concept.id : n.label === label);
+  if (existing && !await showConfirmDialog(`“${label}” is already on this map. Add another copy?`, {okLabel:'Add another'})) {
+    selectedNode = existing; renderCanvas(); return;
+  }
+  addNode(label, position.x, position.y, meta);
+}
 
 function addNode(label, x, y, meta={}) {
   const concept = window.SpanConceptBank?.resolve(label, meta);
@@ -2735,8 +2801,8 @@ function renderCanvas() {
         // Drag: Move node
         const svg = document.getElementById('mapCanvas');
         let svgRect = svg.getBoundingClientRect();
-        let mouseX = e.clientX - svgRect.left;
-        let mouseY = e.clientY - svgRect.top;
+        let mouseX = (e.clientX - svgRect.left) / canvasScale;
+        let mouseY = (e.clientY - svgRect.top) / canvasScale;
         dragInfo = {
           node,
           offsetX: mouseX - node.x,
@@ -2800,19 +2866,19 @@ function renderCanvas() {
     // unreadable squeezed-together line.
     const availableTextWidth = w - NODE_HORIZ_PADDING * 2;
     const naturalTextWidth = measureNodeTextWidth(labelText);
-    const MIN_READABLE_RATIO = 0.82;
     if (naturalTextWidth > availableTextWidth) {
-      if (availableTextWidth / naturalTextWidth >= MIN_READABLE_RATIO) {
-        textEl.setAttribute('textLength', availableTextWidth);
-        textEl.setAttribute('lengthAdjust', 'spacingAndGlyphs');
-      } else {
-        textEl.textContent = truncateLabelForDisplay(node.label, availableTextWidth);
-        const titleEl = document.createElementNS('http://www.w3.org/2000/svg', 'title');
-        titleEl.textContent = node.label;
-        g.appendChild(titleEl);
-      }
+      const words = labelText.split(/\s+/); let first = '';
+      while (words.length && measureNodeTextWidth((first + ' ' + words[0]).trim()) <= availableTextWidth) first = (first + ' ' + words.shift()).trim();
+      if (!first) first = words.shift() || '';
+      textEl.textContent = '';
+      [first, words.join(' ')].forEach((line,index) => {
+        if (!line) return;
+        const span = document.createElementNS('http://www.w3.org/2000/svg','tspan');
+        span.setAttribute('x', w/2); span.setAttribute('y', NODE_HEIGHT/2 + (index ? 10 : -10));
+        span.textContent = truncateLabelForDisplay(line,availableTextWidth); textEl.appendChild(span);
+      });
+      const titleEl = document.createElementNS('http://www.w3.org/2000/svg','title'); titleEl.textContent = node.label; g.appendChild(titleEl);
     }
-    g.appendChild(rect);
     g.appendChild(textEl);
 
     if (isIsolated) {
@@ -2966,7 +3032,7 @@ function dragNodeMove(e) {
   if (!dragInfo) return;
   const svg = document.getElementById('mapCanvas');
   let rect = svg.getBoundingClientRect();
-  let x = e.clientX - rect.left, y = e.clientY - rect.top;
+  let x = (e.clientX - rect.left) / canvasScale, y = (e.clientY - rect.top) / canvasScale;
   dragInfo.node.x = x - dragInfo.offsetX;
   dragInfo.node.y = y - dragInfo.offsetY;
   updateNodePosition(dragInfo.node);
@@ -2998,14 +3064,14 @@ function updateNodePosition(node) {
 function startLinkDrag(e, sourceNode, groupEl, nodeW) {
   const svg = document.getElementById('mapCanvas');
   let svgRect = svg.getBoundingClientRect();
-  let mouseX = e.clientX - svgRect.left;
-  let mouseY = e.clientY - svgRect.top;
+  let mouseX = (e.clientX - svgRect.left) / canvasScale;
+  let mouseY = (e.clientY - svgRect.top) / canvasScale;
   linkDrag = {sourceNode, x2: mouseX, y2: mouseY};
   renderCanvas();
   document.onmousemove = function(ev) {
     const svgRect = svg.getBoundingClientRect();
-    linkDrag.x2 = ev.clientX - svgRect.left;
-    linkDrag.y2 = ev.clientY - svgRect.top;
+    linkDrag.x2 = (ev.clientX - svgRect.left) / canvasScale;
+    linkDrag.y2 = (ev.clientY - svgRect.top) / canvasScale;
     const ghost = svg.querySelector('.link-ghost');
     if (ghost) { ghost.setAttribute('x2', linkDrag.x2); ghost.setAttribute('y2', linkDrag.y2); }
   };
@@ -3122,10 +3188,8 @@ async function requestSuggestions(node, question, exclude) {
     const seen = new Set();
     return prerequisiteData.edges.filter(edge => {
       const anchor = edge[anchorSide], other = edge[otherSide];
-      const renamed = canonical(node.label) !== node.label;
       if (anchor.label !== canonical(node.label) || used.has(other.label) || seen.has(other.label)) return false;
-      if (!renamed && node.meta?.grade && node.meta.grade !== anchor.grade) return false;
-      if (!renamed && node.meta?.unit && node.meta.unit !== anchor.unit) return false;
+      // Canonical concepts recur across grades; reviewed edges can cross units.
       seen.add(other.label); return true;
     }).slice(0,3).map(edge => ({
       label: edge[otherSide].label,
@@ -3136,7 +3200,12 @@ async function requestSuggestions(node, question, exclude) {
     }));
   }
   const backendUrl = window.AI_BACKEND_URL || 'http://localhost:5000';
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 20000);
+  let data;
+  try {
   const res = await fetch(`${backendUrl}/recommend`, {
+    signal: controller.signal,
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -3147,7 +3216,8 @@ async function requestSuggestions(node, question, exclude) {
     }),
   });
   if (!res.ok) throw new Error('bad response');
-  const data = await res.json();
+  data = await res.json();
+  } finally { clearTimeout(timeout); }
   return (data.suggestions || []).map(s => {
     const c=window.SpanConceptBank?.resolve(s.label,s.meta || {});
     return c ? {...s,label:c.label,meta:{...s.meta,conceptId:c.id},reason:typeof s.reason==='string'?s.reason.replaceAll(s.label,c.label):s.reason,source:window.SpanConceptBank.resolve(s.source || '')?.label || s.source,target:window.SpanConceptBank.resolve(s.target || '')?.label || s.target} : s;
@@ -3155,7 +3225,7 @@ async function requestSuggestions(node, question, exclude) {
 }
 
 async function openExploreQuestion(node, question) {
-  ghostState = { node, question, suggestions: [], shownLabels: new Set(), loading: true, error: false };
+  const requestState = ghostState = { node, question, suggestions: [], shownLabels: new Set(), loading: true, error: false };
   renderCanvas();
   let suggestions = [];
   try {
@@ -3167,7 +3237,7 @@ async function openExploreQuestion(node, question) {
     }
     return;
   }
-  if (!ghostState || ghostState.node !== node || ghostState.question !== question) return; // stale response
+  if (ghostState !== requestState) return; // stale response
   suggestions.forEach(s => ghostState.shownLabels.add(s.label));
   ghostState.suggestions = suggestions;
   ghostState.loading = false;
@@ -3233,11 +3303,8 @@ function showGhostReason(s, anchorRect) {
   pop.style.display = 'block';
   pop.style.left = Math.max(8, anchorRect.left - 60) + 'px';
   pop.style.top = (anchorRect.bottom + 8) + 'px';
-  pop.innerHTML = `
-    <div class="reason-rel">${escapeHtml(s.source)} <span class="reason-arrow">&rarr;</span> ${escapeHtml(s.target)} <span class="reason-tag">${escapeHtml(s.relationship)}</span></div>
-    <p></p>
-    <button id="closeReasonBtn" title="Close">&times;</button>
-  `;
+  pop.innerHTML = '<div class="reason-rel"></div><p></p><button id="closeReasonBtn" title="Close">&times;</button>';
+  pop.querySelector('.reason-rel').textContent = `${s.source} → ${s.target} (${s.relationship})`;
   pop.querySelector('p').textContent = s.reason;
   pop.querySelector('#closeReasonBtn').onclick = e => { e.stopPropagation(); pop.style.display = 'none'; };
 }
@@ -3498,10 +3565,11 @@ function updateNodeOverlays() {
       moreBar.style.top = (arect.top + arect.height / 2) + 'px';
       if (ghostState.loading) {
         moreBar.style.display = 'block';
-        moreBar.innerHTML = `<span class="loading-label">Thinking…</span>`;
+        moreBar.innerHTML = '<span class="loading-label">Thinking…</span><button id="cancelExploreBtn">Cancel</button>';
+        document.getElementById('cancelExploreBtn').onclick = e => { e.stopPropagation(); ghostState = null; renderCanvas(); };
       } else if (ghostState.error) {
         moreBar.style.display = 'block';
-        moreBar.innerHTML = `<span class="loading-label">AI backend unavailable.</span><button id="closeExploreBtn" title="Close">&times;</button>`;
+        moreBar.innerHTML = `<span class="loading-label">Suggestions unavailable. Try again.</span><button id="closeExploreBtn" title="Close">&times;</button>`;
         document.getElementById('closeExploreBtn').onclick = e => { e.stopPropagation(); ghostState = null; renderCanvas(); };
       } else {
         moreBar.style.display = 'block';
