@@ -254,7 +254,7 @@ function computeClassSummary(mapsData) {
   const leading = coverage[0];
   const students = new Set(mapsData.map(m => m.owner_id)).size;
   const connections = mapsData.reduce((sum, m) => sum + ((m.data && m.data.e) || []).length, 0);
-  return `${students} student${students === 1 ? '' : 's'} have saved maps with ${connections} connection${connections === 1 ? '' : 's'}. Most students are working in ${leading.unit} (${leading.grade}): ${leading.students} student${leading.students === 1 ? '' : 's'}, as shown in Curriculum coverage.`;
+  return `${students} student${students === 1 ? ' has' : 's have'} saved maps with ${connections} connection${connections === 1 ? '' : 's'}. Most students are working in ${leading.unit} (${leading.grade}): ${leading.students} student${leading.students === 1 ? '' : 's'}, as shown in Curriculum coverage.`;
 }
 
 // taughtSet (optional): a Set of "grade::unit::prereq" strings the teacher
@@ -272,9 +272,14 @@ function computeClassSummary(mapsData) {
 function computeMissingPrereqs(mapsData, curriculum, taughtSet) {
   const aliases = prerequisiteData.aliases || {};
   const canonical = label => aliases[label] || label;
-  const matches = (node, endpoint) => canonical(node.l) === endpoint.label &&
-    (aliases[node.l] || ((!(node.m || {}).grade || node.m.grade === endpoint.grade) &&
-    (!(node.m || {}).unit || node.m.unit === endpoint.unit)));
+  const matches = (node, endpoint) => {
+    const concept = typeof window === 'undefined' ? null : window.SpanConceptBank?.resolve(node.l,node.m || {});
+    const other = typeof window === 'undefined' ? null : window.SpanConceptBank?.resolve(endpoint.label,endpoint);
+    if (concept && other) return concept.id === other.id;
+    return canonical(node.l) === endpoint.label &&
+      (aliases[node.l] || ((!(node.m || {}).grade || node.m.grade === endpoint.grade) &&
+      (!(node.m || {}).unit || node.m.unit === endpoint.unit)));
+  };
   const counts = new Map();
   for (const m of mapsData) {
     const nodes = (m.data && m.data.n) || [];
@@ -285,7 +290,18 @@ function computeMissingPrereqs(mapsData, curriculum, taughtSet) {
       const sources = nodes.filter(n => matches(n, rule.source));
       // A normal student-drawn arrow is still a connection. Direction comes
       // from the reviewed graph; its styling does not make it disappear.
-      const connected = edges.some(e => sources.some(n => n.i === e.s) && targets.some(n => n.i === e.t));
+      // A student's arrow can express a related idea in either direction.
+      // A path is a reason to discuss the explanation, not evidence of a gap.
+      const reached = new Set(sources.map(n => n.i));
+      let changed = true;
+      while (changed) {
+        changed = false;
+        for (const e of edges) {
+          if (reached.has(e.s) && !reached.has(e.t)) { reached.add(e.t); changed = true; }
+          if (reached.has(e.t) && !reached.has(e.s)) { reached.add(e.s); changed = true; }
+        }
+      }
+      const connected = targets.some(n => reached.has(n.i));
       if (connected) continue;
       const key = JSON.stringify([rule.source, rule.target]);
       if (!counts.has(key)) counts.set(key, { topic: rule.target.label, prereq: rule.source.label,
@@ -434,7 +450,8 @@ function renderStudentMapCards(container, roster, mapsWithData, hrefFor, activit
       const text = document.createElement('p');
       const data = m.data || {};
       const concepts = (data.n || []).map(n => n.l).join('; ');
-      const notes = (data.e || []).filter(e => e.no).map(e => e.no).join(' ');
+      const labels = new Map((data.n || []).map(n => [n.i,n.l]));
+      const notes = (data.e || []).map(e => `${labels.get(e.s) || 'Unknown concept'} → ${labels.get(e.t) || 'Unknown concept'}: ${e.no || 'No explanation yet'}`).join('\n');
       text.textContent = concepts + (notes ? ' — ' + notes : '');
       details.appendChild(text);
       details.onclick = e => e.stopPropagation();
@@ -448,6 +465,15 @@ function renderStudentMapCards(container, roster, mapsWithData, hrefFor, activit
     if (card._details) item.appendChild(card._details);
     grid.appendChild(item);
   });
+  const search = document.createElement('input');
+  search.type = 'search';
+  search.placeholder = 'Find a student map';
+  search.setAttribute('aria-label', 'Find a student map');
+  search.oninput = () => {
+    const query = search.value.trim().toLocaleLowerCase();
+    [...grid.children].forEach(item => { item.hidden = !item.textContent.toLocaleLowerCase().includes(query); });
+  };
+  container.appendChild(search);
   container.appendChild(grid);
 }
 
@@ -508,10 +534,10 @@ function renderTaughtTopicsChecklist(container, cls, mapsWithData, curriculum, o
 
   const hint = document.createElement('p');
   hint.className = 'hint';
-  hint.textContent = "Mark topics you've already covered - missing-prerequisite connections above can then tell \"not taught yet\" apart from a real gap.";
+  hint.textContent = "Mark topics you've already covered - discussion prompts above can distinguish topics not yet taught. Map structure alone does not establish understanding.";
   container.appendChild(hint);
 
-  const units = collectUnitsFromMaps(mapsWithData);
+  const units = allUnitsFromCurriculum(curriculum);
   if (!units.length) {
     const p = document.createElement('p');
     p.className = 'settings-empty';
@@ -520,9 +546,22 @@ function renderTaughtTopicsChecklist(container, cls, mapsWithData, curriculum, o
     return;
   }
 
-  const checklistWrap = document.createElement('div');
+  const search = document.createElement('input'); search.type='search'; search.placeholder='Find a taught topic'; search.setAttribute('aria-label','Search taught topics');
+  const grade = document.createElement('select'); grade.setAttribute('aria-label','Taught topics grade');
+  for (const value of ['',...Object.keys(curriculum)]) { const option=document.createElement('option'); option.value=value; option.textContent=value || 'All grades'; grade.appendChild(option); }
+  container.append(search,grade);
+  const checklistWrap = document.createElement('div'); checklistWrap.className='taught-checklist';
   container.appendChild(checklistWrap);
   const checkboxes = renderConceptChecklist(checklistWrap, curriculum, units, cls.taught_topics || []);
+  function filterTopics() {
+    const query=search.value.toLocaleLowerCase().trim();
+    checklistWrap.querySelectorAll('.taught-unit').forEach(group=>{
+      let visible=0;
+      group.querySelectorAll('li').forEach(li=>{li.hidden=!!(grade.value && grade.value!==group.dataset.grade) || !li.textContent.toLocaleLowerCase().includes(query);if(!li.hidden)visible++;});
+      group.hidden=!visible;
+    });
+  }
+  search.oninput=filterTopics; grade.onchange=filterTopics;
 
   const saveRow = document.createElement('div');
   const saveBtn = document.createElement('button');
@@ -539,7 +578,8 @@ function renderTaughtTopicsChecklist(container, cls, mapsWithData, curriculum, o
   container.appendChild(saveRow);
 
   saveBtn.onclick = async () => {
-    const selected = checkboxes.filter(cb => cb.checked).map(cb => cb.dataset.key);
+    const known = new Set(checkboxes.map(cb=>cb.dataset.key));
+    const selected = [...checkboxes.filter(cb => cb.checked).map(cb => cb.dataset.key), ...(cls.taught_topics || []).filter(key=>!known.has(key))];
     saveBtn.disabled = true;
     try {
       await saveFn(cls.id, selected);
@@ -566,6 +606,7 @@ function renderActivitiesCard(container, cls, curriculum, activityFns, onChange)
   activityFns = activityFns || {
     list: (classId) => window.SpanAuth.listClassActivities(classId),
     create: (classId, name, concepts, aiDisabled) => window.SpanAuth.createActivity(classId, name, concepts, aiDisabled),
+    update: (...args) => window.SpanAuth.updateActivity(...args),
     del: (id) => window.SpanAuth.deleteActivity(id),
     setAiDisabled: (id, disabled) => window.SpanAuth.setActivityAiDisabled(id, disabled),
   };
@@ -586,6 +627,8 @@ function renderActivitiesCard(container, cls, curriculum, activityFns, onChange)
   deleteBtn.textContent = 'Delete';
   deleteBtn.disabled = true;
   selectRow.appendChild(deleteBtn);
+  const editBtn = document.createElement('button'); editBtn.textContent='Review / edit'; editBtn.disabled=true; selectRow.appendChild(editBtn);
+  const activityDescription=document.createElement('p'); activityDescription.className='hint'; container.appendChild(activityDescription);
   container.appendChild(selectRow);
 
   const aiToggleRow = document.createElement('label');
@@ -667,6 +710,7 @@ function renderActivitiesCard(container, cls, curriculum, activityFns, onChange)
   container.appendChild(form);
 
   let activities = [];
+  let editingId = null;
   let checkboxes = [];
 
   function renderOptions() {
@@ -681,6 +725,8 @@ function renderActivitiesCard(container, cls, curriculum, activityFns, onChange)
 
   function syncAiToggleRow() {
     const activity = activities.find(a => a.id === select.value);
+    editBtn.disabled=!activity;
+    activityDescription.textContent=activity ? 'Assigned concepts: '+(activity.concepts || []).map(key=>key.split('::').slice(2).join('::')).join('; ') : '';
     if (!activity) { aiToggleRow.style.display = 'none'; return; }
     aiToggleCheckbox.checked = !!activity.ai_disabled;
     aiToggleRow.style.display = 'flex';
@@ -699,7 +745,15 @@ function renderActivitiesCard(container, cls, curriculum, activityFns, onChange)
     onChange(select.value || null, activities);
   }
 
+  editBtn.onclick = () => {
+    const activity=activities.find(a=>a.id===select.value); if(!activity)return;
+    editingId=activity.id; form.style.display='block'; createBtn.textContent='Save changes';
+    nameInput.value=activity.name; newAiDisabledCheckbox.checked=!!activity.ai_disabled;
+    search.value='';gradeFilter.value='';fillUnits();
+    checkboxes=renderConceptChecklist(conceptsWrap,curriculum,allUnitsFromCurriculum(curriculum),activity.concepts);filterConcepts();nameInput.focus();
+  };
   newBtn.onclick = () => {
+    editingId=null;createBtn.textContent='Create';
     const opening = form.style.display === 'none';
     form.style.display = opening ? 'block' : 'none';
     if (opening) {
@@ -720,8 +774,10 @@ function renderActivitiesCard(container, cls, curriculum, activityFns, onChange)
     if (!concepts.length) { alert('Pick at least one concept for this activity.'); return; }
     createBtn.disabled = true;
     try {
-      const created = await activityFns.create(cls.id, name, concepts, newAiDisabledCheckbox.checked);
-      activities = [created, ...activities];
+      const created = editingId
+        ? await activityFns.update(editingId,name,concepts,newAiDisabledCheckbox.checked)
+        : await activityFns.create(cls.id, name, concepts, newAiDisabledCheckbox.checked);
+      activities = [created, ...activities.filter(a=>a.id!==created.id)];
       renderOptions();
       select.value = created.id;
       form.style.display = 'none';
@@ -823,7 +879,9 @@ function badgeRow(labelNode, badgeText, badgeClass) {
 // there's no student data to expand into (e.g. Hub concepts, which counts
 // connections rather than students).
 function addExpandableRow(li, labelNode, badgeText, badgeClass, studentIds, roster, mostRecentByStudent, hrefFor) {
-  const row = badgeRow(labelNode, badgeText, badgeClass);
+  const content = badgeRow(labelNode, badgeText, badgeClass);
+  const row = document.createElement('button'); row.type = 'button'; row.className = content.className;
+  row.append(...content.childNodes); row.setAttribute('aria-expanded','false');
   li.appendChild(row);
   if (!studentIds || !studentIds.size || !roster) return;
 
@@ -857,6 +915,7 @@ function addExpandableRow(li, labelNode, badgeText, badgeClass, studentIds, rost
   row.onclick = () => {
     const isOpen = sub.style.display !== 'none';
     sub.style.display = isOpen ? 'none' : 'block';
+    row.setAttribute('aria-expanded', String(!isOpen));
     chevron.textContent = isOpen ? '▸' : '▾';
   };
 }
@@ -917,8 +976,8 @@ function renderClassInsights(summaryEl, grid, roster, mapsData, curriculum, taug
   grid.appendChild(isoCard);
 
   const missingTitle = taughtSet && taughtSet.size
-    ? 'Missing prerequisite connections <span class="beta-tag">Classwide gaps</span>'
-    : 'Missing prerequisite connections';
+    ? 'Connections to discuss <span class="beta-tag">Discussion prompts</span>'
+    : 'Connections to discuss';
   const missingCard = insightCard(missingTitle);
   missingCard.appendChild(insightList(missing, (item, li) => {
     const span = document.createElement('span');
@@ -926,7 +985,7 @@ function renderClassInsights(summaryEl, grid, roster, mapsData, curriculum, taug
     topicSpan.textContent = item.prereq + ' → ' + item.topic;
     topicSpan.title = item.reason || '';
     span.appendChild(topicSpan);
-    span.appendChild(document.createTextNode(' — connection missing'));
+    span.appendChild(document.createTextNode(' — no connection or path shown'));
     if (item.taught === true) {
       const tag = document.createElement('span');
       tag.className = 'beta-tag';
@@ -1028,7 +1087,7 @@ function setupExportReportButton(header, className, onToggleAnonymous) {
 
   const btn = document.createElement('button');
   btn.id = 'exportReportBtn';
-  btn.textContent = 'Export PDF';
+  btn.textContent = 'Print / save PDF';
   btn.title = "Opens the print dialog - choose \"Save as PDF\" as the destination";
   actions.appendChild(btn);
 
@@ -1073,6 +1132,9 @@ function renderClassDashboard(wrap, cls, roster, maps, mapsWithData, curriculum,
   const rosterCard = document.createElement('div');
   rosterCard.className = 'dash-card';
   wrap.appendChild(rosterCard);
+  const nav = document.createElement('nav'); nav.setAttribute('aria-label','Class dashboard sections');
+  [[activitiesCard,'Activities'],[insightsGrid,'Insights'],[glanceCard,'Student maps'],[taughtCard,'Topics taught'],[rosterCard,'Roster']].forEach(([section,label],i)=>{section.id='class-section-'+i; const a=document.createElement('a'); a.href='#'+section.id; a.textContent=label; nav.appendChild(a);});
+  nav.className='dashboard-sections'; wrap.prepend(nav);
 
   let taughtSet = new Set(cls.taught_topics || []);
   let anonymous = false;
@@ -1157,6 +1219,8 @@ function renderClassDashboard(wrap, cls, roster, maps, mapsWithData, curriculum,
   renderActivitiesCard(activitiesCard, cls, curriculum, activityFns, (activityId, newActivities) => {
     selectedActivityId = activityId;
     activities = newActivities;
+    const meta=header?.parentElement.querySelector('.dash-meta');
+    if(meta && cls.id.startsWith('sample-'))meta.textContent=`${roster.length} students · ${activities.length} activities · ${maps.length} saved maps`;
     rerender();
   });
 
@@ -1186,6 +1250,7 @@ function buildSampleActivityFns(classId='sample-class') {
       activities=[created,...activities]; return created;
     },
     del:async id=>{activities=activities.filter(a=>a.id!==id);},
+    update:async(id,name,concepts,disabled)=>{const a=activities.find(a=>a.id===id);Object.assign(a,{name,concepts,ai_disabled:disabled});return a;},
     setAiDisabled:async(id,disabled)=>{const a=activities.find(a=>a.id===id);if(a)a.ai_disabled=disabled;},
   };
 }
@@ -1341,7 +1406,9 @@ function setupDashboardAuth() {
 
   signOutBtn.onclick = async () => { await window.SpanAuth.signOut(); };
 
+  let classLoadVersion=0;
   async function loadClass(cls) {
+    const version=++classLoadVersion;
     dashWrap.innerHTML = '';
     if (classList.length > 1) {
       const picker = document.createElement('div');
@@ -1380,9 +1447,11 @@ function setupDashboardAuth() {
         window.SpanAuth.listClassMapsWithData(cls.id),
       ]);
     } catch (e) {
+      if(version!==classLoadVersion || !loading.isConnected)return;
       loading.textContent = 'Could not load class data.';
       return;
     }
+    if(version!==classLoadVersion || !loading.isConnected)return;
     loading.remove();
 
     const body = document.createElement('div');
@@ -1396,14 +1465,18 @@ function setupDashboardAuth() {
 
   let classList = [];
 
+  let dashboardLoadVersion=0;
   async function showTeacherDashboard() {
+    const version=++dashboardLoadVersion; ++classLoadVersion;
     dashWrap.innerHTML = '<div class="dash-empty-state">Loading your classes…</div>';
     try {
       classList = await window.SpanAuth.listMyClasses();
     } catch (e) {
+      if(version!==dashboardLoadVersion)return;
       dashWrap.innerHTML = '<div class="dash-empty-state"><p>Could not load your classes.</p></div>';
       return;
     }
+    if(version!==dashboardLoadVersion)return;
     if (!classList.length) {
       dashWrap.innerHTML = `
         <div class="dash-empty-state">
@@ -1420,6 +1493,7 @@ function setupDashboardAuth() {
   }
 
   function updateAuthUI(session) {
+    ++dashboardLoadVersion; ++classLoadVersion;
     if (session) {
       signInBtn.style.display = 'none';
       userMenu.style.display = 'flex';

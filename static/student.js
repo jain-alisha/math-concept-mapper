@@ -215,9 +215,24 @@ function renderMyMapCards(container, maps, hrefFor) {
     }
     card.appendChild(thumbWrap);
     card.appendChild(body);
-    grid.appendChild(card);
+    const item=document.createElement('div'); item.appendChild(card);
+    if(window.SpanAuth?.isConfigured && !String(m.id).startsWith('sample-') && new URLSearchParams(window.location.search).get('sample')!=='1') {
+      const action=document.createElement('a'); action.textContent=m.is_checkpoint?'Make working copy':'Edit map';
+      action.href=m.is_checkpoint?'#':'playground?edit='+encodeURIComponent(m.id);
+      if(m.is_checkpoint)action.onclick=async e=>{e.preventDefault();try{const result=await window.SpanAuth.saveMap({title:m.title+' — working copy',data:m.data,activityId:m.activity_id});if(m.timeline_id)await window.SpanAuth.setMapTimeline(result.row.id,m.timeline_id);window.location.href='playground?edit='+encodeURIComponent(result.row.id);}catch(error){alert('Could not copy map: '+error.message);}};
+      item.appendChild(action);
+    }
+    grid.appendChild(item);
   });
-  container.appendChild(grid);
+  const search = document.createElement('input');
+  search.type = 'search';
+  search.placeholder = 'Find my map';
+  search.setAttribute('aria-label', 'Find my map');
+  search.oninput = () => {
+    const query = search.value.trim().toLocaleLowerCase();
+    [...grid.children].forEach(item => { item.hidden = !item.textContent.toLocaleLowerCase().includes(query); });
+  };
+  container.append(search, grid);
 }
 
 // 'sample-class' can't hit the real Supabase table (it's not a real row),
@@ -313,7 +328,7 @@ function renderStudentDashboardBody(wrap, mapsWithData, classes, hrefFor, timeli
 
   const mapsCard = document.createElement('div');
   mapsCard.className = 'dash-card';
-  mapsCard.innerHTML = '<h2>My maps</h2><p class="hint">Click a map to view it, or open the Playground and use My Maps to keep editing.</p>';
+  mapsCard.innerHTML = '<h2>My maps</h2><p class="hint">Preview a map, edit your work, or make a working copy of a starting checkpoint.</p>';
   const mapsBody = document.createElement('div');
   mapsCard.appendChild(mapsBody);
   wrap.appendChild(mapsCard);
@@ -344,6 +359,17 @@ function renderStudentDashboardBody(wrap, mapsWithData, classes, hrefFor, timeli
   classesCard.appendChild(classesBody);
   wrap.appendChild(classesCard);
   renderClassList(classesBody, classes);
+  const nav = document.createElement('nav');
+  nav.className = 'dashboard-sections';
+  nav.setAttribute('aria-label', 'Student dashboard sections');
+  [...wrap.querySelectorAll('.dash-card')].forEach((card, index) => {
+    card.id = 'student-section-' + index;
+    const link = document.createElement('a');
+    link.href = '#' + card.id;
+    link.textContent = card.querySelector('h2').textContent;
+    nav.appendChild(link);
+  });
+  wrap.prepend(nav);
 }
 
 // Slider + play button that scrubs through an ordered list of map
@@ -353,6 +379,10 @@ function renderStudentDashboardBody(wrap, mapsWithData, classes, hrefFor, timeli
 // one shared viewport across every snapshot.
 function renderTimelineViewer(container, timelineMaps) {
   if(container.stopPlayback)container.stopPlayback();
+  if (!timelineMaps.length) {
+    container.textContent = 'This timeline has no maps yet. Add a saved map from the Playground.';
+    return;
+  }
   container.innerHTML = `
     <div id="timelineFrameWrap"><svg id="timelineFrame"></svg></div>
     <div id="timelineControls">
@@ -590,7 +620,9 @@ function setupStudentDashboardAuth() {
 
   signOutBtn.onclick = async () => { await window.SpanAuth.signOut(); };
 
+  let dashboardLoadVersion=0;
   async function showStudentDashboard() {
+    const version=++dashboardLoadVersion;
     dashWrap.innerHTML = '<div class="dash-empty-state">Loading your maps…</div>';
     let mapRows, classes;
     try {
@@ -599,6 +631,7 @@ function setupStudentDashboardAuth() {
         window.SpanAuth.listMyClasses(),
       ]);
     } catch (e) {
+      if(version!==dashboardLoadVersion)return;
       dashWrap.innerHTML = '<div class="dash-empty-state"><p>Could not load your dashboard.</p></div>';
       return;
     }
@@ -618,13 +651,15 @@ function setupStudentDashboardAuth() {
     // is read-only, same division of labor as maps (build in the
     // Playground, review here).
     let timelineMaps = [];
+    let timelines = [];
     try {
-      const timelines = await window.SpanAuth.listMyTimelines();
+      timelines = await window.SpanAuth.listMyTimelines();
       if (timelines.length) timelineMaps = await window.SpanAuth.listTimelineMaps(timelines[0].id);
     } catch (e) {
       timelineMaps = [];
     }
 
+    if(version!==dashboardLoadVersion)return;
     dashWrap.innerHTML = '';
     const header = document.createElement('div');
     header.className = 'dash-header';
@@ -634,9 +669,20 @@ function setupStudentDashboardAuth() {
     const body = document.createElement('div');
     dashWrap.appendChild(body);
     renderStudentDashboardBody(body, mapsWithData, classes, (m) => `playground?view=${m.id}&readonly=1`, timelineMaps);
+    if(timelines.length) {
+      const card=[...body.querySelectorAll('.dash-card')].find(c=>c.querySelector('h2')?.textContent==='My Timeline');
+      const viewer=card.querySelector('#timelineFrameWrap')?.parentElement || document.createElement('div');
+      if(!viewer.parentElement)card.appendChild(viewer);
+      const label=document.createElement('label');label.textContent='Choose a growth timeline ';
+      const select=document.createElement('select');select.setAttribute('aria-label','Growth timeline');
+      timelines.forEach(t=>{const option=document.createElement('option');option.value=t.id;option.textContent=t.name;select.appendChild(option);});label.appendChild(select);card.insertBefore(label,viewer);
+      let loadVersion=0;
+      select.onchange=async()=>{const version=++loadVersion;try{const frames=await window.SpanAuth.listTimelineMaps(select.value);if(version===loadVersion)renderTimelineViewer(viewer,frames);}catch(error){if(version===loadVersion)viewer.textContent='Could not load timeline. Choose it again to retry.';}};
+    }
   }
 
   function updateAuthUI(session) {
+    ++dashboardLoadVersion;
     if (session) {
       signInBtn.style.display = 'none';
       userMenu.style.display = 'flex';
