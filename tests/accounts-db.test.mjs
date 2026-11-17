@@ -25,11 +25,10 @@ await db.exec(`insert into auth.users(id,email,raw_user_meta_data,raw_app_meta_d
 const rows=async(sql,params=[]) => (await db.query(sql,params)).rows;
 async function asUser(id,fn){await db.exec(`set role authenticated; select set_config('request.jwt.claim.sub','${id}',false);`);try{return await fn();}finally{await db.exec('reset role');}}
 let ownMap,checkpoint,firstClass,secondClass,firstActivity,secondActivity;
-test('demo role toggle goes both directions and changes only the caller',async()=>{
-  await asUser(alice,async()=>{await rows('select public.toggle_role()');});
-  assert.equal((await rows("select raw_app_meta_data->>'role' as role from auth.users where id=$1",[alice]))[0].role,'teacher');
-  await asUser(alice,async()=>{await rows('select public.toggle_role()');});
-  assert.equal((await rows("select raw_app_meta_data->>'role' as role from auth.users where id=$1",[alice]))[0].role,'student');
+test('student and teacher accounts cannot self-assign roles',async()=>{
+  await asUser(alice,async()=>{await assert.rejects(()=>rows('select public.toggle_role()'),/permission denied|administrator-assigned/);});
+  assert.equal((await rows("select raw_app_meta_data->>'role' as role from auth.users where id=$1",[alice]))[0].role,null);
+  await asUser(teacher,async()=>{await assert.rejects(()=>rows('select public.toggle_role()'),/permission denied|administrator-assigned/);});
   assert.equal((await rows("select raw_app_meta_data->>'role' as role from auth.users where id=$1",[teacher]))[0].role,'teacher');
 });
 test('one independent account can join two classes; no synthetic email leaks to roster',async()=>{
@@ -95,6 +94,13 @@ test('account registry and rate-limit RPC stay private',async()=>{
     await assert.rejects(()=>rows("select consume_student_account_attempt('x',5)"),/permission denied/);
   });
   for(let i=0;i<6;i++)assert.equal((await rows("select consume_student_account_attempt('signup:fox',5) as ok"))[0].ok,i<5);
+});
+test('leaving class only removes the caller membership and retains their maps',async()=>{
+  await asUser(teacher,async()=>{await rows('select * from join_class_by_code($1)',[secondClass.invite_code]);});
+  await asUser(alice,async()=>{await rows('delete from class_members where class_id=$1',[secondClass.id]);});
+  assert.equal((await rows('select * from class_members where class_id=$1 and student_id=$2',[secondClass.id,teacher])).length,1);
+  assert.equal((await rows('select * from class_members where class_id=$1 and student_id=$2',[secondClass.id,alice])).length,0);
+  assert.equal((await rows('select * from maps where id=$1',[ownMap.id])).length,1);
 });
 test('deleting auth account cascades maps, timelines, class memberships and username data',async()=>{
   await rows('insert into student_accounts(user_id,username) values ($1,$2) on conflict(user_id) do nothing',[alice,'map_fox']);

@@ -481,7 +481,7 @@
     "Compound events lists": "Compound event",
     "Compound events with tree diagrams": "Tree diagram",
     "Probability from simulations": "Simulation",
-    "Compare experimental and theoretical probability": "Probability models",
+    "Compare experimental and theoretical probability": "Probability model",
     "Use probability models": "Probability model",
     "Identify rational and irrational numbers": "Rational numbers",
     "Define irrational numbers (√2, π)": "Irrational numbers",
@@ -652,7 +652,8 @@
     "Tree diagrams for compound events": "Tree diagram",
     "Interpret probability word problems": "Probability",
     "Make predictions using probability models": "Prediction",
-    "Use probability to assess decision options": "Expected outcomes"
+    "Use probability to assess decision options": "Expected outcomes",
+    "Probability models": "Probability model"
   },
   "edges": [
     {

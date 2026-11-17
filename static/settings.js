@@ -45,6 +45,7 @@ function setupAppearance() {
       label.textContent = preset.label;
       card.appendChild(row);
       card.appendChild(label);
+      for(const [i,color] of (preset.nodeColors||[]).slice(0,3).entries()) {const preview=document.createElement('span');preview.className='theme-node-preview';preview.textContent=['Fraction','Number line','Whole'][i];preview.style.background=color.fill;preview.style.borderColor=color.stroke;preview.style.color=color.text;preview.setAttribute('aria-hidden','true');card.appendChild(preview);}
       card.onclick = () => {
         window.SpanTheme.setActive(preset.key);
         render();
@@ -269,27 +270,17 @@ function setupAuthAndClasses() {
       card.className = 'class-card';
       card.innerHTML = `<div class="class-name"></div>`;
       card.querySelector('.class-name').textContent = cls.name;
+      const leave = document.createElement('button'); leave.type='button'; leave.textContent='Leave class';
+      leave.onclick=async()=>{
+        if (!window.confirm(`Leave ${cls.name}? Your saved maps will remain in your account.`)) return;
+        leave.disabled=true;
+        try { await window.SpanAuth.leaveClass(cls.id); await renderStudentClasses(); }
+        catch(error) { leave.disabled=false; window.alert('Could not leave class: '+error.message); }
+      };
+      card.appendChild(leave);
       listEl.appendChild(card);
     });
   }
-
-  // DEMO-ONLY, TEMPORARY: see the loud comment on toggle_role() in
-  // supabase-schema.sql - self-serve, no gate, acceptable only because this
-  // deployment has no real student data at stake.
-  document.getElementById('toggleRoleBtn').onclick = async () => {
-    const btn = document.getElementById('toggleRoleBtn');
-    const errEl = document.getElementById('toggleRoleError');
-    errEl.textContent = '';
-    btn.disabled = true;
-    try {
-      const newSession = await window.SpanAuth.toggleRole();
-      updateAuthUI(newSession);
-    } catch (e) {
-      errEl.textContent = e.message || 'Could not update role.';
-    } finally {
-      btn.disabled = false;
-    }
-  };
 
   document.getElementById('joinClassBtn').onclick = async () => {
     const input = document.getElementById('joinCodeInput');
@@ -307,9 +298,8 @@ function setupAuthAndClasses() {
   };
 
   // --- Session-driven view switching ---
-  const roleToggleRow = document.getElementById('roleToggleRow');
-  const toggleRoleBtn = document.getElementById('toggleRoleBtn');
   function updateAuthUI(session) {
+    document.getElementById('accountSignedOut').hidden=!!session;
     if (session) {
       signInBtn.style.display = 'none';
       userMenu.style.display = 'flex';
@@ -318,8 +308,6 @@ function setupAuthAndClasses() {
       userLabel.textContent = `${name} (${role})`;
 
       classesSignedOut.style.display = 'none';
-      roleToggleRow.style.display = 'block';
-      toggleRoleBtn.textContent = role === 'teacher' ? 'Switch to student view →' : 'Switch to teacher view →';
       if (role === 'teacher') {
         classesTeacherView.style.display = '';
         classesStudentView.style.display = 'none';
@@ -333,7 +321,6 @@ function setupAuthAndClasses() {
       signInBtn.style.display = '';
       userMenu.style.display = 'none';
       classesSignedOut.style.display = '';
-      roleToggleRow.style.display = 'none';
       classesTeacherView.style.display = 'none';
       classesStudentView.style.display = 'none';
     }

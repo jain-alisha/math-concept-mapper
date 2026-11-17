@@ -92,3 +92,64 @@ test('reviewed fraction-related ideas include specific mathematics without a bac
   assert.equal((await w.requestSuggestions({label:'Equivalent fractions',meta:{}},'related',new Set(['Denominator']))).some(r=>r.label==='Denominator'),false);
   dom.window.close();
 });
+
+test('expired map-list requests refresh once and remain owner-scoped',async()=>{
+  const dom=new JSDOM('',{url:'https://spanmath.org',runScripts:'outside-only'});const w=dom.window;
+  let attempts=0,refreshes=0;const owners=[];
+  w.supabase={createClient:()=>({auth:{getSession:async()=>({data:{session:{user:{id:'owner'}}}}),refreshSession:async()=>{refreshes++;return {data:{session:{user:{id:'owner'}}}};}},from:()=>({select(){return this;},eq(key,id){owners.push([key,id]);return this;},async order(){attempts++;return attempts===1?{error:{code:'PGRST301'},status:401}:{data:[{id:'mine'}]};}})})};
+  vm.runInContext(fs.readFileSync('static/auth.js','utf8'),dom.getInternalVMContext());
+  assert.equal((await w.SpanAuth.listMyMaps())[0].id,'mine');assert.equal(refreshes,1);assert.equal(attempts,2);
+  assert.deepEqual(owners,[['owner_id','owner'],['owner_id','owner']]);dom.window.close();
+});
+
+test('My Maps exposes a retry after a failed request',async()=>{
+  const {dom,w,d,run}=fixture();let attempts=0;
+  w.SpanAuth={isConfigured:true,getSession:async()=>({user:{id:'me',email:'qa@example.com'}}),role:()=> 'student',onAuthStateChange(){},listMyTimelines:async()=>[],listMyMaps:async()=>{if(++attempts===1)throw Error('Network unavailable');return [];}};
+  run('setupAuthUI()');await turn();d.getElementById('myMapsBtn').click();await turn();
+  assert.match(d.getElementById('myMapsList').textContent,/Network unavailable/);
+  [...d.querySelectorAll('#myMapsList button')].find(b=>b.textContent==='Try again').click();await turn();
+  assert.equal(attempts,2);assert.match(d.getElementById('myMapsList').textContent,/No saved maps/);dom.window.close();
+});
+
+test('opening dialogs clears stale selection controls while preserving suggestions',async()=>{
+  const {dom,w,d,run}=fixture();
+  run("selectedLink={id:1};nodeToolbarState={node:{id:1}};ghostState={suggestions:[{label:'Whole'}]};document.getElementById('linkToolbar').style.display='flex';");
+  const result=w.showPromptDialog('Explain Fraction → Number line','', {multiline:true});
+  assert.equal(run('selectedLink'),null);assert.equal(d.getElementById('linkToolbar').style.display,'none');
+  assert.equal(run('ghostState.suggestions.length'),1);assert.equal(d.getElementById('promptDialogInput').rows,5);
+  d.getElementById('promptDialogInput').value='First line\nSecond line';
+  d.getElementById('promptDialogOk').click();assert.equal(await result,'First line\nSecond line');dom.window.close();
+});
+
+test('reverse connections require confirmation and new arrows invite an explanation',async()=>{
+  const {dom,w,run}=fixture();
+  run("nodes=[{id:1,label:'Fraction',x:50,y:50},{id:2,label:'Number line',x:300,y:150}];links=[{id:1,source:1,target:2,note:''}];linkIdCounter=2;renderCanvas=()=>{};window.explanations=0;showNoteEditor=async(link,cb)=>{window.explanations++;cb('A fraction has a position on a number line.');};showConfirmDialog=async()=>false;");
+  await w.addLink(2,1);assert.equal(run('links.length'),1);assert.equal(w.explanations,0);
+  run('showConfirmDialog=async()=>true');await w.addLink(2,1);
+  assert.equal(run('links.length'),2);assert.equal(w.explanations,1);assert.match(run('links[1].note'),/position/);dom.window.close();
+});
+
+test('catalogue node placement starts inside the current zoomed viewport',async()=>{
+  const {dom,w,d,run}=fixture();const area=d.getElementById('canvasArea');
+  Object.defineProperties(area,{clientWidth:{value:800},clientHeight:{value:600},scrollLeft:{value:200,writable:true},scrollTop:{value:100,writable:true}});
+  run('canvasScale=0.5;renderCanvas=()=>{};revealNewNode=()=>{};');await w.addCatalogConcept('Whole',{});
+  assert.ok(run('nodes[0].x')>800);assert.ok(run('nodes[0].y')>600);dom.window.close();
+});
+
+test('shared dashboard shell has a main landmark, skip link and no contact route',async()=>{
+  const dom=new JSDOM(fs.readFileSync('static/student.html','utf8'),{url:'https://spanmath.org/student',runScripts:'outside-only'});
+  const w=dom.window;w.SpanAuth={isConfigured:false};
+  vm.runInContext(fs.readFileSync('static/site-shell.js','utf8'),dom.getInternalVMContext());
+  await turn();const d=w.document;
+  assert.equal(d.getElementById('dashWrap').getAttribute('role'),'main');
+  assert.equal(d.querySelector('.skip-link').getAttribute('href'),'#dashWrap');
+  assert.equal([...d.querySelectorAll('a')].some(a=>/contact|issues\/new|mailto:/i.test(a.textContent+' '+a.href)),false);
+  assert.equal([...d.querySelectorAll('.span-nav-link')].find(a=>a.textContent==='Dashboard').getAttribute('aria-current'),'page');dom.window.close();
+});
+
+test('probability model spellings retain one concept identity and legacy alignment',()=>{
+  const {dom,w}=fixture();const bank=w.SpanConceptBank;
+  assert.equal(bank.resolve('Probability models').id,bank.resolve('Probability model').id);
+  const old=bank.node({i:1,l:'Probability models',m:{conceptId:'math:probability-models'}});
+  assert.equal(old.l,'Probability model');assert.equal(old.m.conceptId,'math:probability-model');dom.window.close();
+});

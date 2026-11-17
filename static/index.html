@@ -228,7 +228,7 @@
 <body>
   <div id="topbar">
     <a href="index" class="brand">
-      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="6" rx="1"/><rect x="2" y="16" width="6" height="6" rx="1"/><rect x="16" y="16" width="6" height="6" rx="1"/><path d="M12 8v4"/><path d="M5 16v-2a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v2"/></svg>
+      <svg aria-hidden="true" focusable="false" class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="6" rx="1"/><rect x="2" y="16" width="6" height="6" rx="1"/><rect x="16" y="16" width="6" height="6" rx="1"/><path d="M12 8v4"/><path d="M5 16v-2a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v2"/></svg>
       Span
     </a>
     <nav>
@@ -238,6 +238,7 @@
     </nav>
   </div>
 
+  <main id="mainContent">
   <div class="hero">
     <div class="hero-inner">
       <div>
@@ -249,13 +250,13 @@
         <div class="cta-row">
           <a class="btn btn-primary" href="playground">Try the Playground</a>
           <a class="btn btn-secondary" href="playground?sample=1">Explore a sample map</a>
-          <a class="btn btn-secondary" href="dashboard?sample=1">Explore a mock teacher dashboard</a>
-          <a class="btn btn-secondary" href="student?sample=1">Explore a mock student dashboard</a>
+          </div>
+        <div class="demo-links"><a href="dashboard?sample=1">Preview teacher dashboard</a><a href="student?sample=1">Preview student dashboard</a>
         </div>
       </div>
 
       <div class="hero-diagram-wrap">
-        <svg class="hero-diagram" width="540" height="360" viewBox="0 0 560 360" xmlns="http://www.w3.org/2000/svg">
+        <svg aria-hidden="true" focusable="false" class="hero-diagram" width="540" height="360" viewBox="0 0 560 360" xmlns="http://www.w3.org/2000/svg">
           <defs>
             <marker id="heroArrow" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto" markerUnits="userSpaceOnUse">
               <polygon points="0 0, 9 3.5, 0 7" fill="#a7b3c4"/>
@@ -304,7 +305,7 @@
   </div>
 
   <div class="proof-strip">
-    Built for <strong>students</strong><span class="dot" aria-hidden="true"><svg width="20" height="8" viewBox="0 0 20 8"><line x1="3" y1="4" x2="17" y2="4" stroke="var(--border)" stroke-width="1.4"/><circle cx="3" cy="4" r="2.4" fill="var(--brand)"/><circle cx="17" cy="4" r="2.4" fill="var(--brand)"/></svg></span><strong>teachers</strong><span class="dot" aria-hidden="true"><svg width="20" height="8" viewBox="0 0 20 8"><line x1="3" y1="4" x2="17" y2="4" stroke="var(--border)" stroke-width="1.4"/><circle cx="3" cy="4" r="2.4" fill="var(--brand)"/><circle cx="17" cy="4" r="2.4" fill="var(--brand)"/></svg></span><strong>curriculum designers</strong>
+    Built for <strong>students</strong><span class="dot" aria-hidden="true"><svg aria-hidden="true" focusable="false" width="20" height="8" viewBox="0 0 20 8"><line x1="3" y1="4" x2="17" y2="4" stroke="var(--border)" stroke-width="1.4"/><circle cx="3" cy="4" r="2.4" fill="var(--brand)"/><circle cx="17" cy="4" r="2.4" fill="var(--brand)"/></svg></span><strong>teachers</strong><span class="dot" aria-hidden="true"><svg aria-hidden="true" focusable="false" width="20" height="8" viewBox="0 0 20 8"><line x1="3" y1="4" x2="17" y2="4" stroke="var(--border)" stroke-width="1.4"/><circle cx="3" cy="4" r="2.4" fill="var(--brand)"/><circle cx="17" cy="4" r="2.4" fill="var(--brand)"/></svg></span><strong>curriculum designers</strong>
   </div>
 
   <section id="about">
@@ -325,7 +326,7 @@
       <div class="feature-card">
         <h3>Map your curriculum</h3>
         <p>Browse concepts by grade and unit (currently 3rd-8th grade math), then drag any topic directly onto the canvas or add your own if it's not in the list yet.</p>
-        <svg class="showcase" viewBox="0 0 220 100" xmlns="http://www.w3.org/2000/svg">
+        <svg aria-hidden="true" focusable="false" class="showcase" viewBox="0 0 220 100" xmlns="http://www.w3.org/2000/svg">
           <defs><marker id="a1" markerWidth="7" markerHeight="6" refX="6" refY="3" orient="auto"><polygon points="0 0,7 3,0 6" fill="#1976d2"/></marker></defs>
           <rect x="4" y="4" width="72" height="92" rx="10" fill="var(--bg)" stroke="var(--border)"/>
           <rect x="14" y="18" width="52" height="9" rx="4.5" fill="#dde3ec"/>
@@ -342,7 +343,7 @@
       <div class="feature-card">
         <h3>Show how concepts connect</h3>
         <p>Draw arrows between concepts to mark prerequisites, extensions, and related ideas.</p>
-        <svg class="showcase" viewBox="0 0 220 100" xmlns="http://www.w3.org/2000/svg">
+        <svg aria-hidden="true" focusable="false" class="showcase" viewBox="0 0 220 100" xmlns="http://www.w3.org/2000/svg">
           <defs><marker id="a2" markerWidth="7" markerHeight="6" refX="6" refY="3" orient="auto"><polygon points="0 0,7 3,0 6" fill="#a7b3c4"/></marker></defs>
           <path d="M78,26 Q98,26 118,26" fill="none" stroke="#a7b3c4" stroke-width="1.8" marker-end="url(#a2)"/>
           <path d="M40,42 Q30,58 45,72" fill="none" stroke="#a7b3c4" stroke-width="1.8" marker-end="url(#a2)"/>
@@ -358,7 +359,7 @@
       <div class="feature-card">
         <h3>Explore what connects</h3>
         <p>Click a concept and ask what it builds on, leads to, or relates to - suggestions show up as ghost nodes right on the map.</p>
-        <svg class="showcase" viewBox="0 0 220 100" xmlns="http://www.w3.org/2000/svg">
+        <svg aria-hidden="true" focusable="false" class="showcase" viewBox="0 0 220 112" xmlns="http://www.w3.org/2000/svg">
           <path d="M78,54 Q94,32 110,19" fill="none" stroke="var(--border)" stroke-width="1.6" stroke-dasharray="3 3"/>
           <path d="M78,54 Q96,54 110,55" fill="none" stroke="var(--border)" stroke-width="1.6" stroke-dasharray="3 3"/>
           <path d="M78,54 Q94,72 110,89" fill="none" stroke="var(--border)" stroke-width="1.6" stroke-dasharray="3 3"/>
@@ -382,7 +383,7 @@
         <span class="label">For Teachers</span>
         <p class="statement">See where students may be missing prerequisite connections.</p>
         <p class="support">Build the path you expect students to follow through a unit, then compare it with the connections they actually make.</p>
-        <svg class="showcase" viewBox="0 0 268 50" xmlns="http://www.w3.org/2000/svg" style="margin-top:0.4em;">
+        <svg aria-hidden="true" focusable="false" class="showcase" viewBox="0 0 268 50" xmlns="http://www.w3.org/2000/svg" style="margin-top:0.4em;">
           <rect x="6" y="8" width="86" height="26" rx="13" fill="var(--blue-bg)" stroke="var(--blue-bd)"/>
           <text x="49" y="25" text-anchor="middle" font-size="9" font-weight="600" fill="var(--blue-tx)" font-family="-apple-system,Segoe UI,Arial,sans-serif">Ratios</text>
           <path d="M92,21 L160,21" fill="none" stroke="var(--amber-bd)" stroke-width="1.6" stroke-dasharray="3 3"/>
@@ -397,7 +398,7 @@
         <span class="label">For Students</span>
         <p class="statement">See how what you're learning fits into the bigger picture.</p>
         <p class="support">Trace a concept back to what it builds on and forward to what it leads to next.</p>
-        <svg class="showcase" viewBox="0 0 268 60" xmlns="http://www.w3.org/2000/svg" style="margin-top:0.4em;">
+        <svg aria-hidden="true" focusable="false" class="showcase" viewBox="0 0 268 60" xmlns="http://www.w3.org/2000/svg" style="margin-top:0.4em;">
           <defs><marker id="a3" markerWidth="7" markerHeight="6" refX="6" refY="3" orient="auto"><polygon points="0 0,7 3,0 6" fill="#a7b3c4"/></marker></defs>
           <rect x="2" y="16" width="70" height="24" rx="12" fill="var(--surface)" stroke="var(--border)" stroke-dasharray="3 2"/>
           <text x="37" y="32" text-anchor="middle" font-size="8.5" fill="var(--text-muted)" font-family="-apple-system,Segoe UI,Arial,sans-serif">Fractions</text>
@@ -452,6 +453,7 @@
     <a class="btn btn-primary" href="playground">Open the Playground →</a>
   </div>
 
+  </main>
   <footer class="site-footer">Span · demo site</footer>
   <script>
     document.getElementById('aboutLink').addEventListener('click', (e) => {
