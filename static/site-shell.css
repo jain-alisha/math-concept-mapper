@@ -175,3 +175,9 @@ section:has(> h2 + p + .features) > .features > .feature-card { flex:1 1 250px; 
 .dash-card, .dash-wrap > div { min-width:0; overflow-wrap:anywhere; }
 .theme-node-preview { display:inline-block; margin:4px; padding:5px 10px; border:1px solid; border-radius:999px; font-size:.78rem; }
 @media print { .insights-grid { columns:auto; } }
+.dash-card button, .dash-card select { overflow-wrap:normal; }
+@media(max-width:600px) {
+ .activity-select-row { flex-wrap:wrap; }
+ .activity-select-row select { flex:1 0 100%; width:100%; }
+ .activity-select-row button { flex:none; white-space:nowrap; }
+}

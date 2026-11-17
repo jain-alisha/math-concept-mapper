@@ -299,6 +299,7 @@ function setupAuthAndClasses() {
 
   // --- Session-driven view switching ---
   function updateAuthUI(session) {
+    document.getElementById('accountSignedOut').hidden=!!session;
     if (session) {
       signInBtn.style.display = 'none';
       userMenu.style.display = 'flex';
