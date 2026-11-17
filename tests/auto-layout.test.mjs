@@ -30,8 +30,8 @@ test('cycles, reciprocal arrows, isolated concepts and narrow canvases remain us
   assert.deepEqual(arrange(n,e,{width:390}),p);
   const second=arrange(n.map((n,i)=>({...n,x:p[i].x,y:p[i].y})),e,{width:390});assert.deepEqual(second,p);
 });
-test('related arrows group concepts without imposing prerequisite order',()=>{
-  const n=[node(1),node(2)],p=arrange(n,[edge(1,2,'related')]);assert.equal(p[0].y,p[1].y);
+test('related arrows retain their direction and meaning while arranging positions',()=>{
+  const n=[node(1),node(2)],e=[edge(1,2,'related')],p=arrange(n,e);assert.ok(p[0].y<p[1].y);assert.equal(e[0].relType,'related');
   assert.deepEqual(arrange([],[]),[]);assert.equal(arrange([node(1)],[]).length,1);
 });
 test('large directed maps do not recurse indefinitely or lose nodes',()=>{

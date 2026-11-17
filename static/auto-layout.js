@@ -11,8 +11,7 @@
     for (const e of links) {
       if (!byId.has(e.source) || !byId.has(e.target) || e.source === e.target) continue;
       neighbours.get(e.source).push(e.target); neighbours.get(e.target).push(e.source);
-      // Sideways/example relationships keep concepts together without imposing a rank.
-      if (['related', 'example', 'representation'].includes(e.relType)) continue;
+      // Follow visible arrow direction for geometry only, regardless of its meaning.
       outgoing.get(e.source).push(e.target); incoming.get(e.target).push(e.source);
     }
 
