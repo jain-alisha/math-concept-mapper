@@ -3870,17 +3870,6 @@
       ]
     },
     {
-      "id": "math:probability-models",
-      "label": "Probability models",
-      "alignments": [
-        {
-          "grade": "7th Grade Math",
-          "unit": "Statistics & Probability",
-          "sourceSkill": "Compare experimental and theoretical probability"
-        }
-      ]
-    },
-    {
       "id": "math:probability-model",
       "label": "Probability model",
       "alignments": [
@@ -3888,6 +3877,11 @@
           "grade": "7th Grade Math",
           "unit": "Statistics & Probability",
           "sourceSkill": "Use probability models"
+        },
+        {
+          "grade": "7th Grade Math",
+          "unit": "Statistics & Probability",
+          "sourceSkill": "Compare experimental and theoretical probability"
         }
       ]
     },
@@ -5663,7 +5657,7 @@
     "7th Grade Math::Statistics & Probability::Compound events lists": "math:compound-event",
     "7th Grade Math::Statistics & Probability::Compound events with tree diagrams": "math:tree-diagram",
     "7th Grade Math::Statistics & Probability::Probability from simulations": "math:simulation",
-    "7th Grade Math::Statistics & Probability::Compare experimental and theoretical probability": "math:probability-models",
+    "7th Grade Math::Statistics & Probability::Compare experimental and theoretical probability": "math:probability-model",
     "7th Grade Math::Statistics & Probability::Use probability models": "math:probability-model",
     "7th Grade Math::Statistics & Probability::Make predictions from data": "math:prediction",
     "8th Grade Math::The Number System::Identify rational and irrational numbers": "math:rational-numbers",
@@ -6264,7 +6258,7 @@
     "Compound events lists": "Compound event",
     "Compound events with tree diagrams": "Tree diagram",
     "Probability from simulations": "Simulation",
-    "Compare experimental and theoretical probability": "Probability models",
+    "Compare experimental and theoretical probability": "Probability model",
     "Use probability models": "Probability model",
     "Identify rational and irrational numbers": "Rational numbers",
     "Define irrational numbers (√2, π)": "Irrational numbers",
@@ -6491,6 +6485,7 @@
     "Equal parts": "Equal parts",
     "Unit fractions": "Unit fraction",
     "Number line": "Number line",
-    "Multiply a fraction by a whole": "Fraction multiplication"
+    "Multiply a fraction by a whole": "Fraction multiplication",
+    "Probability models": "Probability model"
   }
 }

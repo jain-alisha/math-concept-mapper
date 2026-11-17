@@ -164,3 +164,14 @@ body.anonymous-projection .dash-header h1 { display: none !important; }
 section:has(> h2 + p + .features) > p { text-align:center; }
 section:has(> h2 + p + .features) > .features { display:flex; flex-wrap:wrap; justify-content:center; }
 section:has(> h2 + p + .features) > .features > .feature-card { flex:1 1 250px; max-width:340px; box-sizing:border-box; }
+
+.beta-tag { white-space:nowrap; display:inline-block; }
+.map-card-item > details { border-top:1px solid var(--border); padding:12px; margin:0; }
+#ghostMoreBar { transform:translate(-100%,-100%); border-radius:12px; }
+.dash-wrap input[type=search], .dash-wrap select { font:inherit; padding:10px 12px; color:var(--text); background:var(--surface); border:1px solid var(--border); border-radius:8px; max-width:100%; }
+
+.dash-wrap { width:100%; max-width:1128px; min-width:0; box-sizing:border-box; }
+.dash-header-actions { flex-wrap:wrap; min-width:0; }
+.dash-card, .dash-wrap > div { min-width:0; overflow-wrap:anywhere; }
+.theme-node-preview { display:inline-block; margin:4px; padding:5px 10px; border:1px solid; border-radius:999px; font-size:.78rem; }
+@media print { .insights-grid { columns:auto; } }

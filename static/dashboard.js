@@ -254,7 +254,7 @@ function computeClassSummary(mapsData) {
   const leading = coverage[0];
   const students = new Set(mapsData.map(m => m.owner_id)).size;
   const connections = mapsData.reduce((sum, m) => sum + ((m.data && m.data.e) || []).length, 0);
-  return `${students} student${students === 1 ? ' has' : 's have'} saved maps with ${connections} connection${connections === 1 ? '' : 's'}. Most students are working in ${leading.unit} (${leading.grade}): ${leading.students} student${leading.students === 1 ? '' : 's'}, as shown in Curriculum coverage.`;
+  return `${connections} connection${connections === 1 ? '' : 's'} across saved maps. Most students are working in ${leading.unit} (${leading.grade}): ${leading.students} student${leading.students === 1 ? '' : 's'}. See Curriculum coverage for the breakdown.`;
 }
 
 // taughtSet (optional): a Set of "grade::unit::prereq" strings the teacher
@@ -462,7 +462,8 @@ function renderStudentMapCards(container, roster, mapsWithData, hrefFor, activit
     }
     card.appendChild(thumbWrap);
     card.appendChild(body);
-    const item = document.createElement('div');
+    const item = document.createElement('div'); item.className='map-card-item';
+    if(m){const counts=document.createElement('p');counts.className='map-card-counts';counts.textContent=`${(m.data?.n||[]).length} concepts · ${(m.data?.e||[]).length} connections`;body.appendChild(counts);}
     item.appendChild(card);
     if (card._details) item.appendChild(card._details);
     grid.appendChild(item);

@@ -103,7 +103,7 @@
   }
 
   window.SpanTheme = {
-    presets: Object.keys(PRESETS).map(key => ({ key, label: PRESETS[key].label, brand: PRESETS[key].brand })),
+    presets: Object.keys(PRESETS).map(key => ({ key, label: PRESETS[key].label, brand: PRESETS[key].brand, nodeColors: PRESETS[key].nodeColors })),
     getActiveKey: () => activeKey,
     setActive,
     getNodeColors: () => (PRESETS[activeKey] || PRESETS.default).nodeColors,

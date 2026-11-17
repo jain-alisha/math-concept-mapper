@@ -3661,8 +3661,9 @@ function updateNodeOverlays() {
       // To the left of the anchor, vertically centered - stays clear of
       // ghost action bars regardless of whether this question's ghosts
       // land above, below, or to the right (related's own side).
-      moreBar.style.left = (arect.left - 12) + 'px';
-      moreBar.style.top = (arect.top + arect.height / 2) + 'px';
+      const canvasBounds=document.getElementById('canvasArea').getBoundingClientRect();
+      moreBar.style.left = (canvasBounds.right - 16) + 'px';
+      moreBar.style.top = (canvasBounds.bottom - 16) + 'px';
       if (ghostState.loading) {
         moreBar.style.display = 'block';
         moreBar.innerHTML = '<span class="loading-label">Thinking…</span><button id="cancelExploreBtn">Cancel</button>';

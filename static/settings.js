@@ -45,6 +45,7 @@ function setupAppearance() {
       label.textContent = preset.label;
       card.appendChild(row);
       card.appendChild(label);
+      for(const [i,color] of (preset.nodeColors||[]).slice(0,3).entries()) {const preview=document.createElement('span');preview.className='theme-node-preview';preview.textContent=['Fraction','Number line','Whole'][i];preview.style.background=color.fill;preview.style.borderColor=color.stroke;preview.style.color=color.text;preview.setAttribute('aria-hidden','true');card.appendChild(preview);}
       card.onclick = () => {
         window.SpanTheme.setActive(preset.key);
         render();

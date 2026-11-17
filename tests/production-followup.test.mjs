@@ -135,3 +135,21 @@ test('catalogue node placement starts inside the current zoomed viewport',async(
   run('canvasScale=0.5;renderCanvas=()=>{};revealNewNode=()=>{};');await w.addCatalogConcept('Whole',{});
   assert.ok(run('nodes[0].x')>800);assert.ok(run('nodes[0].y')>600);dom.window.close();
 });
+
+test('shared dashboard shell has a main landmark, skip link and no contact route',async()=>{
+  const dom=new JSDOM(fs.readFileSync('static/student.html','utf8'),{url:'https://spanmath.org/student',runScripts:'outside-only'});
+  const w=dom.window;w.SpanAuth={isConfigured:false};
+  vm.runInContext(fs.readFileSync('static/site-shell.js','utf8'),dom.getInternalVMContext());
+  await turn();const d=w.document;
+  assert.equal(d.getElementById('dashWrap').getAttribute('role'),'main');
+  assert.equal(d.querySelector('.skip-link').getAttribute('href'),'#dashWrap');
+  assert.equal([...d.querySelectorAll('a')].some(a=>/contact|issues\/new|mailto:/i.test(a.textContent+' '+a.href)),false);
+  assert.equal([...d.querySelectorAll('.span-nav-link')].find(a=>a.textContent==='Dashboard').getAttribute('aria-current'),'page');dom.window.close();
+});
+
+test('probability model spellings retain one concept identity and legacy alignment',()=>{
+  const {dom,w}=fixture();const bank=w.SpanConceptBank;
+  assert.equal(bank.resolve('Probability models').id,bank.resolve('Probability model').id);
+  const old=bank.node({i:1,l:'Probability models',m:{conceptId:'math:probability-models'}});
+  assert.equal(old.l,'Probability model');assert.equal(old.m.conceptId,'math:probability-model');dom.window.close();
+});

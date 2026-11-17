@@ -27,18 +27,19 @@
     if (!menu) return;
     for (const [href, label] of [['index', 'Home'], ['playground', 'Playground'], ['student', 'Dashboard'], ['settings', 'Settings'], ['privacy', 'Privacy']]) {
       const found = Array.from(menu.querySelectorAll('a')).find(a => {
+        if(a.getAttribute('href').includes('auth=1'))return false;
         const path = a.getAttribute('href').split('?')[0].replace(/\.html$/, '');
         return href === 'student' ? ['student', 'dashboard'].includes(path) && !a.search : path === href;
       });
       const a = found || document.createElement('a');
       if (!found) { a.href = href; a.textContent = label; menu.appendChild(a); }
       if (!editor) menu.appendChild(a);
-      a.classList.add('span-nav-link');
+      a.className='span-nav-link'; a.textContent=label;
       if (href === 'student') a.dataset.spanDashboard = 'true';
       const current = location.pathname.replace(/\.html$/, '').replace(/^\//, '') || 'index';
       if (current === href || (href === 'student' && current === 'dashboard')) a.setAttribute('aria-current', 'page');
     }
-    for (const a of Array.from(menu.querySelectorAll('a'))) if (!a.classList.contains('span-nav-link') && a.id !== 'signInBtn' && !a.closest('#userMenu')) a.remove();
+    for (const a of Array.from(menu.querySelectorAll('a'))) if (!a.classList.contains('span-nav-link') && a.id !== 'signInBtn' && !a.getAttribute('href').includes('auth=1') && !a.closest('#userMenu')) a.remove();
     let signIn = document.getElementById('signInBtn');
     if (!signIn) {
       signIn = bar.querySelector('a[href*="auth=1"]');
@@ -89,7 +90,7 @@
       window.SpanAuth.getSession().then(render).catch(() => render(null));
       window.SpanAuth.onAuthStateChange(render);
     } else render(null);
-    const main = document.querySelector('main, #container, .settings-wrap, .student-wrap, .dashboard-wrap, .dashboard-container');
+    const main = document.querySelector('main, #container, .settings-wrap, #dashWrap');
     if (main) { main.id = main.id || 'mainContent'; main.setAttribute('role','main'); main.tabIndex = -1;
       const skip = document.createElement('a'); skip.className='skip-link'; skip.href='#'+main.id; skip.textContent='Skip to main content'; document.body.prepend(skip);
     }
