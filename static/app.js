@@ -305,6 +305,7 @@ window.onload = async function() {
   setupExportPdfButton();
   setupClearMapButton();
   setupFitMapButton();
+  setupAutoLayoutButton();
   setupHelpDropdown();
   setupAiSummaryButton();
   setupCheckMapButton();
@@ -415,6 +416,8 @@ async function loadReadonlyMap(id) {
 }
 
 function applyReadonlyUI() {
+  const layoutButton = document.getElementById('autoLayoutBtn');
+  if (layoutButton) { layoutButton.hidden = true; layoutButton.style.display = 'none'; }
   const sidebar = document.getElementById('sidebar');
   if (sidebar) sidebar.style.display = 'none';
   const checker = document.getElementById('checkMapBtn');
@@ -893,6 +896,24 @@ function setupFitMapButton() {
   document.getElementById('zoomOutBtn').onclick = () => setCanvasScale(canvasScale / 1.2);
   document.getElementById('zoomInBtn').onclick = () => setCanvasScale(canvasScale * 1.2);
   document.getElementById('zoomResetBtn').onclick = () => setCanvasScale(1);
+}
+
+function autoLayoutMap() {
+  if (isReadonly || demoPlaying || nodes.length < 2 || !window.SpanAutoLayout) return;
+  const area = document.getElementById('canvasArea');
+  const positions = window.SpanAutoLayout.arrange(nodes, links, getNodeWidth, {
+    width: Math.max(300, Math.min(1200, area?.clientWidth || 1000)), nodeHeight: NODE_HEIGHT,
+  });
+  if (!positions.some((p, i) => p.x !== nodes[i].x || p.y !== nodes[i].y)) { fitMap(); return; }
+  // Record the current positions too, including a drag that has just finished.
+  pushHistory();
+  positions.forEach((p, i) => { nodes[i].x = p.x; nodes[i].y = p.y; });
+  dismissSelectionControls(); ghostState = null; selectedNode = null;
+  renderCanvas(); autosave(); pushHistory(); fitMap();
+}
+function setupAutoLayoutButton() {
+  const button = document.getElementById('autoLayoutBtn');
+  if (button) button.onclick = autoLayoutMap;
 }
 
 // --- Export current map to PDF, cropped tight to the nodes ---
@@ -2693,6 +2714,8 @@ function resolveChipCollisions(chips, nodeRects) {
 
 // --------- Main Canvas Drawing ---------
 function renderCanvas() {
+  const layoutButton = document.getElementById('autoLayoutBtn');
+  if (layoutButton) layoutButton.disabled = isReadonly || demoPlaying || nodes.length < 2;
   updateMapTitle();
   positionMapLegends();
   updateCanvasSize();
