@@ -2,6 +2,7 @@
 
 let conceptsData = {};
 let prerequisiteData = { aliases: {}, edges: [] };
+let relatedData = {pairs: []};
 let nodeIdCounter = 1;
 let linkIdCounter = 1;
 let nodes = [];
@@ -287,6 +288,7 @@ function showPromptDialog(message, defaultValue = '') {
 window.onload = async function() {
   conceptsData = await fetch('concepts.json').then(r => r.json());
   prerequisiteData = await fetch('prerequisites.json').then(r => { if (!r.ok) throw new Error('Unavailable'); return r.json(); }).catch(() => ({ aliases: {}, edges: [] }));
+  relatedData = await fetch('related-connections.json').then(r => {if(!r.ok)throw new Error('Unavailable');return r.json();}).catch(() => ({pairs:[]}));
   setupEditorPanels();
   initTopicPicker();
   renderConceptList();
@@ -323,6 +325,7 @@ window.onload = async function() {
     }
   } else if (params.get('sample') === '1') {
     loadSampleMap();
+    loadAutosave();
   } else {
     await setupActivityContext(params);
     loadAutosave();
@@ -669,7 +672,7 @@ function applyMapData(data) {
 function draftStorageKey() {
   const params = new URLSearchParams(window.location.search);
   const context = params.get('activity') || params.get('demoActivity');
-  return shareDraftKey || (cloudMapId ? AUTOSAVE_KEY + ':map:' + cloudMapId : context ? AUTOSAVE_KEY + ':activity:' + context : AUTOSAVE_KEY);
+  return shareDraftKey || (cloudMapId ? AUTOSAVE_KEY + ':map:' + cloudMapId : context ? AUTOSAVE_KEY + ':activity:' + context : params.get('sample') === '1' ? AUTOSAVE_KEY + ':sample' : AUTOSAVE_KEY);
 }
 
 function syncCloudMapIdentity() {
@@ -764,9 +767,9 @@ function showShareBanner(hasDraft) {
   const el = document.getElementById('readonlyBanner');
   if (!el) return;
   el.innerHTML = hasDraft
-    ? 'Editing a copy of this shared map — your changes are saved in this browser only. '
+    ? 'Shared copy · saved in this browser only. '
       + '<button id="resetShareDraftBtn" style="margin-left:0.3em;background:none;border:none;color:var(--brand);text-decoration:underline;cursor:pointer;font-weight:600;font-family:inherit;font-size:1em;">Reset to original</button>'
-    : 'Viewing a shared map — edits are saved as your own copy in this browser, not sent back to whoever shared it.';
+    : 'Shared copy · edits stay in this browser; original unchanged.';
   el.hidden = false;
   const resetBtn = document.getElementById('resetShareDraftBtn');
   if (resetBtn) resetBtn.onclick = async () => {
@@ -1776,6 +1779,7 @@ function setupAuthUI() {
   function stopTimelinePlayback() {
     if (timelinePlayTimer) { clearInterval(timelinePlayTimer); timelinePlayTimer = null; }
     timelinePlayBtn.innerHTML = '&#9654;';
+    timelinePlayBtn.setAttribute('aria-label', 'Play timeline');
   }
 
   function showTimelineList() {
@@ -1800,7 +1804,9 @@ function setupAuthUI() {
     timelineList.innerHTML = '';
     timelines.forEach(t => {
       const li = document.createElement('li');
-      const nameSpan = document.createElement('span');
+      const nameSpan = document.createElement('button');
+      nameSpan.type = 'button';
+      nameSpan.className = 'timeline-open';
       nameSpan.textContent = t.name;
       nameSpan.style.flex = '1';
       nameSpan.onclick = () => openTimelineViewer(t);
@@ -1814,7 +1820,6 @@ function setupAuthUI() {
         await window.SpanAuth.deleteTimeline(t.id);
         li.remove();
       };
-      li.onclick = () => openTimelineViewer(t);
       li.appendChild(nameSpan);
       li.appendChild(delBtn);
       timelineList.appendChild(li);
@@ -1966,11 +1971,14 @@ function setupAuthUI() {
   timelineExpandBtn.onclick = () => {
     const expanded = timelinePanel.classList.toggle('timeline-expanded');
     timelineExpandBtn.title = expanded ? 'Shrink' : 'Expand to full screen';
+    timelineExpandBtn.setAttribute('aria-expanded', String(expanded));
+    timelinePanel.style.display = expanded ? 'flex' : 'block';
   };
   timelinePlayBtn.onclick = () => {
     if (timelinePlayTimer) { stopTimelinePlayback(); return; }
     if (timelineMaps.length < 2) return;
     timelinePlayBtn.innerHTML = '&#10074;&#10074;';
+    timelinePlayBtn.setAttribute('aria-label', 'Pause timeline');
     timelinePlayTimer = setInterval(() => {
       let next = Number(timelineSlider.value) + 1;
       if (next > timelineMaps.length - 1) next = 0;
@@ -2545,7 +2553,10 @@ document.getElementById('mapCanvas').ondrop = ev => {
 
 async function addCatalogConcept(label, meta, position = {x:40, y:40}) {
   const concept = window.SpanConceptBank?.resolve(label, meta);
-  const existing = nodes.find(n => concept?.id ? n.meta?.conceptId === concept.id : n.label === label);
+  const existing = nodes.find(n => {
+    const resolved = window.SpanConceptBank?.resolve(n.label, n.meta || {});
+    return concept?.id ? (resolved?.id || n.meta?.conceptId) === concept.id : n.label === label;
+  });
   if (existing && !await showConfirmDialog(`“${label}” is already on this map. Add another copy?`, {okLabel:'Add another'})) {
     selectedNode = existing; renderCanvas(); return;
   }
@@ -2680,6 +2691,19 @@ function renderCanvas() {
     path.setAttribute('d', curvedPathD(start, end));
     path.setAttribute('class', 'link'+(link.note ? ' has-note' : '')+(link === selectedLink ? ' selected' : ''));
     path.setAttribute('data-link-id', link.id);
+    path.setAttribute('tabindex', '0');
+    path.setAttribute('role', 'button');
+    const sourceName = nodes.find(n => n.id === link.source)?.label || 'Unknown concept';
+    const targetName = nodes.find(n => n.id === link.target)?.label || 'Unknown concept';
+    path.setAttribute('aria-label', `${isReadonly ? 'Read' : 'Edit'} connection: ${sourceName} → ${targetName}. ${link.note || 'No explanation yet.'}`);
+    path.onkeydown = e => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      e.preventDefault(); e.stopPropagation();
+      if (isReadonly) { showAlertDialog(link.note || 'No explanation has been added to this connection.'); return; }
+      showNoteEditor(link, note => {
+        link.note = note; renderNotesSidebar(); renderCanvas(); autosave(); pushHistory();
+      });
+    };
 
     // --- Link interaction: select, note, delete (ctrl+double-click) ---
     path.onclick = e => {
@@ -3199,6 +3223,16 @@ async function requestSuggestions(node, question, exclude) {
       relationship: question === 'builds_on' ? 'prerequisite' : 'builds toward', reason:edge.reason,
     }));
   }
+  const used = new Set([...nodes.map(n => n.label), ...exclude]);
+  const reviewed = relatedData.pairs.flatMap(pair => {
+    const other = pair.a === node.label ? pair.b : pair.b === node.label ? pair.a : null;
+    if (!other || used.has(other)) return [];
+    const concept = window.SpanConceptBank?.resolve(other);
+    const alignment = concept?.alignments.find(a => a.grade === node.meta?.grade) || concept?.alignments[0];
+    return [{label:other,meta:{...(alignment || {}),...(concept ? {conceptId:concept.id} : {})},
+      source:node.label,target:other,relationship:'related',basis:'reviewed',reason:pair.reason}];
+  }).slice(0,3);
+  if (reviewed.length) return reviewed;
   const backendUrl = window.AI_BACKEND_URL || 'http://localhost:5000';
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 20000);
@@ -3621,7 +3655,7 @@ function openEditorPanel(id, anchor) {
     panel.style.left = Math.max(8, Math.min(r.left, innerWidth - 390)) + 'px';
     panel.style.top = (r.bottom + 8) + 'px';
   }
-  panel.style.display = 'block';
+  panel.style.display = id === 'timelinePanel' && panel.classList.contains('timeline-expanded') ? 'flex' : 'block';
 }
 function setupEditorPanels() {
   for (const id of EDITOR_PANELS) {
@@ -3656,10 +3690,13 @@ function positionMapLegends() {
   if (!area) return;
   const mobile = innerWidth <= 500;
   const notices = document.getElementById('mapNotices');
+  const hints = document.getElementById('mapHints');
+  if (hints) hints.hidden = !mobile;
+  const hintBody = document.getElementById('mapHintsBody');
   for (const id of ['isolatedLegend','aiAddedLegend','arrowLegend']) {
     const el = document.getElementById(id);
     if (!el) continue;
-    const parent = mobile && notices ? notices : area;
+    const parent = mobile && notices ? (hintBody || notices) : area;
     if (el.parentElement !== parent) parent.appendChild(el);
     if (mobile) {
       Object.assign(el.style, {position:'static', left:'auto', right:'auto', top:'auto', bottom:'auto', maxWidth:'100%'});

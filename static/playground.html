@@ -898,7 +898,7 @@
             <div id="timelineEmpty" class="settings-empty" style="display:none;">This timeline has no maps yet. Add one from My Maps.</div>
             <div id="timelineControls">
               <button id="timelinePlayBtn" title="Play">&#9654;</button>
-              <input type="range" id="timelineSlider" min="0" max="0" value="0" step="1" />
+              <input aria-label="Timeline snapshot" type="range" id="timelineSlider" min="0" max="0" value="0" step="1" />
               <span id="timelineLabel"></span>
             </div>
           </div>
@@ -1005,6 +1005,7 @@
     <div id="mapNotices" role="status" aria-live="polite">
       <div id="activityBanner" hidden></div>
       <div id="readonlyBanner" hidden></div>
+      <details id="mapHints" hidden aria-live="off"><summary>Map hints</summary><div id="mapHintsBody"></div></details>
     </div>
   <div id="canvasArea">
     <div id="isolatedLegend">This idea isn't connected yet — what does it relate to? Select it, then Connect.</div>
