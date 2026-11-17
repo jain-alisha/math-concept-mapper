@@ -490,11 +490,11 @@ function renderConceptChecklist(container, curriculum, units, checkedKeys) {
   units.forEach(({ grade, unit }) => {
     const topics = (curriculum[grade] && curriculum[grade][unit]) || [];
     if (!topics.length) return;
-    const unitDiv = document.createElement('div');
+    const unitDiv = document.createElement('details');
     unitDiv.className = 'taught-unit';
     unitDiv.dataset.grade = grade;
     unitDiv.dataset.unit = unit;
-    const title = document.createElement('div');
+    const title = document.createElement('summary');
     title.className = 'taught-unit-title';
     title.textContent = `${unit} (${grade})`;
     unitDiv.appendChild(title);
@@ -514,7 +514,10 @@ function renderConceptChecklist(container, curriculum, units, checkedKeys) {
       li.appendChild(label);
       list.appendChild(li);
     });
-    unitDiv.appendChild(list);
+    const all = document.createElement('button'); all.type='button'; all.textContent='Select this unit';
+    all.onclick=()=>{for(const cb of list.querySelectorAll('input'))if(!cb.closest('li').hidden)cb.checked=true;};
+    const clear=document.createElement('button');clear.type='button';clear.textContent='Clear this unit';clear.onclick=()=>{for(const cb of list.querySelectorAll('input'))if(!cb.closest('li').hidden)cb.checked=false;};
+    unitDiv.append(all,clear,list);
     container.appendChild(unitDiv);
   });
   return checkboxes;
@@ -561,6 +564,7 @@ function renderTaughtTopicsChecklist(container, cls, mapsWithData, curriculum, o
       let visible=0;
       group.querySelectorAll('li').forEach(li=>{li.hidden=!!(grade.value && grade.value!==group.dataset.grade) || !li.textContent.toLocaleLowerCase().includes(query);if(!li.hidden)visible++;});
       group.hidden=!visible;
+      if(query)group.open=!!visible;
     });
   }
   search.oninput=filterTopics; grade.onchange=filterTopics;
@@ -683,6 +687,7 @@ function renderActivitiesCard(container, cls, curriculum, activityFns, onChange)
         if (!li.hidden) visible++;
       });
       group.hidden = !visible;
+      if(query)group.open=!!visible;
     });
     const selected = checkboxes.filter(cb => cb.checked);
     selectionCount.textContent = `${selected.length} concept${selected.length === 1 ? '' : 's'} selected` + (selected.length ? ': ' + selected.map(cb => cb.parentElement.textContent).join('; ') : '');
@@ -1006,7 +1011,7 @@ function renderClassInsights(summaryEl, grid, roster, mapsData, curriculum, taug
   }, prerequisiteDataAvailable ? 'No missing connections among the reviewed prerequisite relationships.' : 'Prerequisite analysis is temporarily unavailable. Reload to try again.'));
   grid.appendChild(missingCard);
 
-  const progressCard = insightCard('Student progress');
+  const progressCard = insightCard('Map size');
   const progressHint = document.createElement('p'); progressHint.className = 'hint';
   progressHint.textContent = 'Distinct concepts + total connections per student, lowest first.';
   progressCard.appendChild(progressHint);

@@ -2,7 +2,7 @@
 // and README.md for setup). Loaded after static/vendor/supabase.js.
 //
 // Signup starts in student view. Roles live in auth.users.app_metadata;
-// this pilot also intentionally provides the toggle_role RPC in Settings.
+// Teacher roles are assigned by an administrator, never by the browser.
 // Missing/absent app_metadata.role is treated as 'student'.
 
 (function () {
@@ -45,6 +45,18 @@
     return result;
   }
 
+  async function currentSession() {
+    const { data, error } = await client.auth.getSession();
+    if (error) throw error;
+    let session = data.session;
+    if (session?.expires_at && session.expires_at * 1000 < Date.now() + 60000) {
+      const refreshed = await client.auth.refreshSession();
+      if (refreshed.error) throw refreshed.error;
+      session = refreshed.data.session;
+    }
+    return session;
+  }
+
   window.SpanAuth = {
     isConfigured: true,
     async signUpStudent(username, password) {
@@ -66,6 +78,13 @@
       return data;
     },
     client,
+
+    async leaveClass(classId) {
+      const session = await currentSession();
+      if (!session) throw new Error('Sign in first.');
+      const {error} = await client.from('class_members').delete().eq('class_id',classId).eq('student_id',session.user.id);
+      if (error) throw error;
+    },
 
     async signUp(email, password, displayName) {
       const { data, error } = await client.auth.signUp({
@@ -93,7 +112,7 @@
     // that link is opened, at which point updatePassword() below can be
     // called to actually set the new password.
     async resetPasswordForEmail(email) {
-      if (email.toLowerCase().endsWith('@students.span.invalid')) throw new Error('Username accounts do not have an email reset link. Contact Span for sign-in help.');
+      if (email.toLowerCase().endsWith('@students.span.invalid')) throw new Error('Password recovery for username-only accounts is not available yet.');
       const { error } = await client.auth.resetPasswordForEmail(email, {
         redirectTo: window.location.origin + '/settings',
       });
@@ -106,8 +125,7 @@
     },
 
     async getSession() {
-      const { data } = await client.auth.getSession();
-      return data.session;
+      return currentSession();
     },
 
     onAuthStateChange(cb) {
@@ -116,37 +134,26 @@
 
     role: roleOf,
 
-    // DEMO-ONLY, TEMPORARY: flips the current user's role between student
-    // and teacher, no gate - see the loud comment on toggle_role() in
-    // supabase-schema.sql. Returns the refreshed session (app_metadata
-    // changes only show up in a *new* JWT, so a plain getSession() right
-    // after the RPC would still show the stale role).
-    async toggleRole() {
-      const { error } = await client.rpc('toggle_role');
-      if (error) {
-        if (error.code === 'PGRST202' || /toggle_role.*schema cache/i.test(error.message || '')) throw new Error('Role switching is not installed on this server yet. Ask the Span administrator to install the role-toggle migration. Your account and maps have not changed.');
-        throw error;
-      }
-      const { data, error: refreshError } = await client.auth.refreshSession();
-      if (refreshError) throw refreshError;
-      return data.session;
-    },
-
     // listMyMaps()'s contract is "maps I own" - it needs an explicit filter
     // now that a second RLS policy (teachers viewing their students' maps)
     // means "rows RLS lets me see" is no longer synonymous with "rows I own".
     // Without this filter, a teacher's own My Maps panel would silently
     // include every one of their students' maps too.
     async listMyMaps() {
-      const { data: { session } } = await client.auth.getSession();
-      if (!session) return [];
-      const { data, error } = await client
-        .from('maps')
-        .select('id,title,updated_at,created_at,timeline_id,activity_id,is_checkpoint')
-        .eq('owner_id', session.user.id)
-        .order('updated_at', { ascending: false });
-      if (error) throw error;
-      return data;
+      for (let attempt = 0; attempt < 2; attempt++) {
+        const session = await currentSession();
+        if (!session) throw new Error('Your session ended. Sign in again to load your maps.');
+        const { data, error, status } = await client.from('maps')
+          .select('id,title,updated_at,created_at,timeline_id,activity_id,is_checkpoint')
+          .eq('owner_id', session.user.id).order('updated_at', { ascending: false });
+        if (!error) return data;
+        if (attempt === 0 && (status === 401 || error.code === 'PGRST301' || error.code === 'PGRST303')) {
+          const refreshed = await client.auth.refreshSession();
+          if (refreshed.error || !refreshed.data.session) throw new Error('Your session ended. Sign in again to load your maps.');
+          continue;
+        }
+        throw error;
+      }
     },
 
     async loadMapById(id) {

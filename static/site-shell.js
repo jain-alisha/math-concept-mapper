@@ -25,7 +25,7 @@
       menu = document.createElement('div'); menu.className = 'span-global-nav'; nav.prepend(menu);
     }
     if (!menu) return;
-    for (const [href, label] of [['index', 'Home'], ['playground', 'Playground'], ['student', 'Dashboard'], ['settings', 'Settings']]) {
+    for (const [href, label] of [['index', 'Home'], ['playground', 'Playground'], ['student', 'Dashboard'], ['settings', 'Settings'], ['privacy', 'Privacy']]) {
       const found = Array.from(menu.querySelectorAll('a')).find(a => {
         const path = a.getAttribute('href').split('?')[0].replace(/\.html$/, '');
         return href === 'student' ? ['student', 'dashboard'].includes(path) && !a.search : path === href;
@@ -36,11 +36,9 @@
       a.classList.add('span-nav-link');
       if (href === 'student') a.dataset.spanDashboard = 'true';
       const current = location.pathname.replace(/\.html$/, '').replace(/^\//, '') || 'index';
-      if (current === href) a.setAttribute('aria-current', 'page');
+      if (current === href || (href === 'student' && current === 'dashboard')) a.setAttribute('aria-current', 'page');
     }
-    if (editor && !menu.querySelector('a[href="privacy"]')) {
-      const privacy = document.createElement('a'); privacy.href = 'privacy'; privacy.className = 'span-nav-link'; privacy.textContent = 'Privacy & contact'; menu.appendChild(privacy);
-    }
+    for (const a of Array.from(menu.querySelectorAll('a'))) if (!a.classList.contains('span-nav-link') && a.id !== 'signInBtn' && !a.closest('#userMenu')) a.remove();
     let signIn = document.getElementById('signInBtn');
     if (!signIn) {
       signIn = bar.querySelector('a[href*="auth=1"]');
@@ -52,6 +50,10 @@
       userMenu.id = 'userMenu';
       userMenu.innerHTML = '<span id="userLabel"></span><button id="signOutBtn" type="button">Log out</button>';
       nav.appendChild(userMenu);
+    }
+    if (editor) {
+      const label=document.getElementById('userLabel'), logout=document.getElementById('signOutBtn');
+      if(label && logout)userMenu.replaceChildren(label,logout);
     }
     if (!editor) { if (signIn) nav.appendChild(signIn); nav.appendChild(userMenu); }
     // Sample pages intentionally skip their normal account setup. Keep the
@@ -87,10 +89,15 @@
       window.SpanAuth.getSession().then(render).catch(() => render(null));
       window.SpanAuth.onAuthStateChange(render);
     } else render(null);
+    const main = document.querySelector('main, #container, .settings-wrap, .student-wrap, .dashboard-wrap, .dashboard-container');
+    if (main) { main.id = main.id || 'mainContent'; main.setAttribute('role','main'); main.tabIndex = -1;
+      const skip = document.createElement('a'); skip.className='skip-link'; skip.href='#'+main.id; skip.textContent='Skip to main content'; document.body.prepend(skip);
+    }
+    if (!bar.querySelector('.brand .icon')) { const icon=document.createElement('span');icon.className='icon';icon.textContent='✦';icon.setAttribute('aria-hidden','true');bar.querySelector('.brand')?.prepend(icon); }
     let footer = document.querySelector('footer.site-footer');
     if (!footer) { footer = document.createElement('footer'); document.body.appendChild(footer); }
     footer.classList.add('site-footer', 'span-site-footer');
-    footer.innerHTML = '<span>Span</span><a href="privacy">Privacy &amp; student data</a><a href="https://github.com/jain-alisha/math-concept-mapper/issues/new" target="_blank" rel="noopener">Contact the Span team</a>';
+    footer.innerHTML = '<span>Span</span><a href="privacy">Privacy &amp; student data</a>';
     if (editor) footer.classList.add('span-editor-footer');
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', setup);

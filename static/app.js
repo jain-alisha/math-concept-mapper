@@ -223,6 +223,7 @@ function measureTextWidthAtSize(label, fontSize) {
 // shape (confirm: true/false, prompt: string/null), just backed by
 // #confirmDialogOverlay/#promptDialogOverlay instead of the browser chrome.
 function showConfirmDialog(message, opts = {}) {
+  dismissSelectionControls();
   return new Promise(resolve => {
     const overlay = document.getElementById('confirmDialogOverlay');
     const msgEl = document.getElementById('confirmDialogMessage');
@@ -257,7 +258,8 @@ function showConfirmDialog(message, opts = {}) {
 function showAlertDialog(message) {
   return showConfirmDialog(message, { alertOnly: true });
 }
-function showPromptDialog(message, defaultValue = '') {
+function showPromptDialog(message, defaultValue = '', opts = {}) {
+  dismissSelectionControls();
   return new Promise(resolve => {
     const overlay = document.getElementById('promptDialogOverlay');
     const msgEl = document.getElementById('promptDialogMessage');
@@ -267,6 +269,9 @@ function showPromptDialog(message, defaultValue = '') {
     if (!overlay || !msgEl || !input || !okBtn || !cancelBtn) { resolve(window.prompt(message, defaultValue)); return; }
     msgEl.textContent = message;
     input.value = defaultValue;
+    input.rows = opts.multiline ? 5 : 1;
+    input.setAttribute('aria-label', message);
+    input.maxLength = opts.multiline ? 2000 : 200;
     overlay.style.display = 'flex';
     const cleanup = (result) => {
       overlay.style.display = 'none';
@@ -277,7 +282,7 @@ function showPromptDialog(message, defaultValue = '') {
     const onKey = (e) => { if (e.key === 'Escape') cleanup(null); };
     okBtn.onclick = () => cleanup(input.value);
     cancelBtn.onclick = () => cleanup(null);
-    input.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); cleanup(input.value); } };
+    input.onkeydown = (e) => { if (e.key === 'Enter' && (!opts.multiline || e.ctrlKey || e.metaKey)) { e.preventDefault(); cleanup(input.value); } };
     overlay.onclick = (e) => { if (e.target === overlay) cleanup(null); };
     document.addEventListener('keydown', onKey);
     setTimeout(() => { input.focus(); input.select(); }, 0);
@@ -864,11 +869,22 @@ function setCanvasScale(scale) {
   if (reset) reset.textContent = Math.round(canvasScale * 100) + '%';
   renderCanvas();
 }
+function canvasTopInset() {
+  const area = document.getElementById('canvasArea');
+  const legend = document.getElementById('arrowLegend');
+  if (!area || !legend || legend.parentElement !== area || legend.style.display === 'none') return 0;
+  return Math.max(0, legend.getBoundingClientRect().bottom - area.getBoundingClientRect().top) + 8;
+}
 function fitMap() {
   const box = mapExportBoundingBox(), area = document.getElementById('canvasArea');
+  if (box && ghostState) for (const s of ghostState.suggestions) if (s._pos) {box.minX=Math.min(box.minX,s._pos.x);box.minY=Math.min(box.minY,s._pos.y);box.maxX=Math.max(box.maxX,s._pos.x+Math.max(240,getNodeWidth(s.label)));box.maxY=Math.max(box.maxY,s._pos.y+NODE_HEIGHT+60);}
   if (!box || !area) return;
-  setCanvasScale(Math.min(1,(area.clientWidth-40)/(box.maxX-box.minX),(area.clientHeight-40)/(box.maxY-box.minY)));
-  area.scrollTo({left:Math.max(0,box.minX*canvasScale-20),top:Math.max(0,box.minY*canvasScale-20)});
+  const inset = canvasTopInset();
+  setCanvasScale(Math.min(1, (area.clientWidth-48)/(box.maxX-box.minX+48), (area.clientHeight-inset-48)/(box.maxY-box.minY+48)));
+  const svg = document.getElementById('mapCanvas');
+  svg.style.marginLeft = Math.max(0,24-box.minX*canvasScale)+'px';
+  svg.style.marginTop = Math.max(0,inset+24-box.minY*canvasScale)+'px';
+  area.scrollTo({left:Math.max(0,box.minX*canvasScale-24),top:Math.max(0,box.minY*canvasScale-inset-24)});
 }
 function setupFitMapButton() {
   const btn = document.getElementById('fitMapBtn');
@@ -1264,7 +1280,8 @@ function renderCheckMapPanel() {
     return;
   }
   if (!total) {
-    body.innerHTML = '<p class="checkmap-empty">No gaps spotted — nice work.</p>';
+    body.innerHTML = '<p class="checkmap-empty">No gaps spotted among the reviewed relationships. Try adding a mathematical example to one explanation, or connect a new idea.</p><button type="button" id="closeCheckResult">Close</button>';
+    document.getElementById('closeCheckResult').onclick = closeCheckMapPanel;
     return;
   }
 
@@ -1938,7 +1955,7 @@ function setupAuthUI() {
     const m = timelineMaps[index];
     if (!m) return;
     renderTimelineFrame(timelineFrame, m.data);
-    timelineLabel.textContent = `${m.title} — ${new Date(m.created_at).toLocaleDateString()}`;
+    timelineLabel.textContent = `Snapshot ${index+1} of ${timelineMaps.length} · ${m.title} — ${new Date(m.created_at).toLocaleDateString()}`;
   }
 
   async function openTimelineViewer(t) {
@@ -2001,6 +2018,7 @@ function setupAuthUI() {
     }
   };
   timelineBtn.onclick = async () => {
+    dismissSelectionControls();
     const isOpen = getComputedStyle(timelinePanel).display !== 'none';
     if (isOpen) {
       timelinePanel.style.display = 'none';
@@ -2015,6 +2033,7 @@ function setupAuthUI() {
   };
 
   myMapsBtn.onclick = async () => {
+    dismissSelectionControls();
     // Check the *computed* style, not the inline one: myMapsPanel starts
     // hidden via the stylesheet (no inline style set at all yet), so
     // el.style.display reads '' rather than 'none' until something sets it
@@ -2036,7 +2055,12 @@ function setupAuthUI() {
       ]);
       renderMyMapsList(maps, timelines);
     } catch (e) {
-      myMapsList.innerHTML = '<li class="empty">Could not load maps.</li>';
+      myMapsList.replaceChildren();
+      const item = document.createElement('li'); item.className = 'empty';
+      const message = document.createElement('p'); message.textContent = 'Could not load maps. ' + (e.message || 'Check your connection.');
+      const retry = document.createElement('button'); retry.type = 'button'; retry.textContent = 'Try again';
+      retry.onclick = () => { myMapsPanel.style.display = 'none'; myMapsBtn.click(); };
+      item.append(message, retry); myMapsList.appendChild(item);
     }
   };
 
@@ -2219,7 +2243,8 @@ function makeDraggableTopicLi(grade, unit, topic) {
   li.ondragstart = ev => {
     ev.dataTransfer.setData('text/plain', JSON.stringify({ grade, unit, topic }));
   };
-  li.title = `${grade} › ${unit} · Click or press Enter to add`;
+  li.title = `${topic} · ${grade} › ${unit} · Click or press Enter to add`;
+  li.setAttribute('aria-label', `${topic}. ${grade}, ${unit}. Add concept`);
   li.tabIndex = 0; li.setAttribute('role', 'button');
   li.onclick = () => addCatalogConcept(topic, {grade, unit});
   li.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); li.click(); } };
@@ -2447,8 +2472,8 @@ function nodePositionIsClear(label, x, y, extra = [], includeGhosts = true) {
 }
 function findOpenNodePosition(label, preferred, extra = [], includeGhosts = true) {
   const w = getNodeWidth(label), area = document.getElementById('canvasArea');
-  const baseX = Math.max(16, preferred ? preferred.x : area ? area.scrollLeft + area.clientWidth/2 - w/2 : 90);
-  const baseY = Math.max(16, preferred ? preferred.y : area ? area.scrollTop + area.clientHeight/2 - NODE_HEIGHT/2 : 90);
+  const baseX = Math.max(16, preferred ? preferred.x : area ? (area.scrollLeft + area.clientWidth/2)/canvasScale - w/2 : 90);
+  const baseY = Math.max(16, preferred ? preferred.y : area ? (area.scrollTop + (area.clientHeight+canvasTopInset())/2)/canvasScale - NODE_HEIGHT/2 : 90);
   const clear = (x,y) => nodePositionIsClear(label,x,y,extra,includeGhosts);
   if (clear(baseX,baseY)) return {x:baseX,y:baseY};
   for (let ring=1;ring<=20;ring++) for (let dy=-ring;dy<=ring;dy++) for (let dx=-ring;dx<=ring;dx++) {
@@ -2468,8 +2493,8 @@ function revealNewNode(node) {
   if (area) {
     const w = getNodeWidth(node.label);
     area.scrollTo({
-      left: Math.max(0, node.x + w / 2 - area.clientWidth / 2),
-      top: Math.max(0, node.y + NODE_HEIGHT / 2 - area.clientHeight / 2),
+      left: Math.max(0, (node.x + w / 2)*canvasScale - area.clientWidth / 2),
+      top: Math.max(0, (node.y + NODE_HEIGHT / 2)*canvasScale - (area.clientHeight+canvasTopInset()) / 2),
       behavior: 'smooth',
     });
   }
@@ -2551,7 +2576,7 @@ document.getElementById('mapCanvas').ondrop = ev => {
   addCatalogConcept(obj.topic, {grade: obj.grade, unit: obj.unit}, {x,y});
 };
 
-async function addCatalogConcept(label, meta, position = {x:40, y:40}) {
+async function addCatalogConcept(label, meta, position) {
   const concept = window.SpanConceptBank?.resolve(label, meta);
   const existing = nodes.find(n => {
     const resolved = window.SpanConceptBank?.resolve(n.label, n.meta || {});
@@ -2560,7 +2585,9 @@ async function addCatalogConcept(label, meta, position = {x:40, y:40}) {
   if (existing && !await showConfirmDialog(`“${label}” is already on this map. Add another copy?`, {okLabel:'Add another'})) {
     selectedNode = existing; renderCanvas(); return;
   }
+  position = position || findOpenNodePosition(label);
   addNode(label, position.x, position.y, meta);
+  revealNewNode(nodes[nodes.length-1]);
 }
 
 function addNode(label, x, y, meta={}) {
@@ -3121,14 +3148,25 @@ function endLinkDrag() {
 // student asked (builds-on/leads-to vs. related) - see checkMyMap(),
 // which only treats a connection as an implied prerequisite claim when
 // this says so, instead of assuming every arrow means "prerequisite."
-function addLink(srcId, tgtId, relType = '') {
+async function addLink(srcId, tgtId, relType = '') {
   if (isReadonly) return;
   if (srcId === tgtId || links.some(l => l.source === srcId && l.target === tgtId)) return;
-  links.push({id: linkIdCounter++, source: srcId, target: tgtId, note: '', relType});
+  if (!relType) {
+    const seen = new Set(), stack = [tgtId];
+    while (stack.length) { const id = stack.pop(); if (seen.has(id)) continue; seen.add(id); for (const l of links) if (l.source === id) stack.push(l.target); }
+    if (seen.has(srcId) && !await showConfirmDialog('These ideas already connect in the other direction or through a path. Do they support each other? Add an explanation if you keep this arrow.', {okLabel:'Keep connection'})) return;
+    if (isReadonly || !nodes.some(n=>n.id===srcId) || !nodes.some(n=>n.id===tgtId) || links.some(l=>l.source===srcId&&l.target===tgtId)) return;
+  }
+  const created = {id: linkIdCounter++, source: srcId, target: tgtId, note: '', relType};
+  links.push(created);
   renderNotesSidebar();
   renderCanvas();
   autosave();
   pushHistory();
+  if (!relType) await showNoteEditor(created, note => {
+    if (!links.includes(created) || isReadonly) return;
+    created.note = note; renderCanvas(); autosave(); pushHistory();
+  });
 }
 function deleteNode(nodeId) {
   if (isReadonly) return;
@@ -3150,7 +3188,9 @@ function deleteLink(linkId) {
   pushHistory();
 }
 async function showNoteEditor(link, cb) {
-  let note = await showPromptDialog('These ideas connect because…', link.note || '');
+  const source = nodes.find(n => n.id === link.source)?.label || 'Concept';
+  const target = nodes.find(n => n.id === link.target)?.label || 'Concept';
+  let note = await showPromptDialog(`Explain ${source} → ${target}. These ideas connect because…`, link.note || '', {multiline:true});
   if (note !== null) cb(note);
 }
 function renderNotesSidebar() {
@@ -3168,11 +3208,14 @@ function renderNotesSidebar() {
 // explicit "+ Add" click, and dismissing one is just as easy.
 // ============================================================
 
+function dismissSelectionControls() {
+  nodeToolbarState = null; exploreMenuState = null; connectPending = null; selectedLink = null;
+  for (const id of ['nodeToolbar','linkToolbar','exploreMenu']) {
+    const el = document.getElementById(id); if (el) el.style.display = 'none';
+  }
+}
 function closeAllNodeOverlays() {
-  nodeToolbarState = null;
-  exploreMenuState = null;
-  ghostState = null;
-  connectPending = null;
+  dismissSelectionControls();
 }
 
 // Suggestions lay out in the direction their relationship actually points -
@@ -3276,6 +3319,7 @@ async function openExploreQuestion(node, question) {
   ghostState.suggestions = suggestions;
   ghostState.loading = false;
   renderCanvas();
+  fitMap();
 }
 
 async function showMoreSuggestions() {
@@ -3299,6 +3343,7 @@ async function showMoreSuggestions() {
   ghostState.exhausted = suggestions.length === 0;
   ghostState.loading = false;
   renderCanvas();
+  fitMap();
 }
 
 // Direction follows the suggestion's own source/target labels (one of
@@ -3335,8 +3380,8 @@ function showGhostReason(s, anchorRect) {
   const pop = document.getElementById('ghostReasonPopover');
   if (!pop) return;
   pop.style.display = 'block';
-  pop.style.left = Math.max(8, anchorRect.left - 60) + 'px';
-  pop.style.top = (anchorRect.bottom + 8) + 'px';
+  pop.style.left = (anchorRect.right + 12) + 'px';
+  pop.style.top = anchorRect.top + 'px';
   pop.innerHTML = '<div class="reason-rel"></div><p></p><button id="closeReasonBtn" title="Close">&times;</button>';
   pop.querySelector('.reason-rel').textContent = `${s.source} → ${s.target} (${s.relationship})`;
   pop.querySelector('p').textContent = s.reason;
@@ -3345,11 +3390,16 @@ function showGhostReason(s, anchorRect) {
 }
 
 function clampFloatingPanel(panel) {
-  panel.style.maxWidth = Math.max(100, innerWidth - 16) + 'px';
+  const bounds = document.getElementById('canvasArea')?.getBoundingClientRect();
+  const left = Math.max(8, bounds?.left + 8 || 8), right = Math.min(innerWidth-8, bounds?.right-8 || innerWidth-8);
+  const top = Math.max(8,bounds?.top+8 || 8), bottom = Math.min(innerHeight-8,bounds?.bottom-8 || innerHeight-8);
+  panel.style.maxWidth = Math.max(100, right-left) + 'px';
+  panel.style.maxHeight = Math.max(80,bottom-top)+'px';
+  panel.style.overflow = 'auto';
   panel.style.boxSizing = 'border-box';
   const rect = panel.getBoundingClientRect();
-  const dx = rect.left < 8 ? 8 - rect.left : rect.right > innerWidth - 8 ? innerWidth - 8 - rect.right : 0;
-  const dy = rect.top < 8 ? 8 - rect.top : rect.bottom > innerHeight - 8 ? innerHeight - 8 - rect.bottom : 0;
+  const dx = rect.left < left ? left - rect.left : rect.right > right ? right - rect.right : 0;
+  const dy = rect.top < top ? top - rect.top : rect.bottom > bottom ? bottom - rect.bottom : 0;
   panel.style.left = (parseFloat(panel.style.left) || 0) + dx + 'px';
   panel.style.top = (parseFloat(panel.style.top) || 0) + dy + 'px';
 }
@@ -3381,7 +3431,7 @@ function renderGhostSuggestions(svg) {
       s._pos = findOpenNodePosition(s.label, layoutGhostPosition(anchor,i,total,ghostState.question), occupied, false);
     }
     const pos = s._pos;
-    const w = getNodeWidth(s.label);
+    const w = Math.max(240, getNodeWidth(s.label));
 
     const fromGhost = s.source === s.label; // ghost is the edge's source -> arrow points at anchor
     const gx = pos.x + w / 2, gy = pos.y + NODE_HEIGHT / 2;
@@ -3469,6 +3519,7 @@ function updateNodeOverlays() {
       toolbar.style.display = 'flex';
       toolbar.style.left = (rect.left + rect.width / 2) + 'px';
       toolbar.style.top = rect.top + 'px';
+      clampFloatingPanel(toolbar);
       if (connectPending === node) {
         toolbar.innerHTML = `<span class="toolbar-hint">Click another node to connect…</span><button data-act="cancel-connect">Cancel</button>`;
       } else {
@@ -3476,6 +3527,7 @@ function updateNodeOverlays() {
           (aiToolsDisabled ? '' : `<span class="sep">&middot;</span><button data-act="explore">Find related ideas</button>`) +
           `<span class="sep">&middot;</span><button data-act="delete" class="toolbar-danger" title="Delete this concept">Delete</button>`;
       }
+      clampFloatingPanel(toolbar);
       toolbar.onclick = async e => {
         e.stopPropagation();
         const act = e.target.getAttribute('data-act');
@@ -3529,6 +3581,7 @@ function updateNodeOverlays() {
         linkToolbar.style.left = screenPt.x + 'px';
         linkToolbar.style.top = screenPt.y + 'px';
         linkToolbar.innerHTML = `<button data-act="note">${link.note ? 'Edit explanation' : 'Add explanation'}</button><span class="sep">&middot;</span><button data-act="delete" class="toolbar-danger" title="Delete this connection">Delete connection</button>`;
+        clampFloatingPanel(linkToolbar);
         linkToolbar.onclick = async e => {
           e.stopPropagation();
           const act = e.target.getAttribute('data-act');
@@ -3564,6 +3617,7 @@ function updateNodeOverlays() {
         <div class="explore-menu-title">Explore this concept</div>
         ${EXPLORE_QUESTIONS.map(q => `<button data-q="${q.key}"><div class="eq-title">${q.title}</div><div class="eq-hint">${q.hint}</div></button>`).join('')}
       `;
+      clampFloatingPanel(exploreMenu);
       exploreMenu.onclick = e => {
         e.stopPropagation();
         const btn = e.target.closest('button');
@@ -3599,6 +3653,7 @@ function updateNodeOverlays() {
         else if (act === 'why') showGhostReason(s, rect);
       };
       ghostLayer.appendChild(bar);
+      clampFloatingPanel(bar);
     });
 
     if (anchorG) {
@@ -3636,7 +3691,7 @@ function updateNodeOverlays() {
 
 document.addEventListener('click', e => {
   if (e.target.closest('#nodeToolbar, #exploreMenu, #ghostActionsLayer, #ghostMoreBar, #ghostReasonPopover, .node, .ghost-node')) return;
-  if (nodeToolbarState || exploreMenuState || ghostState || connectPending) {
+  if (nodeToolbarState || exploreMenuState || selectedLink || connectPending) {
     closeAllNodeOverlays();
     renderCanvas();
   }
@@ -3646,6 +3701,7 @@ document.addEventListener('click', e => {
 
 const EDITOR_PANELS = ['aiSummaryPanel','checkMapPanel','myMapsPanel','timelinePanel'];
 function openEditorPanel(id, anchor) {
+  dismissSelectionControls();
   for (const other of EDITOR_PANELS) if (other !== id) document.getElementById(other)?.style.setProperty('display','none');
   const panel = document.getElementById(id);
   if (!panel) return;
@@ -3676,7 +3732,7 @@ function setupEditorPanels() {
       if (el) { el.style.display = 'none'; el.classList.remove('timeline-expanded'); el.dispatchEvent(new Event('span:close')); }
     }
     document.getElementById('helpDropdownMenu')?.classList.remove('open');
-    closeAllNodeOverlays(); summaryHighlightIds = new Set(); checkMapDim = false; renderCanvas();
+    closeAllNodeOverlays(); ghostState=null; summaryHighlightIds = new Set(); checkMapDim = false; renderCanvas();
   });
 }
 function updateMapTitle() {

@@ -37,28 +37,7 @@ becomes a real problem):
   claim, not a hidden UI button) can create a class.
 ## Auth & roles
 
-- **⚠️ TEMPORARY, DEMO-ONLY — self-serve role toggle (2026-11-13, replacing
-  an earlier signup-code-gated version from 2026-11-11, which itself
-  replaced an even earlier ungated button from 2026-08-16).** `settings.html`
-  has a "Switch to teacher/student view" toggle for any signed-in user,
-  calling `toggle_role()` (`supabase-schema.sql`), which flips
-  `auth.users.app_metadata.role` with no gate and no approval - acceptable
-  only because this deployment is a demo with no real student data at
-  stake. **Before any real usage:** replace with a real gate (see the
-  signup-code and admin-only-flow options this section has tried before)
-  or remove the toggle entirely and go back to manual SQL promotion. Don't
-  let this linger once the app has real users.
-- **Note on a 2026-11-13 reversal attempt:** a separate pass (merged from
-  branch `fix/span-pilot-qa`, see `docs/PILOT_QA_FIXES.md` item 2) removed
-  this toggle in favor of admin-only role management, arguing self-serve
-  switching - even reversible - is unsafe ahead of a real pilot. That's a
-  reasonable position for a pilot launch. The user explicitly asked to
-  restore the toggle instead (keeping the rest of that merge), so it's
-  back - but the safety argument above still stands and should be
-  revisited before this app has real student users.
-- Previously: role (`student`/`teacher`) had no self-serve path at all -
-  see `static/auth.js` and `README.md` for the original manual-SQL
-  promotion flow (still works as a fallback for one-off promotions).
+- Teacher roles are administrator-assigned. The legacy role-switch RPC is denied and execution is revoked by `migrations/20261116_disable_self_serve_roles.sql`. Students can explore a fictional teacher dashboard without changing their account role.
 
 ## Next ideas for the portal
 

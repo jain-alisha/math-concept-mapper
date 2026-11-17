@@ -66,7 +66,7 @@
   function dataFor(project, count, edgeCount, variant=0) {
     const nodes=project.labels.slice(0,count).map((l,i)=>{
       const [x,y]=arrangements[project.id][i];
-      return {i:i+1,l,x:Math.round(x*0.75)+(variant ? ((variant+i)%3-1)*10 : 0),y:Math.round(y*0.85)+(variant ? ((variant*2+i)%3-1)*8 : 0),m:{grade:project.grade,unit:project.unit,presentationColor:i%6,...(window.SpanConceptBank?.resolve(l) ? {conceptId:window.SpanConceptBank.resolve(l).id} : {})}};
+      return {i:i+1,l,x:Math.round(x*0.75)+(variant ? ((variant+i)%3-1)*10 : 0),y:Math.round(y*0.85)+(variant ? ((variant*2+i)%3-1)*8 : 0),m:{grade:project.grade,unit:project.unit,presentationColor:i%6,aiAdded:variant>0 && i===project.labels.length-1,...(window.SpanConceptBank?.resolve(l) ? {conceptId:window.SpanConceptBank.resolve(l).id} : {})}};
     });
     const edges=project.edges.filter(([s,t])=>s<count&&t<count).slice(0,edgeCount).map(([s,t,note],i)=>({i:i+1,s:s+1,t:t+1,no:variant&&i%4===3?'':note,rt:'related'}));
     return {n:nodes,e:edges};

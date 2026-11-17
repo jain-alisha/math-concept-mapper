@@ -112,13 +112,7 @@ hides itself and logs a console note instead of breaking anything.
 purpose. Role lives in `auth.users.app_metadata`, which the client SDK cannot write directly
 (only a service-role/dashboard call, or a `SECURITY DEFINER` Postgres function, can).
 
-⚠️ **Temporary, demo-only exception:** a signed-in user can self-serve switch between the
-student and teacher views on `settings.html` with a "Switch to teacher/student view" toggle,
-which calls `toggle_role()` in `supabase-schema.sql` — completely ungated, and reversible in
-either direction. This is only acceptable because this deployment is a demo with no real
-student data at stake; see `TODO.md`'s "Auth & roles" section for the plan to replace it with
-a real gate before any real usage. The manual SQL path below still works and is the only
-*safe* promotion path until then:
+Teacher roles are administrator-assigned. Apply `migrations/20261116_disable_self_serve_roles.sql` to disable the legacy self-serve toggle. The browser has no role elevation control. An administrator can provision a verified teacher with:
 
 ```sql
 update auth.users

@@ -863,7 +863,7 @@
         <div id="myMapsPanel">
           <header>My Maps</header>
           <div class="my-maps-clear-row">
-            <button id="clearMapBtnInPanel">Clear this map</button>
+            <p class="hint">A starting checkpoint preserves this version so you can compare it with later work.</p>
           </div>
           <div class="my-maps-save-row">
             <input type="text" id="mapTitleInput" placeholder="Map title..." maxlength="80" />
@@ -927,7 +927,7 @@
       <div class="auth-error" id="signInError"></div>
     </form>
     <form id="forgotPasswordForm" style="display:none;">
-      <p class="hint">For an email account, request a password reset link. If your account has no email, <a href="privacy">contact the Span team</a> for sign-in help.</p>
+      <p class="hint">For email accounts, request a password reset link. Password recovery for username-only accounts is not available yet. Keep your password somewhere safe.</p>
       <input type="email" id="forgotEmail" aria-label="Account email" placeholder="Account email" autocomplete="email" required />
       <button type="submit">Send reset link</button>
       <button type="button" id="forgotBackBtn" style="background:none;border:none;color:var(--text-secondary);text-decoration:underline;cursor:pointer;padding:0;font-size:0.85em;align-self:flex-start;">Back to sign in</button>
@@ -1010,7 +1010,7 @@
   <div id="canvasArea">
     <div id="isolatedLegend">This idea isn't connected yet — what does it relate to? Select it, then Connect.</div>
     <div id="aiAddedLegend"><span class="ai-added-dot">&#10022;</span> = added from a suggestion, not typed in yourself</div>
-    <div id="arrowLegend">A → B: A supports B. For other relationships, add a note explaining the arrow.</div>
+    <div id="arrowLegend">A → B: A supports B. Explain other relationships. Gold arrows have an explanation; gray arrows need one.</div>
     <svg id="mapCanvas"></svg>
   </div>
   </div>
@@ -1027,7 +1027,7 @@
 <div id="promptDialogOverlay" class="modal-overlay">
   <div class="modal confirm-dialog">
     <p id="promptDialogMessage"></p>
-    <input type="text" id="promptDialogInput" maxlength="200" />
+    <textarea id="promptDialogInput" rows="1" maxlength="200" aria-label="Response"></textarea>
     <div class="confirm-dialog-actions">
       <button id="promptDialogCancel" type="button">Cancel</button>
       <button id="promptDialogOk" type="button" class="confirm-dialog-ok">OK</button>

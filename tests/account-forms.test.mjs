@@ -36,7 +36,7 @@ test('username signup signs in immediately with the same password',async()=>{
 test('forgot-password UI keeps email resets and explains username account help',async()=>{
   const {dom,w,d,calls}=await load();
   d.getElementById('signInEmail').value='fox_map';d.getElementById('forgotPasswordLink').click();
-  assert.equal(d.getElementById('forgotEmail').value,'');assert.match(d.getElementById('forgotPasswordForm').textContent,/no email/);
+  assert.equal(d.getElementById('forgotEmail').value,'');assert.match(d.getElementById('forgotPasswordForm').textContent,/username-only accounts is not available yet/);
   d.getElementById('forgotEmail').value='teacher@example.com';
   d.getElementById('forgotPasswordForm').dispatchEvent(new w.Event('submit',{cancelable:true}));await turn();
   assert.deepEqual(calls,['teacher@example.com']);dom.window.close();

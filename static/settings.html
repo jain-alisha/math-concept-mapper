@@ -188,6 +188,7 @@
   <nav class="settings-tabs">
     <button class="settings-tab active" data-tab="appearance">Appearance</button>
     <button class="settings-tab" data-tab="classes">Classes</button>
+    <button class="settings-tab" data-tab="account">Account</button>
   </nav>
 
   <section id="tab-appearance" class="settings-panel active">
@@ -211,19 +212,6 @@
       </div>
     </div>
 
-    <section id="accountDataControls" style="display:none; margin-bottom:1.5em;">
-      <h2>Your data</h2>
-      <p class="hint">Cloud maps, including starting checkpoints, are deleted after 12 months without edits. Export work you want to keep. You can delete your account and its cloud maps, class memberships, and timelines here. Classes you teach are also deleted. Backups and previously shared exports are not recalled.</p>
-      <label for="deleteAccountConfirmation">To delete your account permanently, type DELETE</label>
-      <input id="deleteAccountConfirmation" autocomplete="off" aria-label="Type DELETE to confirm account deletion" />
-      <button id="deleteAccountBtn" type="button">Delete my account and data</button>
-      <p id="deleteAccountError" role="alert"></p>
-    </section>
-    <div id="roleToggleRow" style="display:none; margin-bottom:1.5em;">
-      <button id="toggleRoleBtn" type="button" class="role-preview-cta" style="border:none; cursor:pointer;"></button>
-      <p class="auth-error" id="toggleRoleError"></p>
-    </div>
-
     <div id="classesTeacherView" style="display:none;">
       <h2>Your classes</h2>
       <p class="hint">Create a class to get an invite code your students can use to join. Each class links to its own Teacher Dashboard, where you'll see read-only maps saved for your class activities.</p>
@@ -245,6 +233,16 @@
       <div id="studentClassList"></div>
     </div>
   </section>
+  <section id="tab-account" class="settings-panel">
+    <section id="accountDataControls" style="display:none; margin-bottom:1.5em;">
+      <h2>Your data</h2>
+      <p class="hint">Cloud maps, including starting checkpoints, are deleted after 12 months without edits. Export work you want to keep. You can delete your account and its cloud maps, class memberships, and timelines here. Classes you teach are also deleted. Backups and previously shared exports are not recalled.</p>
+      <label for="deleteAccountConfirmation">To delete your account permanently, type DELETE</label>
+      <input id="deleteAccountConfirmation" autocomplete="off" aria-label="Type DELETE to confirm account deletion" />
+      <button id="deleteAccountBtn" type="button">Delete my account and data</button>
+      <p id="deleteAccountError" role="alert"></p>
+    </section>
+  </section>
 </div>
 
 <div id="authModal" class="modal-overlay">
@@ -262,7 +260,7 @@
       <div class="auth-error" id="signInError"></div>
     </form>
     <form id="forgotPasswordForm" style="display:none;">
-      <p class="hint">For an email account, request a password reset link. If your account has no email, <a href="privacy">contact the Span team</a> for sign-in help.</p>
+      <p class="hint">For email accounts, request a password reset link. Password recovery for username-only accounts is not available yet. Keep your password somewhere safe.</p>
       <input type="email" id="forgotEmail" aria-label="Account email" placeholder="Account email" autocomplete="email" required />
       <button type="submit">Send reset link</button>
       <button type="button" id="forgotBackBtn" style="background:none;border:none;color:var(--text-secondary);text-decoration:underline;cursor:pointer;padding:0;font-size:0.85em;align-self:flex-start;">Back to sign in</button>

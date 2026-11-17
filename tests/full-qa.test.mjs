@@ -94,7 +94,7 @@ test('zoomed pointer movement keeps logical node coordinates', () => {
 
 test('catalogue works by keyboard and reuses a duplicate when declined', async () => {
   const {dom,w,d,run} = fixture();
-  run('window.added=0;addNode=()=>{window.added++};renderCanvas=()=>{};showConfirmDialog=async()=>false;');
+  run('window.added=0;findOpenNodePosition=()=>({x:50,y:50});revealNewNode=()=>{};addNode=()=>{window.added++};renderCanvas=()=>{};showConfirmDialog=async()=>false;');
   const li=w.makeDraggableTopicLi('Grade3','Fractions','Unit fraction');
   d.body.appendChild(li);
   li.dispatchEvent(new w.KeyboardEvent('keydown',{key:'Enter',bubbles:true}));
@@ -110,7 +110,7 @@ test('taught topics can be selected before a single student submits', async () =
   let saved;
   w.renderTaughtTopicsChecklist(d.querySelector('main'),{id:'sample-class'},[],{Grade3:{Fractions:['Unit fraction']}},()=>{},async(id,topics)=>{saved=topics;});
   const cb=d.querySelector('input[type=checkbox]');assert.ok(cb);cb.checked=true;
-  d.querySelector('button').click();await turn();
+  d.querySelector('.taught-save-btn').click();await turn();
   assert.deepEqual(Array.from(saved),['Grade3::Fractions::Unit fraction']);
   dom.window.close();
 });

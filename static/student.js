@@ -215,12 +215,13 @@ function renderMyMapCards(container, maps, hrefFor) {
     }
     card.appendChild(thumbWrap);
     card.appendChild(body);
-    const item=document.createElement('div'); item.appendChild(card);
+    const item=document.createElement('div'); item.className='map-card-item'; item.dataset.title=m.title; item.dataset.date=m.updated_at || ''; item.dataset.checkpoint=String(!!m.is_checkpoint); item.appendChild(card);
+    const counts=document.createElement('p'); counts.className='map-card-counts'; counts.textContent=`${(m.data?.n||[]).length} concepts · ${(m.data?.e||[]).length} connections`; body.appendChild(counts);
     if(window.SpanAuth?.isConfigured && !String(m.id).startsWith('sample-') && new URLSearchParams(window.location.search).get('sample')!=='1') {
       const action=document.createElement('a'); action.textContent=m.is_checkpoint?'Make working copy':'Edit map';
       action.href=m.is_checkpoint?'#':'playground?edit='+encodeURIComponent(m.id);
       if(m.is_checkpoint)action.onclick=async e=>{e.preventDefault();try{const result=await window.SpanAuth.saveMap({title:m.title+' — working copy',data:m.data,activityId:m.activity_id});if(m.timeline_id)await window.SpanAuth.setMapTimeline(result.row.id,m.timeline_id);window.location.href='playground?edit='+encodeURIComponent(result.row.id);}catch(error){alert('Could not copy map: '+error.message);}};
-      item.appendChild(action);
+      action.className='map-card-action'; item.appendChild(action);
     }
     grid.appendChild(item);
   });
@@ -232,7 +233,14 @@ function renderMyMapCards(container, maps, hrefFor) {
     const query = search.value.trim().toLocaleLowerCase();
     [...grid.children].forEach(item => { item.hidden = !item.textContent.toLocaleLowerCase().includes(query); });
   };
-  container.append(search, grid);
+  const controls=document.createElement('div'); controls.className='map-list-controls';
+  const type=document.createElement('select'); type.setAttribute('aria-label','Map type');
+  for(const [value,label] of [['all','All saved maps'],['working','Working maps'],['checkpoints','Starting checkpoints']]) {const option=document.createElement('option');option.value=value;option.textContent=label;type.appendChild(option);}
+  const sort=document.createElement('select');sort.setAttribute('aria-label','Sort maps');
+  for(const [value,label] of [['recent','Most recent'],['name','Name A–Z']]) {const option=document.createElement('option');option.value=value;option.textContent=label;sort.appendChild(option);}
+  function applyFilter() {const query=search.value.trim().toLocaleLowerCase();for(const item of grid.children)item.hidden=!item.textContent.toLocaleLowerCase().includes(query)||(type.value==='working'&&item.dataset.checkpoint==='true')||(type.value==='checkpoints'&&item.dataset.checkpoint!=='true');}
+  search.oninput=applyFilter;type.onchange=applyFilter;sort.onchange=()=>{const items=[...grid.children];items.sort((a,b)=>sort.value==='name'?a.dataset.title.localeCompare(b.dataset.title):b.dataset.date.localeCompare(a.dataset.date));grid.append(...items);};
+  controls.append(search,type,sort);container.append(controls,grid);
 }
 
 // 'sample-class' can't hit the real Supabase table (it's not a real row),
@@ -386,8 +394,8 @@ function renderTimelineViewer(container, timelineMaps) {
   container.innerHTML = `
     <div id="timelineFrameWrap"><svg id="timelineFrame"></svg></div>
     <div id="timelineControls">
-      <button id="timelinePlayBtn" title="Play">&#9654;</button>
-      <input type="range" id="timelineSlider" min="0" max="0" value="0" step="1" />
+      <button id="timelinePlayBtn" title="Play" aria-label="Play timeline">&#9654;</button>
+      <input type="range" id="timelineSlider" aria-label="Timeline snapshot" min="0" max="0" value="0" step="1" />
       <span id="timelineLabel"></span>
     </div>
   `;
@@ -409,13 +417,14 @@ function renderTimelineViewer(container, timelineMaps) {
   function stopPlayback() {
     if (playTimer) { clearInterval(playTimer); playTimer = null; }
     playBtn.innerHTML = '&#9654;';
+    playBtn.setAttribute('aria-label','Play timeline');
   }
   container.stopPlayback=stopPlayback;
   function showFrame(index) {
     const m = timelineMaps[index];
     if (!m) return;
     renderTimelineFrame(svg, m.data, timelineBounds);
-    label.textContent = `${m.title} — ${new Date(m.created_at).toLocaleDateString()}`;
+    label.textContent = `Snapshot ${index+1} of ${timelineMaps.length} · ${m.title} — ${new Date(m.created_at).toLocaleDateString()}`;
   }
 
   slider.max = String(timelineMaps.length - 1);
@@ -427,6 +436,7 @@ function renderTimelineViewer(container, timelineMaps) {
     if (playTimer) { stopPlayback(); return; }
     if (timelineMaps.length < 2) return;
     playBtn.innerHTML = '&#10074;&#10074;';
+    playBtn.setAttribute('aria-label','Pause timeline');
     playTimer = setInterval(() => {
       let next = Number(slider.value) + 1;
       if (next > timelineMaps.length - 1) next = 0;
