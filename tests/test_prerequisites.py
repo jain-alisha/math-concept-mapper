@@ -21,6 +21,29 @@ class PrerequisiteTests(unittest.TestCase):
         suggestions = self.suggestions('Equivalent fractions', 'leads_to', meta={'grade':'3rd Grade Math','unit':'Number & Operations—Fractions'})
         self.assertTrue(suggestions)
 
+    def test_reviewed_related_pairs_use_specific_mathematics_in_both_directions(self):
+        forward = self.suggestions('Equivalent fractions', 'related')
+        denominator = next(s for s in forward if s['label'] == 'Denominator')
+        reverse = next(s for s in self.suggestions('Denominator', 'related') if s['label'] == 'Equivalent fractions')
+        self.assertEqual(denominator['reason'], reverse['reason'])
+        self.assertIn('2/3 = 4/6', denominator['reason'])
+        self.assertEqual('reviewed', denominator['basis'])
+        with patch.object(recommender, 'llm_relationship_suggestions', side_effect=AssertionError('reviewed pair should not need AI')):
+            result = recommender.app.test_client().post('/recommend', json={'selected_node':{'label':'Equivalent fractions'},'question':'related'})
+            self.assertTrue(all(s['basis'] == 'reviewed' for s in result.json['suggestions']))
+
+    def test_unreviewed_fallback_is_explicitly_a_candidate(self):
+        rows = self.suggestions('Equal groups', 'related')
+        self.assertTrue(rows)
+        self.assertTrue(all(s['relationship'] == 'possible connection' for s in rows))
+        self.assertTrue(all('No reviewed mathematical explanation' in s['reason'] for s in rows))
+
+    def test_reviewed_related_endpoints_are_real_concepts(self):
+        for pair in recommender.reviewed_related_pairs:
+            self.assertIn(pair['a'], recommender.concept_lookup)
+            self.assertIn(pair['b'], recommender.concept_lookup)
+            self.assertNotEqual(pair['a'], pair['b'])
+
     def test_no_keyword_fallback_for_unknown_or_terminal_topic(self):
         self.assertEqual([], self.suggestions('Unlisted mixed fraction idea', 'builds_on'))
         self.assertEqual([], self.suggestions('Mixed-number division', 'leads_to'))

@@ -17,6 +17,9 @@ with open(os.path.join(BASE_DIR, 'static', 'concepts.json'), encoding='utf-8') a
 with open(os.path.join(BASE_DIR, 'static', 'prerequisites.json'), encoding='utf-8') as f:
     prerequisite_graph = json.load(f)
 
+with open(os.path.join(BASE_DIR, 'static', 'related-connections.json'), encoding='utf-8') as f:
+    reviewed_related_pairs = json.load(f)['pairs']
+
 ALIASES = prerequisite_graph.get('aliases', {})
 
 def canonical_label(label):
@@ -108,40 +111,23 @@ def semantic_similarity(selected_label, candidates, topk=5):
 # a bare "add this topic." Curriculum topic order within a unit
 # is NOT prerequisite evidence. Authored graph edges determine direction; related pulls
 # same-unit topics that are neither, ranked by word-overlap to the anchor.
-REASON_TEMPLATES = {
-    'builds_on': [
-        "{a} is what {b} builds on directly - it lays the groundwork.",
-        "Getting {a} solid first is usually what makes {b} click.",
-        "{b} assumes {a} as a starting point.",
-    ],
-    'leads_to': [
-        "{a} feeds directly into {b} - a natural next step.",
-        "Once {a} is solid, {b} is where it gets used next.",
-        "{b} builds on {a} without much else in between.",
-    ],
-    'related': [
-        "{b} touches similar ideas as {a}, without being a strict prerequisite.",
-        "{a} and {b} often show up side by side in the same unit.",
-        "{b} is a useful sideways connection from {a}, not a dependency.",
-    ],
-}
-
-def _stable_index(a, b, n):
-    # Deterministic (not process-random like Python's hash()) so the same
-    # pair always phrases the same way, while still varying across pairs.
-    s = sum(ord(c) for c in (a + b))
-    return s % n
-
-def build_reason(a, b, question):
-    options = REASON_TEMPLATES[question]
-    template = options[_stable_index(a, b, len(options))]
-    return template.format(a=a, b=b)
-
 RELATIONSHIP_LABEL = {
     'builds_on': 'prerequisite',
     'leads_to': 'builds toward',
     'related': 'related',
 }
+
+def reviewed_related_suggestions(selected_label, used_labels, topk=3):
+    anchor = canonical_label(selected_label)
+    used = {canonical_label(label) for label in used_labels}
+    results = []
+    for pair in reviewed_related_pairs:
+        other = pair['b'] if pair['a'] == anchor else pair['a'] if pair['b'] == anchor else None
+        if not other or other in used:
+            continue
+        results.append({'label': other, 'meta': concept_lookup[other], 'source': selected_label,
+                        'target': other, 'relationship': 'related', 'basis': 'reviewed', 'reason': pair['reason']})
+    return results[:topk]
 
 def relationship_suggestions(selected_label, selected_meta, used_labels, question, topk=3):
     used = {canonical_label(label) for label in used_labels}
@@ -170,16 +156,18 @@ def relationship_suggestions(selected_label, selected_meta, used_labels, questio
                 break
         return results
 
+    reviewed = reviewed_related_suggestions(selected_label, used, topk)
+    used.update(s['label'] for s in reviewed)
     canonical = canonical_label(selected_label)
     grade, unit = resolved_meta(canonical, selected_meta)
     candidates = curriculum.get(grade, {}).get(unit, [])
     candidates = [t for t in candidates if t not in used and t != canonical]
-    ranked = semantic_similarity(canonical, candidates, topk=topk)
-    return [{
+    ranked = semantic_similarity(canonical, candidates, topk=topk - len(reviewed))
+    return reviewed + [{
         'label': r['label'], 'meta': {'grade': grade, 'unit': unit, 'conceptId': concept_lookup[r['label']]['conceptId']},
         'source': selected_label, 'target': r['label'],
-        'relationship': 'related',
-        'reason': build_reason(selected_label, r['label'], 'related'),
+        'relationship': 'possible connection', 'basis': 'curriculum_candidate',
+        'reason': f"Possible connection to explain: {selected_label} and {r['label']} occur in the same curriculum unit. No reviewed mathematical explanation is available for this pair yet. Can you describe a specific connection?",
     } for r in ranked]
 
 # --- Optional: real-LLM recommendations ---
@@ -327,6 +315,9 @@ def recommend():
         selected_meta = selected.get('meta', {})
         grade, unit = resolved_meta(selected_label, selected_meta)
 
+        reviewed = reviewed_related_suggestions(selected_label, used_labels) if question == 'related' else []
+        if reviewed:
+            return jsonify({'suggestions': reviewed})
         suggestions = llm_relationship_suggestions(selected_label, grade, unit, used_labels, question, topk=3)
         if suggestions is None:
             # Not configured, or the call/parse failed - the heuristic is

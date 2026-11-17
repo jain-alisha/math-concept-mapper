@@ -303,14 +303,16 @@ function computeMissingPrereqs(mapsData, curriculum, taughtSet) {
       }
       const connected = targets.some(n => reached.has(n.i));
       if (connected) continue;
-      const key = JSON.stringify([rule.source, rule.target]);
+      const endpointId = endpoint => endpoint.conceptId || canonical(endpoint.label).toLocaleLowerCase();
+      const key = JSON.stringify([endpointId(rule.source), endpointId(rule.target)]);
       if (!counts.has(key)) counts.set(key, { topic: rule.target.label, prereq: rule.source.label,
-        grade: rule.source.grade, unit: rule.source.unit, reason: rule.reason, studentIds: new Set() });
+        grade: rule.source.grade, unit: rule.source.unit, reason: rule.reason, studentIds: new Set(), taughtKeys: new Set() });
+      counts.get(key).taughtKeys.add(`${rule.source.grade}::${rule.source.unit}::${rule.source.label}`);
       counts.get(key).studentIds.add(m.owner_id);
     }
   }
   return [...counts.values()].map(rec => ({ ...rec, count: rec.studentIds.size,
-    taught: taughtSet && taughtSet.size ? taughtSet.has(`${rec.grade}::${rec.unit}::${rec.prereq}`) : null,
+    taught: taughtSet && taughtSet.size ? [...rec.taughtKeys].some(key => taughtSet.has(key)) : null,
   })).sort((a, b) => (b.taught === true) - (a.taught === true) || b.count - a.count);
 }
 
@@ -1116,6 +1118,8 @@ function renderClassDashboard(wrap, cls, roster, maps, mapsWithData, curriculum,
   glanceCard.appendChild(glanceGrid);
   wrap.appendChild(glanceCard);
 
+  const scopeNote = document.createElement('p'); scopeNote.className = 'dash-scope-note';
+  wrap.appendChild(scopeNote);
   const summaryEl = document.createElement('div');
   wrap.appendChild(summaryEl);
   const insightsGrid = document.createElement('div');
@@ -1196,6 +1200,9 @@ function renderClassDashboard(wrap, cls, roster, maps, mapsWithData, curriculum,
     const r = currentRoster();
     const activity = activities.find(a => a.id === selectedActivityId) || null;
     const filteredMaps = mapsForProjection(filterMapsForActivity(mapsWithData, selectedActivityId), anonymous);
+    scopeNote.textContent = activity
+      ? 'Latest submission per student for this activity. Previews and insights use the same submissions.'
+      : 'Historical overview: insights combine all saved maps, including older submissions and checkpoints. Previews show the latest map per student. Select an activity to compare latest submissions only.';
     if (r.length) {
       renderStudentMapCards(glanceGrid, r, filteredMaps, hrefFor, activity?.name);
     } else {
